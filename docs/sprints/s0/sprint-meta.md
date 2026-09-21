@@ -8,6 +8,6 @@
 - **Bundle version:** 0.22.0
 - **Exit status:** in-progress
 - **Token count:** (filled at Loop Phase if observable)
-- **Summary:** (one-line description of sprint goal, filled after Plan Phase)
-- **Intents:** (filled after Plan Phase)
+- **Summary:** Stand up the Project Book and Sprint Loops substrate, record the fork's AACD purpose as intent, and queue Sprint 1's lineage analysis as backlog
+- **Intents:** [INT-0001](../../intents/INT-0001-project-book-and-sprint-substrate.md) (advanced); [INT-0002](../../intents/INT-0002-lineage-lessons-ferric-kinesin.md) and [INT-0003](../../intents/INT-0003-animus-adaptive-constrained-decoding.md) (created as proposed; backlog links only)
 - **Completion evidence:** (filled at Loop Phase)
