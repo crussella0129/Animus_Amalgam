@@ -12,4 +12,4 @@
 - **Intent:** [INT-0001](../intents/INT-0001-project-book-and-sprint-substrate.md)
 - **Completed:** 2026-09-21T17:43:28Z
 - **Files modified:** docs/work/tasks.md, docs/intents/INT-0001-project-book-and-sprint-substrate.md, docs/intents/INT-0002-lineage-lessons-ferric-kinesin.md, docs/intents/INT-0003-animus-adaptive-constrained-decoding.md
-- **Commit:** PENDING
+- **Commit:** `a6525d168dc26a5cf11c05e97cf662598850fece`
