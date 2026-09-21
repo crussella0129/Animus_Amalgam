@@ -2,7 +2,7 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0001
-- **State:** planned
+- **State:** active
 - **Work evidence:** [T-001 and T-002 in the Sprint 0 build plan](../sprints/s0/sprint-plans/build-plan.md)
 - **Completion evidence:** none
 - **Code evidence:** none
@@ -93,3 +93,4 @@ can live there without colliding with upstream files.
 ## Transition history
 - 2026-09-21: created as `proposed` (Sprint 0 research).
 - 2026-09-21: `proposed` → `planned`. The owner approved the Sprint 0 plan, and T-001 and T-002 are scheduled.
+- 2026-09-21: `planned` → `active`. Sprint 0 Build started with T-001.
