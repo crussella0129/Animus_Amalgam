@@ -44,7 +44,11 @@ test_readme_upstream_boundary() {
   section=$(awk '/^## Where the Book ends$/ { f = 1; next } f && /^## / { f = 0 } f' "$README")
   printf '%s\n' "$section" | grep -qF 'website/' &&
     printf '%s\n' "$section" | grep -qF 'README.md' &&
-    printf '%s\n' "$section" | grep -qF 'AGENTS.md'
+    printf '%s\n' "$section" | grep -qF 'AGENTS.md' &&
+    printf '%s\n' "$section" | tr '\n' ' ' |
+      grep -qE '`website/`[^.]*upstream[^.]*\.[[:space:]]+Fork records[[:space:]]+do[[:space:]]+not go there' &&
+    printf '%s\n' "$section" | tr '\n' ' ' |
+      grep -qE '`AGENTS\.md`.{0,40}are owned[[:space:]]+by upstream[[:space:]]+and are outside the Book'
 }
 test_intent_index_complete() {
   local f t
