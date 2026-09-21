@@ -3,7 +3,7 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0002
 - **State:** proposed
-- **Work evidence:** none
+- **Work evidence:** [T-101, T-102, T-103, T-104 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none

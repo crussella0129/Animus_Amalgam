@@ -3,7 +3,7 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0001
 - **State:** active
-- **Work evidence:** [T-001 and T-002 in the Sprint 0 build plan](../sprints/s0/sprint-plans/build-plan.md)
+- **Work evidence:** [T-001 and T-002 in the Sprint 0 build plan](../sprints/s0/sprint-plans/build-plan.md), [T-106 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
