@@ -2,12 +2,12 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0001
-- **State:** active
+- **State:** realized
 - **Work evidence:** [T-001 and T-002 in the Sprint 0 build plan](../sprints/s0/sprint-plans/build-plan.md), [T-106 in the backlog](../work/tasks.md)
-- **Completion evidence:** none
+- **Completion evidence:** [T-001 completion](../work/completed-tasks.md#t-001-sprint-0), [T-002 completion](../work/completed-tasks.md#t-002-sprint-0)
 - **Code evidence:** none
 - **Test evidence:** [Sprint 0 test report](../sprints/s0/sprint-tests/test-report.md)
-- **Documentation evidence:** none
+- **Documentation evidence:** [Project Book front matter](../README.md), [intent index](README.md), [remote profile](../work/remote-profile.md)
 
 ## Intent
 
@@ -94,3 +94,4 @@ can live there without colliding with upstream files.
 - 2026-09-21: created as `proposed` (Sprint 0 research).
 - 2026-09-21: `proposed` → `planned`. The owner approved the Sprint 0 plan, and T-001 and T-002 are scheduled.
 - 2026-09-21: `planned` → `active`. Sprint 0 Build started with T-001.
+- 2026-09-21: `active` → `realized`. All five acceptance criteria and the intent's claim about orienting from the Book alone passed 15 of 15 tests at `8827c4e6f4` (see the Sprint 0 test report). Test critique verdict: `proceed-with-caveats`. Remaining work is carried forward as a follow-on under backlog T-106, not by reopening this chapter: the upstream sync policy, CI expectations for checkpoints, content screening, and a reusable Book test harness.
