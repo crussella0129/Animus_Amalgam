@@ -61,4 +61,4 @@
 - **Intent:** [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
 - **Completed:** 2026-09-23T15:58:45Z
 - **Files modified:** docs/intents/INT-0003-animus-adaptive-constrained-decoding.md, docs/intents/INT-0004-bounded-local-model-qualification.md, docs/intents/INT-0005-adaptive-action-policy.md, docs/intents/INT-0006-constraint-engine-research.md, docs/intents/README.md, docs/README.md, docs/SUMMARY.md, docs/work/tasks.md
-- **Commit:** PENDING
+- **Commit:** `58d756c2df62cdf2a51a129b4355af803aea0ddb`
