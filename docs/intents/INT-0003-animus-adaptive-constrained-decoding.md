@@ -2,8 +2,8 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0003
-- **State:** proposed
-- **Work evidence:** [T-104, T-105, T-107, T-108 in the backlog](../work/tasks.md)
+- **State:** planned
+- **Work evidence:** [Sprint 1 tasks T-104, T-105, T-107, and T-108](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
@@ -29,10 +29,11 @@ does not by itself demonstrate task success or affordable execution.
 
 **This chapter is deliberately coarse.** The project owner deferred writing
 the detailed intents to Sprint 1. This chapter's boundaries and acceptance
-criteria will be written after the lessons register from
+criteria will be replaced after the lessons register from
 [INT-0002](INT-0002-lineage-lessons-ferric-kinesin.md) exists, and the chapter
-may be split into follow-on intents at that point. Until then it stays
-`proposed`, and no sprint may plan implementation work against it directly.
+may be split into follow-on intents at that point. Sprint 1 plans that
+research and intent decomposition; no implementation work may be planned
+directly against these provisional criteria.
 
 Working reading, to be confirmed or replaced by the owner: the harness, not
 the model, decides which well-formed actions the model is able to emit. The
@@ -99,3 +100,6 @@ exists.
   request: provider/service alternatives, the 2080 Ti / 32 GB target, and
   long-session resource behavior. State remains `proposed`; implementation
   criteria and architecture selection still require the lineage analysis.
+- 2026-09-23: moved to `planned` after the owner approved the Sprint 1
+  research, evaluation-protocol, and detailed-intent work. This transition
+  does not authorize decoder implementation against the provisional criteria.

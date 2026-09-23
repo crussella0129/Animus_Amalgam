@@ -2,8 +2,8 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0002
-- **State:** proposed
-- **Work evidence:** [T-101, T-102, T-103, T-104 in the backlog](../work/tasks.md)
+- **State:** planned
+- **Work evidence:** [Sprint 1 tasks T-101 through T-104](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
@@ -83,3 +83,5 @@ the analysis reproducible while both repositories keep changing.
 
 ## Transition history
 - 2026-09-21: created as `proposed` (Sprint 0 research).
+- 2026-09-23: moved to `planned` after the owner approved Sprint 1's
+  evidence-backed lineage, comparison, and lessons-register plan.
