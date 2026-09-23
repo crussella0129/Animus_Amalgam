@@ -13,6 +13,7 @@
   - [Local Hermes long-session case study](lineage/local-session-case-study.md)
   - [Architecture comparison](lineage/architecture-comparison.md)
   - [Lessons register](lineage/lessons-register.md)
+  - [Bounded local-model evaluation protocol](lineage/local-evaluation-protocol.md)
 - [Sprint 0](sprints/s0/sprint-meta.md)
 - [Sprint 1](sprints/s1/sprint-meta.md)
   - [Research report](sprints/s1/sprint-research/research-report.md)

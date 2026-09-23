@@ -48,3 +48,10 @@
 - **Completed:** 2026-09-23T15:52:55Z
 - **Files modified:** docs/lineage/architecture-comparison.md, docs/lineage/lessons-register.md, docs/SUMMARY.md
 - **Commit:** `9f779fa487f6512a3164657124a0db039892520e`
+
+## T-108 (sprint 1)
+- **Description:** Publish the bounded local-model evaluation protocol and architecture advancement gates
+- **Intent:** [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
+- **Completed:** 2026-09-23T15:55:46Z
+- **Files modified:** docs/lineage/local-evaluation-protocol.md, docs/SUMMARY.md
+- **Commit:** PENDING
