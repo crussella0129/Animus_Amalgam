@@ -54,4 +54,4 @@
 - **Intent:** [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
 - **Completed:** 2026-09-23T15:55:46Z
 - **Files modified:** docs/lineage/local-evaluation-protocol.md, docs/SUMMARY.md
-- **Commit:** PENDING
+- **Commit:** `fa8e9e55c6b0aec9d0267f877fd044f828cecbdf`
