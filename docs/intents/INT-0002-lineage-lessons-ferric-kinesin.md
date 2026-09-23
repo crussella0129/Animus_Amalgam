@@ -3,11 +3,11 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0002
 - **State:** active
-- **Work evidence:** [Sprint 1 tasks T-101 through T-104](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
-- **Completion evidence:** none
+- **Work evidence:** [Sprint 1 tasks T-101 through T-105](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
+- **Completion evidence:** [Sprint 1 task completions](../work/completed-tasks.md#t-101-sprint-1)
 - **Code evidence:** none
-- **Test evidence:** none
-- **Documentation evidence:** none
+- **Test evidence:** [Sprint 1 test report](../sprints/s1/sprint-tests/test-report.md)
+- **Documentation evidence:** [Ferric lineage](../lineage/animus-ferric.md), [Kinesin lineage](../lineage/kinesin.md), [architecture comparison](../lineage/architecture-comparison.md), [lessons register](../lineage/lessons-register.md)
 
 ## Intent
 

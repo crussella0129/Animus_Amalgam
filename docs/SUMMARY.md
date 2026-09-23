@@ -29,3 +29,5 @@
   - [Unit test results](sprints/s1/sprint-tests/unit-tests.md)
   - [Integration test results](sprints/s1/sprint-tests/integration-tests.md)
   - [End-to-end test results](sprints/s1/sprint-tests/e2e-tests.md)
+  - [Test critique](sprints/s1/sprint-tests/critique.md)
+  - [Test report](sprints/s1/sprint-tests/test-report.md)

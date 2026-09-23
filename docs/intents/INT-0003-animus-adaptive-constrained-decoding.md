@@ -4,9 +4,9 @@
 - **Intent ID:** INT-0003
 - **State:** superseded
 - **Work evidence:** [Sprint 1 tasks T-104, T-105, T-107, and T-108](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
-- **Completion evidence:** none
+- **Completion evidence:** [Sprint 1 task completions](../work/completed-tasks.md#t-104-sprint-1)
 - **Code evidence:** none
-- **Test evidence:** none
+- **Test evidence:** [Sprint 1 test report](../sprints/s1/sprint-tests/test-report.md)
 - **Documentation evidence:** [INT-0004 bounded qualification](INT-0004-bounded-local-model-qualification.md), [INT-0005 adaptive policy](INT-0005-adaptive-action-policy.md), [INT-0006 engine research](INT-0006-constraint-engine-research.md), [lessons register](../lineage/lessons-register.md)
 
 ## Intent

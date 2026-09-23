@@ -1,6 +1,6 @@
 # Sprint 1 End-to-End Test Results
 
-- **Tested build head:** `1e3c15a9606fb23e6af35ca92b4dbb86ebd21f4f`
+- **Tested build head:** `ebc5ff0524c06f3b9e16415792e99bd73909dc59`
 - **Date:** 2026-09-23
 
 ## `book_navigation_e2e`
