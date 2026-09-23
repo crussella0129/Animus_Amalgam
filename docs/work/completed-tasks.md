@@ -13,3 +13,10 @@
 - **Completed:** 2026-09-21T17:43:28Z
 - **Files modified:** docs/work/tasks.md, docs/intents/INT-0001-project-book-and-sprint-substrate.md, docs/intents/INT-0002-lineage-lessons-ferric-kinesin.md, docs/intents/INT-0003-animus-adaptive-constrained-decoding.md
 - **Commit:** `a6525d168dc26a5cf11c05e97cf662598850fece`
+
+## T-101 (sprint 1)
+- **Description:** Publish the commit-pinned Animus_Ferric architecture, successes, failures, and transfer boundaries
+- **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md)
+- **Completed:** 2026-09-23T15:40:42Z
+- **Files modified:** docs/lineage/animus-ferric.md, docs/SUMMARY.md, docs/intents/INT-0002-lineage-lessons-ferric-kinesin.md
+- **Commit:** PENDING

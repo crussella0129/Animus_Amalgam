@@ -2,7 +2,7 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0002
-- **State:** planned
+- **State:** active
 - **Work evidence:** [Sprint 1 tasks T-101 through T-104](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
 - **Completion evidence:** none
 - **Code evidence:** none
@@ -85,3 +85,5 @@ the analysis reproducible while both repositories keep changing.
 - 2026-09-21: created as `proposed` (Sprint 0 research).
 - 2026-09-23: moved to `planned` after the owner approved Sprint 1's
   evidence-backed lineage, comparison, and lessons-register plan.
+- 2026-09-23: moved to `active` when T-101 began the pinned predecessor
+  chapters.

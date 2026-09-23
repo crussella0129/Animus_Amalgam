@@ -6,6 +6,8 @@
   - [INT-0003 — Animus Adaptive Constrained Decoding in Amalgam](intents/INT-0003-animus-adaptive-constrained-decoding.md)
 - [Tasks](work/tasks.md)
 - [Completed tasks](work/completed-tasks.md)
+- [Lineage](lineage/animus-ferric.md)
+  - [Animus_Ferric](lineage/animus-ferric.md)
 - [Sprint 0](sprints/s0/sprint-meta.md)
 - [Sprint 1](sprints/s1/sprint-meta.md)
   - [Research report](sprints/s1/sprint-research/research-report.md)
