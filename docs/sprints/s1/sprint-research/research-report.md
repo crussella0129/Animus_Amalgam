@@ -169,6 +169,8 @@ the alternatives remain candidates when a measured requirement justifies them.
   source correspondence, context/growth behavior and located test coverage.
 - [Candidate evaluation](evaluation-design.md) — architecture alternatives,
   manifest, resource gates, controls, metrics and advancement criteria.
+- [Research verification](verification.md) — structural, citation and
+  independent review receipts, with the limits of those checks.
 
 ## Budget Override
 
