@@ -2,24 +2,38 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0003
-- **State:** proposed
-- **Work evidence:** [T-104, T-105 in the backlog](../work/tasks.md)
-- **Completion evidence:** none
+- **State:** superseded
+- **Work evidence:** [Sprint 1 tasks T-104, T-105, T-107, and T-108](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
+- **Completion evidence:** [Sprint 1 task completions](../work/completed-tasks.md#t-104-sprint-1)
 - **Code evidence:** none
-- **Test evidence:** none
-- **Documentation evidence:** none
+- **Test evidence:** [Sprint 1 test report](../sprints/s1/sprint-tests/test-report.md)
+- **Documentation evidence:** [INT-0004 bounded qualification](INT-0004-bounded-local-model-qualification.md), [INT-0005 adaptive policy](INT-0005-adaptive-action-policy.md), [INT-0006 engine research](INT-0006-constraint-engine-research.md), [lessons register](../lineage/lessons-register.md)
 
 ## Intent
 
 Amalgam brings Animus Adaptive Constrained Decoding (AACD) to Hermes Agent.
 This is the main reason the fork exists.
 
+The owner's 2026-09-23 direction makes small local models on an RTX 2080 Ti
+and 32 GB of system RAM the initial research target. The fork is a working
+surface, not a requirement to maintain a separate full agent: an existing
+Hermes custom endpoint, a provider plugin, or a Rust service informed by
+Ferric are all candidates. Reusing an established constraint engine and
+researching an automatically adapting decoder must be compared on evidence.
+No particular integration or decoder has been selected.
+
+Long-session viability is part of the desired outcome. The reported Qwen
+session's prompt growth, request latency, cache behavior, compression failures,
+and resource limits must inform the design. A syntactically valid tool call
+does not by itself demonstrate task success or affordable execution.
+
 **This chapter is deliberately coarse.** The project owner deferred writing
 the detailed intents to Sprint 1. This chapter's boundaries and acceptance
-criteria will be written after the lessons register from
+criteria will be replaced after the lessons register from
 [INT-0002](INT-0002-lineage-lessons-ferric-kinesin.md) exists, and the chapter
-may be split into follow-on intents at that point. Until then it stays
-`proposed`, and no sprint may plan implementation work against it directly.
+may be split into follow-on intents at that point. Sprint 1 plans that
+research and intent decomposition; no implementation work may be planned
+directly against these provisional criteria.
 
 Working reading, to be confirmed or replaced by the owner: the harness, not
 the model, decides which well-formed actions the model is able to emit. The
@@ -43,8 +57,8 @@ decisions:
 
 ## Acceptance criteria
 
-These criteria are provisional and will be replaced when the detailed intents
-are written:
+These provisional criteria are satisfied and replaced by INT-0004 through
+INT-0006:
 
 1. Before any AACD implementation is planned, this chapter, or the follow-on
    chapters that supersede it, states observable acceptance criteria grounded
@@ -52,6 +66,14 @@ are written:
    providers are in scope and what the non-goals are.
 2. This chapter records a definition of "adaptive", with its rationale and the
    alternatives that were rejected.
+3. Architecture selection distinguishes policy adaptation, token-mask
+   enforcement, semantic checking, and resource control; it evaluates an
+   existing Hermes endpoint/provider seam before adding core surface.
+4. The research identifies the supplied local session, separates observed
+   events from unmeasured causes, and specifies a bounded comparison of
+   ordinary local Hermes, static constraints, and adaptive constraints on
+   the stated hardware. Any later implementation acceptance must include
+   task correctness, latency, context growth, and memory headroom.
 
 ## Rationale
 
@@ -60,8 +82,16 @@ Animus_Ferric and Kinesin about Animus Adaptive Constrained Decoding.
 
 ## Alternatives
 
-None have been evaluated yet. They will be recorded once INT-0002's analysis
-exists.
+- **Existing custom endpoint only.** Selected as the baseline under INT-0004;
+  it remains the final architecture if no policy/service gap appears.
+- **Narrow Rust policy/protocol service.** Selected as INT-0005's leading
+  adaptive candidate, conditional on the bounded baseline.
+- **Out-of-tree provider plugin or provider-supplied client.** Retained only
+  for a demonstrated configuration, request-context, or boundary need.
+- **New self-constraining decoder.** Deferred behind the reproducible engine-
+  gap gate in INT-0006.
+- **Full forked loop or direct Ferric-loop port.** Rejected because Hermes
+  already owns conversation, tools, authority, and execution.
 
 ## Consequences
 
@@ -74,3 +104,15 @@ exists.
 
 ## Transition history
 - 2026-09-21: created as `proposed` (Sprint 0 research).
+- 2026-09-23: revised the research boundaries from the owner's Sprint 1
+  request: provider/service alternatives, the 2080 Ti / 32 GB target, and
+  long-session resource behavior. State remains `proposed`; implementation
+  criteria and architecture selection still require the lineage analysis.
+- 2026-09-23: moved to `planned` after the owner approved the Sprint 1
+  research, evaluation-protocol, and detailed-intent work. This transition
+  does not authorize decoder implementation against the provisional criteria.
+- 2026-09-23: moved to `active` when T-104 began the Hermes integration
+  chapter. Implementation remains outside Sprint 1.
+- 2026-09-23: superseded by INT-0004, INT-0005, and INT-0006 after the pinned
+  lineage analysis, lessons register, local-session case, and bounded
+  evaluation protocol replaced this chapter's provisional criteria.

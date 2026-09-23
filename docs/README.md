@@ -32,8 +32,10 @@ cover them:
 - [INT-0002 — Lineage lessons from Animus_Ferric and Kinesin](intents/INT-0002-lineage-lessons-ferric-kinesin.md)
   covers the analysis.
 - [INT-0003 — Animus Adaptive Constrained Decoding in Amalgam](intents/INT-0003-animus-adaptive-constrained-decoding.md)
-  covers what Amalgam will build. Its detailed intents will be written after
-  that analysis.
+  records the original coarse direction and is superseded by three detailed
+  follow-ons: [bounded local qualification](intents/INT-0004-bounded-local-model-qualification.md),
+  [adaptive provider-boundary policy](intents/INT-0005-adaptive-action-policy.md),
+  and [conditional decoder research](intents/INT-0006-constraint-engine-research.md).
 
 ## How the Book is organized
 
