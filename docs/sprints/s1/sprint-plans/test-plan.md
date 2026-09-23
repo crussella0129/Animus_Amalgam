@@ -1,3 +1,5 @@
+Finalized - DO NOT EDIT
+
 # Sprint 1 Test Plan
 
 These are document and evidence verification procedures. They are not source-shape unit tests, runtime model benchmarks, or permanent test code added only to check reversible documentation.
