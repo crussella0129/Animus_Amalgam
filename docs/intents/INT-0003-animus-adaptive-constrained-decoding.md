@@ -2,12 +2,12 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0003
-- **State:** active
+- **State:** superseded
 - **Work evidence:** [Sprint 1 tasks T-104, T-105, T-107, and T-108](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
-- **Documentation evidence:** none
+- **Documentation evidence:** [INT-0004 bounded qualification](INT-0004-bounded-local-model-qualification.md), [INT-0005 adaptive policy](INT-0005-adaptive-action-policy.md), [INT-0006 engine research](INT-0006-constraint-engine-research.md), [lessons register](../lineage/lessons-register.md)
 
 ## Intent
 
@@ -57,8 +57,8 @@ decisions:
 
 ## Acceptance criteria
 
-These criteria are provisional and will be replaced when the detailed intents
-are written:
+These provisional criteria are satisfied and replaced by INT-0004 through
+INT-0006:
 
 1. Before any AACD implementation is planned, this chapter, or the follow-on
    chapters that supersede it, states observable acceptance criteria grounded
@@ -82,8 +82,16 @@ Animus_Ferric and Kinesin about Animus Adaptive Constrained Decoding.
 
 ## Alternatives
 
-None have been evaluated yet. They will be recorded once INT-0002's analysis
-exists.
+- **Existing custom endpoint only.** Selected as the baseline under INT-0004;
+  it remains the final architecture if no policy/service gap appears.
+- **Narrow Rust policy/protocol service.** Selected as INT-0005's leading
+  adaptive candidate, conditional on the bounded baseline.
+- **Out-of-tree provider plugin or provider-supplied client.** Retained only
+  for a demonstrated configuration, request-context, or boundary need.
+- **New self-constraining decoder.** Deferred behind the reproducible engine-
+  gap gate in INT-0006.
+- **Full forked loop or direct Ferric-loop port.** Rejected because Hermes
+  already owns conversation, tools, authority, and execution.
 
 ## Consequences
 
@@ -105,3 +113,6 @@ exists.
   does not authorize decoder implementation against the provisional criteria.
 - 2026-09-23: moved to `active` when T-104 began the Hermes integration
   chapter. Implementation remains outside Sprint 1.
+- 2026-09-23: superseded by INT-0004, INT-0005, and INT-0006 after the pinned
+  lineage analysis, lessons register, local-session case, and bounded
+  evaluation protocol replaced this chapter's provisional criteria.

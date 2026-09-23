@@ -55,3 +55,10 @@
 - **Completed:** 2026-09-23T15:55:46Z
 - **Files modified:** docs/lineage/local-evaluation-protocol.md, docs/SUMMARY.md
 - **Commit:** `fa8e9e55c6b0aec9d0267f877fd044f828cecbdf`
+
+## T-105 (sprint 1)
+- **Description:** Supersede the coarse AACD chapter with detailed bounded-baseline, adaptive-policy, and conditional-decoder intents
+- **Intent:** [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
+- **Completed:** 2026-09-23T15:58:45Z
+- **Files modified:** docs/intents/INT-0003-animus-adaptive-constrained-decoding.md, docs/intents/INT-0004-bounded-local-model-qualification.md, docs/intents/INT-0005-adaptive-action-policy.md, docs/intents/INT-0006-constraint-engine-research.md, docs/intents/README.md, docs/README.md, docs/SUMMARY.md, docs/work/tasks.md
+- **Commit:** PENDING
