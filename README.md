@@ -2,7 +2,7 @@
   <img src="assets/banner.png" alt="Animus Amalgam - The Animus Project Hermes Agent" width="100%">
 </p>
 
-# Animus Amalgam - The Animus Project Hermes Agent ☤
+# Animus Amalgam - The Animus Project's Hermes Agent for Small Models
 <p align="center">
   <a href="https://hermes-agent.nousresearch.com/">Hermes Agent</a> | <a href="https://hermes-agent.nousresearch.com/">Hermes Desktop</a>
 </p>
