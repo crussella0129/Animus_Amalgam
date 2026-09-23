@@ -34,3 +34,10 @@
 - **Completed:** 2026-09-23T15:46:30Z
 - **Files modified:** docs/lineage/hermes-decoding-seams.md, docs/SUMMARY.md, docs/intents/INT-0003-animus-adaptive-constrained-decoding.md
 - **Commit:** `4e86662d4b9feae37a8e29544afcb428a80d3cd4`
+
+## T-107 (sprint 1)
+- **Description:** Publish a sanitized, measured case study of the owner's long local Qwen Hermes session
+- **Intent:** [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
+- **Completed:** 2026-09-23T15:50:34Z
+- **Files modified:** docs/lineage/local-session-case-study.md, docs/SUMMARY.md
+- **Commit:** PENDING
