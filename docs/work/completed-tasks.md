@@ -20,3 +20,10 @@
 - **Completed:** 2026-09-23T15:40:42Z
 - **Files modified:** docs/lineage/animus-ferric.md, docs/SUMMARY.md, docs/intents/INT-0002-lineage-lessons-ferric-kinesin.md
 - **Commit:** `626c39c8186ad98c0ad70e5c79b1df61a293e1a3`
+
+## T-102 (sprint 1)
+- **Description:** Publish the commit-pinned Kinesin architecture, successes, failures, superseded claims, and transfer boundaries
+- **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md)
+- **Completed:** 2026-09-23T15:43:03Z
+- **Files modified:** docs/lineage/kinesin.md, docs/SUMMARY.md
+- **Commit:** PENDING
