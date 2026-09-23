@@ -11,3 +11,4 @@
 - **Summary:** Research the least intrusive Hermes integration for adaptive constrained decoding on small local models, grounded in Ferric/Kinesin and the owner's long-session failure.
 - **Intents:** [INT-0002](../../intents/INT-0002-lineage-lessons-ferric-kinesin.md), [INT-0003](../../intents/INT-0003-animus-adaptive-constrained-decoding.md) (research selection; implementation not authorized by these proposed chapters)
 - **Completion evidence:** [Test report](sprint-tests/test-report.md) verifies INT-0002 AC1-4 and INT-0003 AC1-4; [final critique](sprint-tests/critique.md) is clean.
+- **Checkpoint:** https://github.com/crussella0129/Animus_Amalgam/pull/2
