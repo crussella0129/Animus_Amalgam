@@ -9,6 +9,7 @@
 - [Lineage](lineage/animus-ferric.md)
   - [Animus_Ferric](lineage/animus-ferric.md)
   - [Kinesin](lineage/kinesin.md)
+  - [Hermes decoding and integration seams](lineage/hermes-decoding-seams.md)
 - [Sprint 0](sprints/s0/sprint-meta.md)
 - [Sprint 1](sprints/s1/sprint-meta.md)
   - [Research report](sprints/s1/sprint-research/research-report.md)

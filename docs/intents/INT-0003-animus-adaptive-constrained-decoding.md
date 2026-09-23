@@ -2,7 +2,7 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0003
-- **State:** planned
+- **State:** active
 - **Work evidence:** [Sprint 1 tasks T-104, T-105, T-107, and T-108](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
 - **Completion evidence:** none
 - **Code evidence:** none
@@ -103,3 +103,5 @@ exists.
 - 2026-09-23: moved to `planned` after the owner approved the Sprint 1
   research, evaluation-protocol, and detailed-intent work. This transition
   does not authorize decoder implementation against the provisional criteria.
+- 2026-09-23: moved to `active` when T-104 began the Hermes integration
+  chapter. Implementation remains outside Sprint 1.

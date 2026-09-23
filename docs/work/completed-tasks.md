@@ -27,3 +27,10 @@
 - **Completed:** 2026-09-23T15:43:03Z
 - **Files modified:** docs/lineage/kinesin.md, docs/SUMMARY.md
 - **Commit:** `ab4fb4ea007ec939c08d69d433c590424a781520`
+
+## T-104 (sprint 1)
+- **Description:** Publish Hermes's existing constrained-decoding attachment points, cache invariants, context behavior, and implementation test seams
+- **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md), [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
+- **Completed:** 2026-09-23T15:46:30Z
+- **Files modified:** docs/lineage/hermes-decoding-seams.md, docs/SUMMARY.md, docs/intents/INT-0003-animus-adaptive-constrained-decoding.md
+- **Commit:** PENDING
