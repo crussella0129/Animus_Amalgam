@@ -24,3 +24,8 @@
   - [Pinned lineage findings](sprints/s1/sprint-research/lineage-findings.md)
   - [Hermes integration findings](sprints/s1/sprint-research/hermes-seams.md)
   - [Candidate evaluation](sprints/s1/sprint-research/evaluation-design.md)
+  - [Build plan](sprints/s1/sprint-plans/build-plan.md)
+  - [Test plan](sprints/s1/sprint-plans/test-plan.md)
+  - [Unit test results](sprints/s1/sprint-tests/unit-tests.md)
+  - [Integration test results](sprints/s1/sprint-tests/integration-tests.md)
+  - [End-to-end test results](sprints/s1/sprint-tests/e2e-tests.md)

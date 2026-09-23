@@ -66,10 +66,13 @@ Non-goals:
 
 ## Rationale
 
-Lessons [L-01 through L-05, L-10, and L-13](../lineage/lessons-register.md)
+Lessons
+[L-01 through L-06, L-10, L-11, and L-13](../lineage/lessons-register.md)
 support qualified server enforcement, deterministic bounded policy, separate
-semantic/authority checks, a stable cached prefix, and an out-of-process first
-boundary. Hermes already provides the narrow integration and execution waist.
+semantic/authority checks, reuse of Hermes's loop/executor, rejection of the
+failed recovery controller as a proven component, a stable cached prefix, and
+an out-of-process first boundary. Hermes already provides the narrow
+integration and execution waist.
 
 ## Alternatives
 
@@ -86,6 +89,8 @@ boundary. Hermes already provides the narrow integration and execution waist.
   seams.
 - **Port Ferric's complete loop.** Rejected because it duplicates Hermes
   conversation and execution ownership and carries Rust-specific coupling.
+  Ferric's L-11 recovery controller is also preserved as negative evidence,
+  not imported as a qualified component.
 
 ## Consequences
 
@@ -97,3 +102,6 @@ boundary. Hermes already provides the narrow integration and execution waist.
 
 ## Transition history
 - 2026-09-23: created as `proposed` from Sprint 1 lessons L-01 through L-05, L-10, and L-13.
+- 2026-09-23: Sprint 1 test review made L-06's reuse of the Hermes
+  loop/executor and L-11's negative recovery-controller evidence explicit;
+  state remains `proposed`.

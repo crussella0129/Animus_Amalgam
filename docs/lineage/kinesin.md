@@ -50,7 +50,12 @@ review did not produce action selection or task completion.
 [INT-0004](https://github.com/crussella0129/Kinesin/blob/a4491211e605d2358e0e1daa00598920c8b213dd/docs/intents/INT-0004-kv-cache-reuse.md#L45)
 was superseded because its original benchmark did not exercise real session
 construction. The corrected session observation above retains the narrower
-reuse result and leaves concurrent-slot and full-history behavior open.
+reuse result and leaves concurrent-slot and full-history behavior open. Its
+successor,
+[INT-0026](https://github.com/crussella0129/Kinesin/blob/a4491211e605d2358e0e1daa00598920c8b213dd/docs/intents/INT-0026-session-context-continuity.md#L15),
+carries actual session assembly, token-window admission, full-history
+continuity, and concurrent-slot/data-boundary criteria; those broader criteria
+remain proposed rather than proven by the partial observation.
 
 [INT-0008](https://github.com/crussella0129/Kinesin/blob/a4491211e605d2358e0e1daa00598920c8b213dd/docs/intents/INT-0008-remote-model-over-overlay.md#L81)
 was superseded because private-address plaintext and a same-host LAN

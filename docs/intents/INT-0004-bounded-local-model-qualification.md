@@ -52,9 +52,10 @@ Boundaries and non-goals:
    meaningful-first-token, prompt/decode/total timing, actual cache reuse,
    action/argument validity, independent completion, retries, RAM/VRAM/paging,
    host responsiveness, and stop/cancel behavior. Missing metrics are explicit.
-5. Context/pruning/compression trials are a separate axis. Compression must
-   complete and reduce history before the cap; a timeout is a failed trial and
-   does not trigger repeated retries of the oversized history.
+5. Context/pruning/compression trials are a separate axis. They preserve
+   tool/result groups and checked evidence under a tokenizer-aware budget.
+   Compression must complete and reduce history before the cap; a timeout is a
+   failed trial and does not trigger repeated retries of the oversized history.
 6. Static constraints advance only if they improve valid execution or
    independently checked completion without exceeding the same resource and
    authority envelope. A negative or smaller-workload result is acceptable.
@@ -63,9 +64,11 @@ Boundaries and non-goals:
 
 The local case shows high-cache long generation and separate cold-prefill
 cliffs after cache pressure, context growth, and restart. Grammar constraints
-cannot diagnose those costs. Lessons [L-04, L-07, L-09, L-12, and L-13](../lineage/lessons-register.md)
-require independent correctness/resource measures, faithful cache evidence,
-honest failures, and a cancellable process boundary.
+cannot diagnose those costs. Lessons
+[L-04, L-07 through L-09, L-12, and L-13](../lineage/lessons-register.md)
+require independent correctness/resource measures, group-preserving
+token-aware compaction, faithful cache evidence, honest failures, and a
+cancellable process boundary.
 
 ## Alternatives
 
@@ -90,3 +93,6 @@ honest failures, and a cancellable process boundary.
 
 ## Transition history
 - 2026-09-23: created as `proposed` from Sprint 1 lessons L-04, L-07, L-09, L-12, and L-13.
+- 2026-09-23: Sprint 1 test review made L-08's group-preserving,
+  tokenizer-aware compaction boundary explicit in acceptance criterion 5 and
+  the rationale; state remains `proposed`.
