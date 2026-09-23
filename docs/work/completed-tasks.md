@@ -40,4 +40,4 @@
 - **Intent:** [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
 - **Completed:** 2026-09-23T15:50:34Z
 - **Files modified:** docs/lineage/local-session-case-study.md, docs/SUMMARY.md
-- **Commit:** PENDING
+- **Commit:** `358d80065b698df311d5083e1f4159fa56e24bbb`
