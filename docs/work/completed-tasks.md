@@ -26,4 +26,4 @@
 - **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md)
 - **Completed:** 2026-09-23T15:43:03Z
 - **Files modified:** docs/lineage/kinesin.md, docs/SUMMARY.md
-- **Commit:** PENDING
+- **Commit:** `ab4fb4ea007ec939c08d69d433c590424a781520`
