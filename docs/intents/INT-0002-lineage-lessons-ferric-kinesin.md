@@ -2,9 +2,9 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0002
-- **State:** active
+- **State:** realized
 - **Work evidence:** [Sprint 1 tasks T-101 through T-105](../sprints/s1/sprint-plans/build-plan.md#execution-sequence)
-- **Completion evidence:** [Sprint 1 task completions](../work/completed-tasks.md#t-101-sprint-1)
+- **Completion evidence:** [Sprint 1 T-101 through T-105 completions](../work/completed-tasks.md#t-101-sprint-1)
 - **Code evidence:** none
 - **Test evidence:** [Sprint 1 test report](../sprints/s1/sprint-tests/test-report.md)
 - **Documentation evidence:** [Ferric lineage](../lineage/animus-ferric.md), [Kinesin lineage](../lineage/kinesin.md), [architecture comparison](../lineage/architecture-comparison.md), [lessons register](../lineage/lessons-register.md)
@@ -87,3 +87,7 @@ the analysis reproducible while both repositories keep changing.
   evidence-backed lineage, comparison, and lessons-register plan.
 - 2026-09-23: moved to `active` when T-101 began the pinned predecessor
   chapters.
+- 2026-09-23: moved from `active` to `realized` after T-101 through T-105
+  completed the pinned predecessor chapters, Hermes comparison, stable lessons
+  register, and lesson-grounded successor intents, with all four acceptance
+  criteria verified by the Sprint 1 test report.
