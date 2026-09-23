@@ -33,4 +33,4 @@
 - **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md), [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
 - **Completed:** 2026-09-23T15:46:30Z
 - **Files modified:** docs/lineage/hermes-decoding-seams.md, docs/SUMMARY.md, docs/intents/INT-0003-animus-adaptive-constrained-decoding.md
-- **Commit:** PENDING
+- **Commit:** `4e86662d4b9feae37a8e29544afcb428a80d3cd4`
