@@ -3,7 +3,7 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0003
 - **State:** proposed
-- **Work evidence:** [T-104, T-105 in the backlog](../work/tasks.md)
+- **Work evidence:** [T-104, T-105, T-107, T-108 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
@@ -13,6 +13,19 @@
 
 Amalgam brings Animus Adaptive Constrained Decoding (AACD) to Hermes Agent.
 This is the main reason the fork exists.
+
+The owner's 2026-09-23 direction makes small local models on an RTX 2080 Ti
+and 32 GB of system RAM the initial research target. The fork is a working
+surface, not a requirement to maintain a separate full agent: an existing
+Hermes custom endpoint, a provider plugin, or a Rust service informed by
+Ferric are all candidates. Reusing an established constraint engine and
+researching an automatically adapting decoder must be compared on evidence.
+No particular integration or decoder has been selected.
+
+Long-session viability is part of the desired outcome. The reported Qwen
+session's prompt growth, request latency, cache behavior, compression failures,
+and resource limits must inform the design. A syntactically valid tool call
+does not by itself demonstrate task success or affordable execution.
 
 **This chapter is deliberately coarse.** The project owner deferred writing
 the detailed intents to Sprint 1. This chapter's boundaries and acceptance
@@ -52,6 +65,14 @@ are written:
    providers are in scope and what the non-goals are.
 2. This chapter records a definition of "adaptive", with its rationale and the
    alternatives that were rejected.
+3. Architecture selection distinguishes policy adaptation, token-mask
+   enforcement, semantic checking, and resource control; it evaluates an
+   existing Hermes endpoint/provider seam before adding core surface.
+4. The research identifies the supplied local session, separates observed
+   events from unmeasured causes, and specifies a bounded comparison of
+   ordinary local Hermes, static constraints, and adaptive constraints on
+   the stated hardware. Any later implementation acceptance must include
+   task correctness, latency, context growth, and memory headroom.
 
 ## Rationale
 
@@ -74,3 +95,7 @@ exists.
 
 ## Transition history
 - 2026-09-21: created as `proposed` (Sprint 0 research).
+- 2026-09-23: revised the research boundaries from the owner's Sprint 1
+  request: provider/service alternatives, the 2080 Ti / 32 GB target, and
+  long-session resource behavior. State remains `proposed`; implementation
+  criteria and architecture selection still require the lineage analysis.
