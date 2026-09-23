@@ -11,6 +11,8 @@
   - [Kinesin](lineage/kinesin.md)
   - [Hermes decoding and integration seams](lineage/hermes-decoding-seams.md)
   - [Local Hermes long-session case study](lineage/local-session-case-study.md)
+  - [Architecture comparison](lineage/architecture-comparison.md)
+  - [Lessons register](lineage/lessons-register.md)
 - [Sprint 0](sprints/s0/sprint-meta.md)
 - [Sprint 1](sprints/s1/sprint-meta.md)
   - [Research report](sprints/s1/sprint-research/research-report.md)

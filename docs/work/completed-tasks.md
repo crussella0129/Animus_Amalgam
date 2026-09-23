@@ -41,3 +41,10 @@
 - **Completed:** 2026-09-23T15:50:34Z
 - **Files modified:** docs/lineage/local-session-case-study.md, docs/SUMMARY.md
 - **Commit:** `358d80065b698df311d5083e1f4159fa56e24bbb`
+
+## T-103 (sprint 1)
+- **Description:** Publish the three-system architecture comparison and stable Amalgam lessons register
+- **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md), [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
+- **Completed:** 2026-09-23T15:52:55Z
+- **Files modified:** docs/lineage/architecture-comparison.md, docs/lineage/lessons-register.md, docs/SUMMARY.md
+- **Commit:** PENDING
