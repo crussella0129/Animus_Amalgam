@@ -47,4 +47,4 @@
 - **Intent:** [INT-0002](../intents/INT-0002-lineage-lessons-ferric-kinesin.md), [INT-0003](../intents/INT-0003-animus-adaptive-constrained-decoding.md)
 - **Completed:** 2026-09-23T15:52:55Z
 - **Files modified:** docs/lineage/architecture-comparison.md, docs/lineage/lessons-register.md, docs/SUMMARY.md
-- **Commit:** PENDING
+- **Commit:** `9f779fa487f6512a3164657124a0db039892520e`
