@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -131,6 +132,30 @@ def main():
     port = None
     interrupt_file = attempt / "INTERRUPT"
     try:
+        identity = {k: v for k, v in manifest.items() if k != "id"}
+        actual_digest = hashlib.sha256(
+            json.dumps(
+                identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ).encode()
+        ).hexdigest()
+        if actual_digest != manifest["id"]:
+            raise RuntimeError("candidate manifest digest mismatch")
+        source_commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, timeout=5, cwd=HERE.parents[1]
+        ).strip()
+        if manifest["source_dirty"] or source_commit != manifest["source_commit"]:
+            raise RuntimeError("source revision differs from frozen candidate")
+        for artifact in ("model", "backend"):
+            artifact_path = Path(paths["model" if artifact == "model" else "server"])
+            with artifact_path.open("rb") as stream:
+                actual = hashlib.file_digest(stream, "sha256").hexdigest()
+            if actual != manifest[artifact]["sha256"]:
+                raise RuntimeError(f"{artifact} artifact differs from frozen candidate")
+        record(
+            "identity_verified",
+            file_cache_state="uncontrolled; artifact verification reads model bytes",
+        )
+        previous_tick = time.monotonic()
         collector = spawn(
             [sys.executable, "-B", str(HERE / "telemetry.py"), str(sample_path)],
             "telemetry",
@@ -375,14 +400,24 @@ def main():
         for proc, job in reversed(owned):
             job.close()
         for proc, _job in reversed(owned):
-            proc.wait(timeout=max(0.1, 5 - (time.monotonic() - stop_start)))
+            try:
+                proc.wait(timeout=max(0.1, 5 - (time.monotonic() - stop_start)))
+            except subprocess.TimeoutExpired:
+                record(
+                    "cleanup_failure",
+                    pid=proc.pid,
+                    error="process wait deadline exceeded",
+                )
         record(
             "cleanup",
             seconds=time.monotonic() - stop_start,
             processes=[{"pid": p.pid, "exit": p.returncode} for p, _j in owned],
         )
         if wire is not None:
-            wire.close()
+            try:
+                wire.close()
+            except RuntimeError as exc:
+                record("cleanup_failure", error=str(exc))
         listener_closed = True
         if port is not None:
             with socket.socket() as probe:
