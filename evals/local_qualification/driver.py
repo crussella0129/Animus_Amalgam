@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import subprocess
 import threading
 import time
 
@@ -15,12 +16,35 @@ def main():
     parser.add_argument("--url", required=True)
     parser.add_argument(
         "--mode",
-        choices=["smoke", "operate", "main-cancel", "aux-cancel"],
+        choices=["smoke", "operate", "workflow", "main-cancel", "aux-cancel"],
         required=True,
     )
     parser.add_argument("--result", type=Path, required=True)
     parser.add_argument("--interrupt-file", type=Path, required=True)
     args = parser.parse_args()
+    if args.mode == "workflow":
+        # Fresh CLI processes share one already-admitted backend. Toolsets stay
+        # fixed within each conversation and all calls retain the owner's budget.
+        for mode in ("smoke", "operate"):
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(Path(__file__).resolve()),
+                    "--lab",
+                    str(args.lab),
+                    "--url",
+                    args.url,
+                    "--mode",
+                    mode,
+                    "--result",
+                    str(args.result.with_name(f"result-{mode}.json")),
+                    "--interrupt-file",
+                    str(args.interrupt_file),
+                ],
+                check=True,
+            )
+        return
     os.chdir(args.lab / "fixture")
     from cli import HermesCLI
 
@@ -91,7 +115,11 @@ def main():
                 + " check.py. Report the failure and recovery truthfully.",
             ],
         }[args.mode]
-        responses = [cli.chat(prompt) for prompt in prompts]
+        responses = []
+        for prompt in prompts:
+            if args.interrupt_file.exists():
+                break
+            responses.append(cli.chat(prompt))
     args.result.write_text(
         json.dumps(
             {

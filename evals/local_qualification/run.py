@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--lab", type=Path, required=True)
     parser.add_argument(
         "--mode",
-        choices=["smoke", "operate", "main-cancel", "aux-cancel"],
+        choices=["smoke", "operate", "workflow", "main-cancel", "aux-cancel"],
         required=True,
     )
     args = parser.parse_args()

@@ -22,3 +22,10 @@ before generation. Production compression deliberately omits user caps; this
 experiment does not restore those caps globally or pretend that its bounded
 request is an unmodified stock-Hermes request. This is an operational probe,
 not the later native/static comparison.
+
+An explicit `model.context_length: 8192` on the local custom route, together
+with `compression.enabled: false`, opts this lab into a bounded small window.
+The fork extends Hermes's existing explicit LM Studio context exception to
+this local custom/no-auto-compression case; automatic and hosted-model floors
+remain. The external wire still tokenizes the complete prompt and refuses
+more than 4096 tokens. No server capacity is fabricated or automatically grown.

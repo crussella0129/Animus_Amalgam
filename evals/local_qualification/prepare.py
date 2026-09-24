@@ -130,6 +130,7 @@ def main():
             "default": "amalgam-pilot",
             "provider": "custom",
             "base_url": "http://127.0.0.1:18082/v1",
+            "context_length": 8192,
         },
         "local_runtime": {"enabled": False},
         "compression": {"enabled": False},

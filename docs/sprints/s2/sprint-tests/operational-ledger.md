@@ -96,3 +96,28 @@ and record the idle approval interval separately. Its conservative start is
 handoff stays charged. Only the stopped, overnight human wait is excluded;
 the 60-minute experiment-work allowance is not renewed. Future pauses must
 be recorded explicitly at the point of handoff, never inferred by a launcher.
+
+## Attempt 06 — load succeeds, real CLI exposes the context floor
+
+Manifest `4f4736dcaa13aca343a9c549093fe6544642307851a6eee9a70cbd328434a5f3`
+loaded the actual backend in 13.985 seconds, with one 8192-token slot. The
+readiness check verified its identity. After load, a sample showed
+9,339,199,488 RAM and 3,681,550,336 VRAM bytes free, with zero page-out rate.
+HermesCLI then refused initialization because 8192 is below its automatic
+64,000-token floor. No inference was sent. All owned processes exited and the
+backend listener closed in 1.422 seconds.
+
+`agent/agent_init.py::_enforce_minimum_context` is the actual rejection.
+History (`8c12fa7cf0`) establishes that an explicit LM Studio context already
+overrides the floor intentionally. The focused Amalgam repair extends that
+exception only to a local custom route with an explicit matching context pin
+and automatic compression disabled. The lab now pins its real 8192 capacity;
+it retains the independent full-prompt 4096-token admission check. This is a
+fork compatibility change for the observed operation, not evidence that all
+Hermes workloads fit small windows. Replay remains required.
+
+The next replay uses separate smoke and operational CLI processes against one
+owned backend (`workflow` mode), preserving each conversation's fixed toolset
+and the aggregate budget. This leaves two of the six launches for main and
+auxiliary cancellation after the startup repair, rather than wasting a model
+reload between the smoke and useful task.
