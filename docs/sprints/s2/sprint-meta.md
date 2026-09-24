@@ -3,14 +3,14 @@
 - **Sprint number:** 2
 - **Book schema version:** 2
 - **Start timestamp:** 2026-09-24T03:27:07Z
-- **End timestamp:** (filled at Loop Phase)
+- **End timestamp:** 2026-09-24T19:23:41Z
 - **Model:** GPT-6 (Codex) through attempt 09; Claude Opus 5.5 (Claude Code) from the owner's second continuation
 - **Bundle version:** 0.22.0
-- **Exit status:** in-progress
+- **Exit status:** success
 - **Token count:** (filled at Loop Phase if observable)
 - **Summary:** Operate isolated 27B Hermes, repair encountered failures, then verify the bounded runtime formally.
 - **Intents:** [INT-0004](../../intents/INT-0004-bounded-local-model-qualification.md)
-- **Completion evidence:** (filled at Loop Phase)
+- **Completion evidence:** Real 27B Hermes completed an independently checked read/edit/check/recover task plus main and auxiliary cancellation (attempts 10-11, conditional on owner ratification of attempt-scoped time charging); 48/48 sprint tests at f8379f93ba; zero regressions vs cd2185c288; final critique proceed-with-caveats; INT-0004 active (AC1/AC4 partial, AC3/5/6 on T-202); direction review opens INT-0007 (T-210) after lab hardening T-211
 
 ## Blockages
 
