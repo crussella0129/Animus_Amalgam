@@ -1,3 +1,5 @@
+Finalized - DO NOT EDIT
+
 # Sprint 2 Test Plan
 
 ## Execution order: operate, repair, replay, then formal verification
