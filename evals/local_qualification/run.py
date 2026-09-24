@@ -100,7 +100,7 @@ def main():
             events.flush()
 
     def consume_request():
-        if ledger["requests"] >= 18:
+        if ledger["requests"] >= manifest["limits"]["max_requests"]:
             raise RuntimeError("aggregate request budget exhausted")
         ledger["requests"] += 1
         write_json(ledger_path, ledger)
@@ -226,7 +226,7 @@ def main():
             if (
                 ledger["started"] is not None
                 and now - ledger["started"] - ledger.get("idle_approval_seconds", 0)
-                > 3600
+                > manifest["limits"]["total_seconds"]
             ):
                 raise RuntimeError("aggregate live time budget exhausted")
             return sample
@@ -253,7 +253,7 @@ def main():
         ):
             reason = "not-run: resource gate"
             return
-        if ledger["launches"] >= 6:
+        if ledger["launches"] >= manifest["limits"]["max_launches"]:
             raise RuntimeError("aggregate launch budget exhausted")
         ledger["launches"] += 1
         if ledger["started"] is None:
@@ -325,7 +325,13 @@ def main():
         record("launch", command=command, python=sys.version)
         load_start = time.monotonic()
         server = spawn(command, "backend")
-        wire = Wire(f"http://127.0.0.1:{port}", token, record, consume_request)
+        wire = Wire(
+            f"http://127.0.0.1:{port}",
+            token,
+            record,
+            consume_request,
+            manifest["limits"]["input_tokens"],
+        )
         load_error = []
 
         def readiness():

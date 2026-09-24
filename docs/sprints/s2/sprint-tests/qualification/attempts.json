@@ -16,16 +16,19 @@
     "admission": null,
     "sampled_extrema": null,
     "max_page_in_bytes_per_second": null,
+    "max_page_out_bytes_per_second": null,
+    "requests": [],
+    "rejected_input_tokens": [],
     "private_evidence_sha256": {
       "events.jsonl": "2522d247ed089b114b579bf548406f10b911aae5405735b148ec15a785554609",
       "manifest.json": "8bda076b082452b4409052c7ba19121aa45b3870f9155af3e489c39f16004685",
       "outcome.json": "16dbcc3fa665d9c49bd110b74083165d69060bf96f8b0ab919b4d2c8ec9bd706",
       "telemetry.log": "fdd6799be347a0faec8f3e67ec9596f1059356708dcc7cebd5f79c49fb7d3887"
     },
-    "requests": 0,
     "limitations": [
-      "250 ms RAM minimum unavailable unless a reserve_breach event is present",
-      "No actual inference; CLI and cancellation checks not run"
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
     ]
   },
   {
@@ -63,6 +66,9 @@
       "vram_free": 3607101440
     },
     "max_page_in_bytes_per_second": 105805088.32442671,
+    "max_page_out_bytes_per_second": null,
+    "requests": [],
+    "rejected_input_tokens": [],
     "private_evidence_sha256": {
       "backend.log": "c1582fc3064e0cafe9cd6f962f69879dad6faf61231c7ceff9ec40d01278866a",
       "events.jsonl": "f954aac5252509a9e06c1810be91cd12af7bb7d05bc3da810bd46de24c74dcf4",
@@ -71,10 +77,10 @@
       "sample.json": "e6b2973b6eda7f5af4f0467e0c3d190ef4843c71010d7f78367e4127ea3ff0d4",
       "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
-    "requests": 0,
     "limitations": [
-      "250 ms RAM minimum unavailable unless a reserve_breach event is present",
-      "No actual inference; CLI and cancellation checks not run"
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
     ]
   },
   {
@@ -112,6 +118,9 @@
       "vram_free": 9888071680
     },
     "max_page_in_bytes_per_second": 28562891.53838903,
+    "max_page_out_bytes_per_second": null,
+    "requests": [],
+    "rejected_input_tokens": [],
     "private_evidence_sha256": {
       "events.jsonl": "aa3c8f74ebc6dd79e0189a57227b36dd75fa7a2547c743ed38924225428adbad",
       "manifest.json": "8363539ae6042563cca5a865d0f1cffcbca23200fea89ee2e327082e226e2274",
@@ -119,10 +128,10 @@
       "sample.json": "d59fc18fcec0df3e1a4f44a9ab1e7cc00547dbebc6e29e46cd4a4ae59993a371",
       "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
-    "requests": 0,
     "limitations": [
-      "250 ms RAM minimum unavailable unless a reserve_breach event is present",
-      "No actual inference; CLI and cancellation checks not run"
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
     ]
   },
   {
@@ -160,6 +169,9 @@
       "vram_free": 9916383232
     },
     "max_page_in_bytes_per_second": 2136549.2451769453,
+    "max_page_out_bytes_per_second": null,
+    "requests": [],
+    "rejected_input_tokens": [],
     "private_evidence_sha256": {
       "events.jsonl": "6b00632704324a990e36e042c905422a70297276f72a2777fda3e168cfdb021b",
       "manifest.json": "8363539ae6042563cca5a865d0f1cffcbca23200fea89ee2e327082e226e2274",
@@ -167,10 +179,10 @@
       "sample.json": "0891ac01b461643e3e84d36172aadc28ce8f43ff063af63a5b3dde0bfd5c9c65",
       "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
-    "requests": 0,
     "limitations": [
-      "250 ms RAM minimum unavailable unless a reserve_breach event is present",
-      "No actual inference; CLI and cancellation checks not run"
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
     ]
   },
   {
@@ -208,6 +220,9 @@
       "vram_free": 4222615552
     },
     "max_page_in_bytes_per_second": 1504377919.172954,
+    "max_page_out_bytes_per_second": null,
+    "requests": [],
+    "rejected_input_tokens": [],
     "private_evidence_sha256": {
       "backend.log": "1c72dea9b38a15e85893f836cae4d72f52f01057a3d13222b42cee14d81cd559",
       "events.jsonl": "5938ecbe11a5425c97746b5f457f3f2d4a3186ccd0b25b4b66ca9e8249ef66bd",
@@ -216,10 +231,351 @@
       "sample.json": "d6d687278915bb47221d928a4c5897b03ea6448b942f4388df6de79de37df5cc",
       "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
-    "requests": 0,
     "limitations": [
-      "250 ms RAM minimum unavailable unless a reserve_breach event is present",
-      "No actual inference; CLI and cancellation checks not run"
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
+    ]
+  },
+  {
+    "attempt": "attempt-06-smoke",
+    "manifest_id": "4f4736dcaa13aca343a9c549093fe6544642307851a6eee9a70cbd328434a5f3",
+    "outcome": {
+      "reason": "CLI exited: 1",
+      "manifest_id": "4f4736dcaa13aca343a9c549093fe6544642307851a6eee9a70cbd328434a5f3",
+      "budget": {
+        "started": 75178.421,
+        "launches": 3,
+        "requests": 0,
+        "attempts": 6,
+        "idle_approval_intervals": [
+          {
+            "start": 76413.04102659225,
+            "end": 111250.875,
+            "reason": "All pilot jobs stopped while awaiting owner approval overnight; start conservatively includes 120 seconds after last evidence commit."
+          }
+        ],
+        "idle_approval_seconds": 34837.833973407745
+      },
+      "cleanup_seconds": 1.4219999999913853,
+      "backend_listener_closed": true
+    },
+    "admission": {
+      "at": 111437.234,
+      "kind": "admission",
+      "manifest_id": "4f4736dcaa13aca343a9c549093fe6544642307851a6eee9a70cbd328434a5f3",
+      "cpu_needed": 17238933504,
+      "gpu_needed": 8295178240,
+      "sample": {
+        "at": 111436.218,
+        "ram_available": 20389666816,
+        "vram_free": 9963569152,
+        "vram_used": 1600126976,
+        "gpu_utilization": 17,
+        "gpu_temperature": 47,
+        "hard_page_in_bytes_per_second": 0.0,
+        "page_out_bytes_per_second": 0.0
+      }
+    },
+    "sampled_extrema": {
+      "ram_available": 9182502912,
+      "vram_free": 3681550336
+    },
+    "max_page_in_bytes_per_second": 1514018107.352937,
+    "max_page_out_bytes_per_second": 0.0,
+    "requests": [],
+    "rejected_input_tokens": [],
+    "private_evidence_sha256": {
+      "backend.log": "1b0354ee921d67f1e5b18f5bce20edd3567d94cdfa4cabf01c496984f207fc0c",
+      "cli.log": "872b7b50461e523a702b9fbb3be460f4ff1ea6fbc00960d0a7d5a104f027dcf8",
+      "events.jsonl": "e92120f86f7066728eae852dfb0b5bcfd24ba6c7d9fb4b3d8c3556daeaf931a6",
+      "manifest.json": "63cd1c54cbaedddc0bd001515a8b8e5d980abff705367c57df38f24c12e5a1a9",
+      "outcome.json": "9e7deb47c20893e7bb58254ff53de389a41437f808c900ea3e304a11ba7f5e28",
+      "sample.json": "15c97ffa7be1dd369b89815737b0853b1cc2dadb4a4c9b37d9b9f2b07b1c6214",
+      "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "limitations": [
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
+    ]
+  },
+  {
+    "attempt": "attempt-07-workflow",
+    "manifest_id": "9ecf14193525bf430368d19cec1f6a3ef292fc76dedc779c7fe394950ac4e5a7",
+    "outcome": {
+      "reason": "stopped: RuntimeError: ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host",
+      "manifest_id": "9ecf14193525bf430368d19cec1f6a3ef292fc76dedc779c7fe394950ac4e5a7",
+      "budget": {
+        "started": 75178.421,
+        "launches": 4,
+        "requests": 2,
+        "attempts": 7,
+        "idle_approval_intervals": [
+          {
+            "start": 76413.04102659225,
+            "end": 111250.875,
+            "reason": "All pilot jobs stopped while awaiting owner approval overnight; start conservatively includes 120 seconds after last evidence commit."
+          }
+        ],
+        "idle_approval_seconds": 34837.833973407745
+      },
+      "cleanup_seconds": 3.110000000000582,
+      "backend_listener_closed": true
+    },
+    "admission": {
+      "at": 111717.234,
+      "kind": "admission",
+      "manifest_id": "9ecf14193525bf430368d19cec1f6a3ef292fc76dedc779c7fe394950ac4e5a7",
+      "cpu_needed": 17238933504,
+      "gpu_needed": 8295178240,
+      "sample": {
+        "at": 111716.156,
+        "ram_available": 20569579520,
+        "vram_free": 9963569152,
+        "vram_used": 1600126976,
+        "gpu_utilization": 17,
+        "gpu_temperature": 49,
+        "hard_page_in_bytes_per_second": 7768.097999411324,
+        "page_out_bytes_per_second": 0.0
+      }
+    },
+    "sampled_extrema": {
+      "ram_available": 9466802176,
+      "vram_free": 3614441472
+    },
+    "max_page_in_bytes_per_second": 1493152344.6050498,
+    "max_page_out_bytes_per_second": 12386142.140233526,
+    "requests": [
+      {
+        "request_id": 1,
+        "input_tokens": 1169,
+        "prompt_sha256": "25fda0d02aa635b855d81db90b8d17c219c65192a4189c4965b0da3af261a0ef",
+        "tools": [],
+        "output_limit": 128,
+        "stream": true,
+        "smoke_exact_answer": true,
+        "response_end": {
+          "at": 111815.609,
+          "kind": "response_end",
+          "manifest_id": "9ecf14193525bf430368d19cec1f6a3ef292fc76dedc779c7fe394950ac4e5a7",
+          "request_id": 1,
+          "status": 200,
+          "seconds": 71.90600000000268,
+          "meaningful_first_token_seconds": 65.98400000001129
+        }
+      },
+      {
+        "request_id": 2,
+        "input_tokens": 267,
+        "prompt_sha256": "763d9813e25ec39b5f8735d2d27b982638810c34118adea2f5e46504843bb2b8",
+        "tools": [],
+        "output_limit": 128,
+        "stream": false,
+        "smoke_exact_answer": false,
+        "response_end": null
+      }
+    ],
+    "rejected_input_tokens": [],
+    "private_evidence_sha256": {
+      "backend.log": "e55fa99cd1567bbd69dc891880ea9531e851dff05dbf8ce8bb7290703a0af5fb",
+      "cli.log": "a097f7823c3f17a043d76bd91cdce2278e264039c13361ef83ea9c58fc32825a",
+      "events.jsonl": "c65a61fabd8aca341f5dac1fa838eae79a791befb15d343e55c1d9e036abc5fe",
+      "manifest.json": "5f461994baf253f76ba4a77a1be48c6f464066647dbea15dde35e5a37accb50c",
+      "outcome.json": "40b2bc926eab9924bae4912732be28d20e205b47f99bd85f5cda650ae056ecf5",
+      "result-smoke.json": "addce2abc9e64c1d1fb300e50a0d2b9654f54631e21610831cbffb9640a2c05b",
+      "sample.json": "7fd9a1a9bf9def4f9a2ea643440b600cb76a720826f585c4a92fcd3bb19faa80",
+      "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "limitations": [
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
+    ]
+  },
+  {
+    "attempt": "attempt-08-exercise",
+    "manifest_id": "0c069dc3a608fcfe7a3d646899b19b83bca040efe7c1bf9974c5052902d61c58",
+    "outcome": {
+      "reason": "stopped: RuntimeError: ValueError: rendered input 5481 exceeds 4096",
+      "manifest_id": "0c069dc3a608fcfe7a3d646899b19b83bca040efe7c1bf9974c5052902d61c58",
+      "budget": {
+        "started": 75178.421,
+        "launches": 5,
+        "requests": 3,
+        "attempts": 8,
+        "idle_approval_intervals": [
+          {
+            "start": 76413.04102659225,
+            "end": 111250.875,
+            "reason": "All pilot jobs stopped while awaiting owner approval overnight; start conservatively includes 120 seconds after last evidence commit."
+          }
+        ],
+        "idle_approval_seconds": 34837.833973407745
+      },
+      "cleanup_seconds": 3.0310000000026776,
+      "backend_listener_closed": true
+    },
+    "admission": {
+      "at": 112009.5,
+      "kind": "admission",
+      "manifest_id": "0c069dc3a608fcfe7a3d646899b19b83bca040efe7c1bf9974c5052902d61c58",
+      "cpu_needed": 17238933504,
+      "gpu_needed": 8295178240,
+      "sample": {
+        "at": 112008.515,
+        "ram_available": 20788228096,
+        "vram_free": 9952034816,
+        "vram_used": 1611661312,
+        "gpu_utilization": 17,
+        "gpu_temperature": 50,
+        "hard_page_in_bytes_per_second": 7753.524981314213,
+        "page_out_bytes_per_second": 0.0
+      }
+    },
+    "sampled_extrema": {
+      "ram_available": 9474338816,
+      "vram_free": 3601858560
+    },
+    "max_page_in_bytes_per_second": 1604505874.0859342,
+    "max_page_out_bytes_per_second": 0.0,
+    "requests": [
+      {
+        "request_id": 3,
+        "input_tokens": 1127,
+        "prompt_sha256": "e81ef0cdc5fad648d7e0b6ea154975800a03d2919ff0f529346f35ad82053586",
+        "tools": [],
+        "output_limit": 128,
+        "stream": true,
+        "smoke_exact_answer": true,
+        "response_end": {
+          "at": 112042.156,
+          "kind": "response_end",
+          "manifest_id": "0c069dc3a608fcfe7a3d646899b19b83bca040efe7c1bf9974c5052902d61c58",
+          "request_id": 3,
+          "status": 200,
+          "seconds": 10.593999999997322,
+          "meaningful_first_token_seconds": 9.202999999994063
+        }
+      }
+    ],
+    "rejected_input_tokens": [
+      5481
+    ],
+    "private_evidence_sha256": {
+      "backend.log": "6e7d8ec70940f15aa0075df0f0cb018d8cbdc390b353a2ccea2ebb7815e3c42d",
+      "cli.log": "969c0bf751b0b115bc324b09a886725d8ea2f8c5027a5e4c7b9d7043ae11b74c",
+      "events.jsonl": "0dfbd9ef37139520b7964331e8413cb7aa3915e8cc10a192f9e81d887daa9bab",
+      "manifest.json": "f0fc1eff8a20d3e125d24a15365efd7a44912eee595b62d76115eb280918f9b3",
+      "outcome.json": "ecbf6ce93a97f65c28207b80444d701b03f05a4182334b7c4209771fc634e484",
+      "result-operate.json": "68c25e49346b5ec3bfee068128ad157476f79046f40099e89e7b9201f67be4bb",
+      "result-smoke.json": "2d1e613cb4d991e5e49f2fd5abbe693232a7e7b2b63fa01f60807d8074b143ec",
+      "sample.json": "4fdf94e172f519001bca7ecb3548adf071170e9e0ffd8c575f40452ca5157085",
+      "stage.json": "822639ad0874a88cb9e3a1bf755fa0d71ed949f7097e98388ce1e7f2a94fc369",
+      "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "limitations": [
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
+    ]
+  },
+  {
+    "attempt": "attempt-09-exercise",
+    "manifest_id": "dfd0151da22a7dbcf587f9d33180724342258fb4e74f2cfff6c2d3fbb40a99fd",
+    "outcome": {
+      "reason": "stopped: RuntimeError: hard page-in rate breached",
+      "manifest_id": "dfd0151da22a7dbcf587f9d33180724342258fb4e74f2cfff6c2d3fbb40a99fd",
+      "budget": {
+        "started": 75178.421,
+        "launches": 6,
+        "requests": 5,
+        "attempts": 9,
+        "idle_approval_intervals": [
+          {
+            "start": 76413.04102659225,
+            "end": 111250.875,
+            "reason": "All pilot jobs stopped while awaiting owner approval overnight; start conservatively includes 120 seconds after last evidence commit."
+          }
+        ],
+        "idle_approval_seconds": 34837.833973407745
+      },
+      "cleanup_seconds": 3.2189999999973224,
+      "backend_listener_closed": true
+    },
+    "admission": {
+      "at": 112313.296,
+      "kind": "admission",
+      "manifest_id": "dfd0151da22a7dbcf587f9d33180724342258fb4e74f2cfff6c2d3fbb40a99fd",
+      "cpu_needed": 17238933504,
+      "gpu_needed": 8295178240,
+      "sample": {
+        "at": 112312.296,
+        "ram_available": 20806828032,
+        "vram_free": 9975103488,
+        "vram_used": 1588592640,
+        "gpu_utilization": 16,
+        "gpu_temperature": 43,
+        "hard_page_in_bytes_per_second": 21682992.289250676,
+        "page_out_bytes_per_second": 0.0
+      }
+    },
+    "sampled_extrema": {
+      "ram_available": 9568813056,
+      "vram_free": 3624927232
+    },
+    "max_page_in_bytes_per_second": 1518342422.0943613,
+    "max_page_out_bytes_per_second": 2704224.523254969,
+    "requests": [
+      {
+        "request_id": 4,
+        "input_tokens": 1127,
+        "prompt_sha256": "e81ef0cdc5fad648d7e0b6ea154975800a03d2919ff0f529346f35ad82053586",
+        "tools": [],
+        "output_limit": 128,
+        "stream": true,
+        "smoke_exact_answer": true,
+        "response_end": {
+          "at": 112344.984,
+          "kind": "response_end",
+          "manifest_id": "dfd0151da22a7dbcf587f9d33180724342258fb4e74f2cfff6c2d3fbb40a99fd",
+          "request_id": 4,
+          "status": 200,
+          "seconds": 10.375,
+          "meaningful_first_token_seconds": 9.047000000005937
+        }
+      },
+      {
+        "request_id": 5,
+        "input_tokens": 3799,
+        "prompt_sha256": "0516aeacc646e45d61e7fca1e030c9c17aac129fbdf97e9bc08ae0657fb48c83",
+        "tools": [
+          "process_manage",
+          "terminal"
+        ],
+        "output_limit": 128,
+        "stream": true,
+        "smoke_exact_answer": false,
+        "response_end": null
+      }
+    ],
+    "rejected_input_tokens": [],
+    "private_evidence_sha256": {
+      "backend.log": "0883f4f950d4aa6752802ef78cd87737e972b3ceb3d733564a4cf4d185be816f",
+      "cli.log": "f63ddf0003f84dcfd16d280af7d9a319a6d5cf6ab4b9e00ed1548bf3071602a6",
+      "events.jsonl": "0b34b245f082f90a4fb96c8c48b240ae2fb0a252368129337ddb0c7cc0bfeb42",
+      "manifest.json": "081390a63981d0666edf54705cd926f06d5e633da0587a8f655d3c73274f8eaf",
+      "outcome.json": "4b9e825269593202bf951c52c78a31a67afc97bf88c14f82c5dac0e3db5b3e0e",
+      "result-operate.json": "efe0f33f48c827fe8f8d6d4bd7b1da888278d9a95688b2c659db38cffc7847d7",
+      "result-smoke.json": "9e00d11417e556763759363f93b148d29b812e02773c90fc2c0b415a86711a0c",
+      "sample.json": "786b6fe126012ca86d8f5d77c68ab8233c98803db5f3dda1b60cc26f0e81baea",
+      "stage.json": "822639ad0874a88cb9e3a1bf755fa0d71ed949f7097e98388ce1e7f2a94fc369",
+      "telemetry.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "limitations": [
+      "Resource extrema are sampled, not continuous minima",
+      "No useful-task completion or dedicated main/auxiliary cancellation qualification",
+      "Raw requests, user paths, ephemeral credentials and unrelated transcripts remain local"
     ]
   }
 ]

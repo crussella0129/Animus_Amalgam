@@ -3,7 +3,7 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0004
 - **State:** active
-- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [T-201 and T-202](../work/tasks.md)
+- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 and T-202](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none

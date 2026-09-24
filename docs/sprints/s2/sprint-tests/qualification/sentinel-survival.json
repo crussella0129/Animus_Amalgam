@@ -1,0 +1,9 @@
+{
+  "alive_after_attempts": [
+    8,
+    9
+  ],
+  "observed_at": 112462.078,
+  "raw_evidence_sha256": "d12a463bf52e51ba998a348f7e343e2e3380cf5c20d8add193919c19be23ba44",
+  "then_stopped_by_owner": true
+}

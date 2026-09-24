@@ -23,3 +23,8 @@
 - 2026-09-24 continuation: owner approved the bounded loader amendment. The
   load-phase blocker is ready for replay; stopped overnight approval time is
   recorded separately without resetting consumed work or launch/request counts.
+- 2026-09-24 after attempt 09: six launches exhausted, five inference requests
+  consumed. Real startup succeeds; a valid terminal action was generated but
+  stopped before execution by the global page-in guard. Useful-task completion
+  and dedicated main/auxiliary cancellation remain unresolved. The operational
+  ledger contains a concrete next-step proposal; official suites remain not run.

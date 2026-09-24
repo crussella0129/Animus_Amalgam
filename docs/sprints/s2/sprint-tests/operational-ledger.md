@@ -166,3 +166,68 @@ boundary, not mid-conversation, and does not trim a prompt to evade admission.
 The original 4096-token input gate remains. Attempt useful work and main
 cancellation; auxiliary cancellation will remain pending if the six-launch
 budget is reached. Do not silently start a seventh backend.
+
+## Attempt 09 — valid terminal action; steady-state paging stop
+
+Manifest `dfd0151da22a7dbcf587f9d33180724342258fb4e74f2cfff6c2d3fbb40a99fd`
+again produced `AMALGAM_OK`, in 10.375 seconds. The terminal-only operation
+rendered to 3799 tokens and generated the valid native call
+`terminal({"command":"cat settings.json"})`. The backend processed its prompt
+in 28.882 seconds (131.53 tokens/second) and generated 28 tokens in 7.554
+seconds. The third consecutive high global page-in sample stopped the owner
+while the tool call was finishing. The command did not execute and the fixture
+remained at 2. This is action-format evidence, not completed read/edit work.
+
+At the last sample, available RAM was 9,652,416,512 bytes, available VRAM
+3,624,927,232 bytes, page-in about 199.24 MiB/s and page-out zero. Across the
+entire sampled attempt, minimum RAM was 9,568,813,056 bytes and maximum
+page-out about 2.58 MiB/s (well below the guard). Global counters cannot assign
+these page-ins to model reads, other processes or pagefile activity. A later
+read-only host snapshot showed little disk reading; it does not retroactively
+attribute the earlier events. Windows Performance Recorder is available and
+was not recording; no host-wide trace was started.
+
+The owner signalled the actual Hermes interrupt API, then closed its owned
+jobs. All owned roots exited and the backend listener closed in 3.219 seconds.
+The separately launched sentinel survived attempts 08 and 09, then the owner
+explicitly stopped that sentinel. Dedicated main cancellation still needs an
+active-slot check at its planned trigger; this resource stop is not substituted
+for that check. Auxiliary cancellation has not run.
+
+The six-launch budget is exhausted: nine total attempts, six backend launches,
+five inference requests (three completed smokes, one title and one interrupted
+terminal action). [Sanitized receipts](qualification/attempts.json) retain all
+nine attempts and immutable manifests. The fixture/check/recovery workflow,
+continued-session replay, formal suites and qualification verdict remain pending.
+
+The driver now independently checks the smoke value and fixture checker before
+advancing its staged workflow, and keeps its real conversation transcript in
+private evidence. Previously a CLI-rendered error could return exit zero and
+advance the stage label; the owner still stopped the attempt, but the label
+was not completion evidence. This repair needs replay. Limits now come from
+the frozen manifest rather than duplicate hardcoded request/launch/input values.
+
+## Next bounded continuation — proposed, not active
+
+The following changes need the owner's decision because the current launch
+allowance is exhausted and the input/paging policy is explicitly fixed:
+
+1. Permit three additional backend launches (nine cumulative). Retain eighteen
+   cumulative inference requests and sixty minutes of experiment work, including
+   repairs, startup and cleanup. Do not reset any used count or charge idle time
+   while all lab processes are stopped awaiting this decision.
+2. Increase the rendered-input ceiling from 4096 to 6144 tokens, within the same
+   already-allocated 8192-token context and unchanged 128-token output ceiling.
+   The minimal real prompt consumes 3799 tokens, leaving only 297 for results
+   and continued work under the old ceiling. No instructions are trimmed.
+3. After loading, make the existing three-sample page-in stop conditional on
+   available RAM being below 8 GiB. Continue recording every page-in sample.
+   The independent 4 GiB RAM, 1 GiB VRAM, three-sample 64 MiB/s page-out,
+   2-second owner-lag, stale-probe and 300-second request/load stops all remain.
+   This is a provisional experimental policy, not a claim that high page-ins
+   are harmless; the global counter did not demonstrate memory exhaustion.
+
+Use the first continuation launch for the useful workflow and main cancellation,
+the second for real auxiliary cancellation, with the third reserved for a
+diagnosed repair replay. Operational confidence still requires the actual
+success evidence; approving these changes is not approving a test verdict.

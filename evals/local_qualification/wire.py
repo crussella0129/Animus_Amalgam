@@ -10,7 +10,7 @@ import urllib.request
 
 
 class Wire:
-    def __init__(self, backend_url, token, record, consume_request):
+    def __init__(self, backend_url, token, record, consume_request, input_limit):
         self.backend_url, self.token = backend_url, token
         self.record, self.consume_request = record, consume_request
         self.active = None
@@ -66,13 +66,15 @@ class Wire:
                             "parse_special": True,
                         },
                     )["tokens"]
-                    if len(tokens) > 4096:
+                    if len(tokens) > input_limit:
                         owner.record(
                             "rejected_request",
                             input_tokens=len(tokens),
                             original_body=original,
                         )
-                        raise ValueError(f"rendered input {len(tokens)} exceeds 4096")
+                        raise ValueError(
+                            f"rendered input {len(tokens)} exceeds {input_limit}"
+                        )
                     request_id = owner.consume_request()
                     owner.active = {
                         "request_id": request_id,

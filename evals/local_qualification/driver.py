@@ -141,6 +141,7 @@ def main():
             {
                 "session_id": cli.session_id,
                 "responses": responses,
+                "conversation": cli.conversation_history,
                 "fixture": json.loads(
                     Path("settings.json").read_text(encoding="utf-8")
                 ),
@@ -149,6 +150,24 @@ def main():
         ),
         encoding="utf-8",
     )
+    if args.mode == "smoke" and responses != ["AMALGAM_OK"]:
+        raise RuntimeError("Smoke answer did not match the independent expected value")
+    if args.mode == "operate":
+        verification = subprocess.run(
+            [sys.executable, "check.py"], capture_output=True, text=True
+        )
+        args.result.with_name("independent-check.json").write_text(
+            json.dumps({
+                "exit_code": verification.returncode,
+                "stdout": verification.stdout,
+                "stderr": verification.stderr,
+            }),
+            encoding="utf-8",
+        )
+        if verification.returncode or verification.stdout.strip() != "CHECK_OK":
+            raise RuntimeError(
+                "Operational fixture did not pass its independent checker"
+            )
 
 
 if __name__ == "__main__":
