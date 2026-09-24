@@ -154,6 +154,11 @@ def main():
                 raise RuntimeError("critical telemetry stale")
             available = psutil.virtual_memory().available
             if available < 4 << 30 or sample["vram_free"] < 1 << 30:
+                record(
+                    "reserve_breach",
+                    current_ram_available=available,
+                    latest_sample=sample,
+                )
                 raise RuntimeError("RAM or VRAM reserve breached")
             if sample["at"] != last_sample:
                 paging_streak = (
@@ -222,6 +227,8 @@ def main():
             "1",
             "--fit",
             "off",
+            "--load-mode",
+            "none",
             "--no-context-shift",
             "--no-warmup",
             "--spec-type",

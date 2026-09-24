@@ -77,6 +77,7 @@ def main():
             },
         },
         "placement": {
+            "load_mode": "none",
             "cpu_pattern": cpu_pattern,
             "cpu_weight_bytes": cpu_weights,
             "gpu_weight_bytes": header.tensor_bytes - cpu_weights,
