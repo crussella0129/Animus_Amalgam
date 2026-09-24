@@ -92,6 +92,7 @@ def main():
             "output_tokens": 128,
             "request_seconds": 300,
             "load_seconds": 300,
+            "load_page_in_allowance_seconds": 60,
             "max_requests": 18,
             "max_launches": 6,
             "total_seconds": 3600,

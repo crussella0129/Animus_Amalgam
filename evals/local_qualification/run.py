@@ -125,6 +125,9 @@ def main():
     wire = None
     last_sample = None
     paging_streak = 0
+    page_out_streak = 0
+    loaded = threading.Event()
+    load_start = None
     previous_tick = time.monotonic()
     reason = "unfinished"
     server = None
@@ -163,7 +166,7 @@ def main():
         collector_start = time.monotonic()
 
         def observe():
-            nonlocal previous_tick, last_sample, paging_streak
+            nonlocal previous_tick, last_sample, paging_streak, page_out_streak
             now = time.monotonic()
             if (lab / "STOP").exists():
                 raise RuntimeError("operator STOP requested")
@@ -190,16 +193,34 @@ def main():
                 )
                 raise RuntimeError("RAM or VRAM reserve breached")
             if sample["at"] != last_sample:
+                load_allowance = (
+                    load_start is not None
+                    and not loaded.is_set()
+                    and now - load_start
+                    < manifest["limits"]["load_page_in_allowance_seconds"]
+                )
                 paging_streak = (
                     paging_streak + 1
-                    if sample["hard_page_in_bytes_per_second"] > 64 << 20
+                    if not load_allowance
+                    and sample["hard_page_in_bytes_per_second"] > 64 << 20
+                    else 0
+                )
+                page_out_streak = (
+                    page_out_streak + 1
+                    if sample["page_out_bytes_per_second"] > 64 << 20
                     else 0
                 )
                 last_sample = sample["at"]
-                record("sample", **sample)
+                record("sample", load_page_in_allowance=load_allowance, **sample)
                 if paging_streak >= 3:
                     raise RuntimeError("hard page-in rate breached")
-            if ledger["started"] is not None and now - ledger["started"] > 3600:
+                if page_out_streak >= 3:
+                    raise RuntimeError("page-out rate breached")
+            if (
+                ledger["started"] is not None
+                and now - ledger["started"] - ledger.get("idle_approval_seconds", 0)
+                > 3600
+            ):
                 raise RuntimeError("aggregate live time budget exhausted")
             return sample
 
@@ -295,9 +316,9 @@ def main():
             "--metrics",
         ]
         record("launch", command=command, python=sys.version)
+        load_start = time.monotonic()
         server = spawn(command, "backend")
         wire = Wire(f"http://127.0.0.1:{port}", token, record, consume_request)
-        loaded = threading.Event()
         load_error = []
 
         def readiness():
@@ -322,7 +343,6 @@ def main():
                     time.sleep(0.5)
 
         threading.Thread(target=readiness, daemon=True).start()
-        load_start = time.monotonic()
         while not loaded.is_set():
             observe()
             if server.poll() is not None:

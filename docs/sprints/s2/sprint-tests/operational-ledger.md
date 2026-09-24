@@ -79,3 +79,20 @@ the model for the first time. A bounded diagnostic amendment would:
 This is a reviewable proposal, not active policy. No next load is authorized
 under this amendment until the owner accepts it. Operational confidence,
 useful-task execution, cancellation coverage and official suites remain pending.
+
+## Owner continuation — 2026-09-24
+
+The owner's “continue” in direct response to the proposed amendment approves
+the bounded 60-second loading adjustment above. It now supersedes only the
+load-phase page-in clause; the locked plans remain preserved as historical
+approval evidence. Page-out observation and its stop predicate are active.
+
+The old timer also charged the overnight approval wait while all lab jobs were
+stopped. On resumption, retain `started`, launches, requests and every receipt,
+and record the idle approval interval separately. Its conservative start is
+120 seconds after the previous turn's last evidence commit (`04d40088b5`,
+2026-09-24T04:44:11Z); its end is this turn's first host reading (monotonic
+111250.875). Thus all earlier development time plus two minutes for final
+handoff stays charged. Only the stopped, overnight human wait is excluded;
+the 60-minute experiment-work allowance is not renewed. Future pauses must
+be recorded explicitly at the point of handoff, never inferred by a launcher.

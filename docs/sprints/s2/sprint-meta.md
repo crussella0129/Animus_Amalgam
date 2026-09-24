@@ -20,3 +20,6 @@
   measurement does not identify pagefile versus model-file reads. See the
   [operational ledger and proposed bounded amendment](sprint-tests/operational-ledger.md).
   Keep T-208 and T-209 pending; no inference or formal suite has yet run.
+- 2026-09-24 continuation: owner approved the bounded loader amendment. The
+  load-phase blocker is ready for replay; stopped overnight approval time is
+  recorded separately without resetting consumed work or launch/request counts.
