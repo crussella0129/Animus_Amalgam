@@ -37,3 +37,5 @@
   - [Pilot design inputs](sprints/s2/sprint-research/pilot-design.md)
   - [Draft build plan](sprints/s2/sprint-plans/draft-build-plan.md)
   - [Draft test plan](sprints/s2/sprint-plans/draft-test-plan.md)
+  - [Build plan](sprints/s2/sprint-plans/build-plan.md)
+  - [Test plan](sprints/s2/sprint-plans/test-plan.md)

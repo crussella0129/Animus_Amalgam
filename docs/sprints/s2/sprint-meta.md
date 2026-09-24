@@ -8,6 +8,6 @@
 - **Bundle version:** 0.22.0
 - **Exit status:** in-progress
 - **Token count:** (filled at Loop Phase if observable)
-- **Summary:** (one-line description of sprint goal, filled after Plan Phase)
-- **Intents:** (filled after Plan Phase)
+- **Summary:** Operate isolated 27B Hermes, repair encountered failures, then verify the bounded runtime formally.
+- **Intents:** [INT-0004](../../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completion evidence:** (filled at Loop Phase)

@@ -2,8 +2,8 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0004
-- **State:** proposed
-- **Work evidence:** [T-201 and T-202 in the backlog](../work/tasks.md)
+- **State:** planned
+- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [T-201 and T-202](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
@@ -124,3 +124,5 @@ cancellable process boundary.
   isolated system, encounter and repair failures, replay, then run official
   unit/integration suites. Added AC7; state remains `proposed`. This changes
   the draft workflow, not the authority to start inference before plan approval.
+- 2026-09-24: owner approved the revised reverse-E2E Sprint 2 plan with
+  “ok now continue”; moved `proposed` → `planned`, linked work evidence.
