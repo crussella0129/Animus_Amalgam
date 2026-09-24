@@ -59,7 +59,7 @@ def _rendered_prefix_is_honest(prefix):
 
 
 def test_published_evidence_excludes_private_paths_and_credentials():
-    for path in [QUALIFICATION / "attempts.json", *QUALIFICATION.glob("manifests/*")]:
+    for path in QUALIFICATION.rglob("*.json"):
         leaks = PRIVATE_PATTERNS.findall(path.read_text(encoding="utf-8"))
         assert not leaks, (path.name, leaks[:3])
 
@@ -123,6 +123,15 @@ def test_changed_parameter_artifact_or_source_refuses_launch(
     )
     change(m, commit, artifacts)
     assert expected in identity_mismatch(m, commit[-1], artifacts, False)
+
+
+def test_manifest_frozen_from_a_dirty_tree_refuses_launch(manifest):
+    # Re-freeze with a valid digest so the source_dirty branch, not the digest, decides.
+    dirty = {**copy.deepcopy(manifest), "source_dirty": True}
+    dirty["id"] = manifest_digest(dirty)
+    assert "source revision" in identity_mismatch(
+        dirty, dirty["source_commit"], _artifacts(dirty), False
+    )
 
 
 def test_uncommitted_changes_at_launch_refuse_a_valid_manifest(manifest):
