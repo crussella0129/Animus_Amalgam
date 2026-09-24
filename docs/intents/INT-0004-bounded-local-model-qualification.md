@@ -18,10 +18,13 @@ custom provider and an isolated profile. It compares the endpoint's native
 tool behavior with a static constrained action protocol at the same model and
 resource settings.
 
-The default pilot favors a smaller model that leaves memory and latency
-headroom. The observed Qwen3.8-27B artifact remains a bounded comparison. The
-owner must select the initial artifact/priority and acceptable interactive
-latency before T-201 executes.
+The owner selected the existing Qwen3.8-27B artifact as the first pilot and
+300 seconds as its total request deadline on 2026-09-23. The owner also
+explained that the live Hermes configuration allowed three hours because
+some historical requests exceeded five minutes. The pilot deadline bounds
+this small experiment; it is not a claim about all acceptable product latency
+and does not change that live configuration. The smaller local 7B artifact
+remains a possible later comparison, not an automatic fallback.
 
 Boundaries and non-goals:
 
@@ -72,10 +75,10 @@ cancellable process boundary.
 
 ## Alternatives
 
-- **Begin with the 27B model at the largest declared context.** Rejected as a
-  default because the supplied run lost host responsiveness and did not
-  establish a safe envelope. It remains a bounded comparison if it passes the
-  same gate.
+- **Begin with the 27B model at the largest declared context.** Rejected:
+  the supplied run lost host responsiveness and did not establish a safe
+  envelope. The owner's selected 27B-first pilot instead uses a small fixed
+  context and the same memory/cancellation gates.
 - **Use Hermes's managed local runtime and lower compression settings.**
   Rejected for qualification because managed growth occurs before compression
   and would change the tested allocation.
@@ -96,3 +99,7 @@ cancellable process boundary.
 - 2026-09-23: Sprint 1 test review made L-08's group-preserving,
   tokenizer-aware compaction boundary explicit in acceptance criterion 5 and
   the rationale; state remains `proposed`.
+- 2026-09-23: owner selected existing Qwen3.8-27B first and a 300-second
+  pilot request deadline, with historical three-hour live timeouts retained
+  as context. Updated priority and latency boundaries; state remains
+  `proposed` pending the Sprint 2 plan gate.

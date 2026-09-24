@@ -31,3 +31,7 @@
   - [End-to-end test results](sprints/s1/sprint-tests/e2e-tests.md)
   - [Test critique](sprints/s1/sprint-tests/critique.md)
   - [Test report](sprints/s1/sprint-tests/test-report.md)
+- [Sprint 2](sprints/s2/sprint-meta.md)
+  - [Research report](sprints/s2/sprint-research/research-report.md)
+  - [Local inventory](sprints/s2/sprint-research/inventory.md)
+  - [Pilot design inputs](sprints/s2/sprint-research/pilot-design.md)
