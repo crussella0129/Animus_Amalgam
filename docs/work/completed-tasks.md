@@ -76,3 +76,10 @@
 - **Completed:** 2026-09-24T16:54:16Z
 - **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/run.py, evals/local_qualification/prepare.py, evals/local_qualification/telemetry.py, tests/evals/test_local_qualification_policy.py
 - **Commit:** `501ff12df51b5c390a6fcc8e2bdc6be5d3ccb4d4`
+
+## T-207 (sprint 2)
+- **Description:** Wire the real Hermes entry point and observe requests. D1: the real HermesCLI main path and the real compress_now path sent every request through the lab wire to the pinned amalgam-pilot endpoint, one physical request at a time, with original and bounded bodies recorded and a 128-token backend cap (attempts 06-11); test_local_qualification_wire pins the bound, single forwarding and preserved original. D2: oversized rendered input or a wrong model never reaches generation (wire test; attempt 08 refused 5481 tokens live); auxiliary cancellation covered the actual compression request (attempt 11). Reproduced Hermes defect repaired at its source: the 64K floor now admits an explicitly pinned local custom window only with automatic compression disabled (fa747be391; regression test proven red on the pre-fix code).
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
+- **Completed:** 2026-09-24T16:54:28Z
+- **Files modified:** agent/agent_init.py, evals/local_qualification/driver.py, evals/local_qualification/wire.py, tests/evals/test_local_qualification_wire.py, tests/agent/test_minimum_context_explicit_local.py
+- **Commit:** PENDING
