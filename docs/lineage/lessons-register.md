@@ -20,10 +20,15 @@ or **open question**.
 | L-12 | adopt | Preserve failed, skipped, and externally interrupted qualifications with their denominators and limits. | Language-independent. | [Ferric reported limits](animus-ferric.md#reported-successes-and-their-limits), [Kinesin diagnostics](kinesin.md#failures-and-superseded-claims) |
 | L-13 | adapt | Prefer a cancellable out-of-process serving boundary for the first experiment. | Process boundary is runtime-specific; cancellation requirement is general. | [Ferric ADR-027](animus-ferric.md#failed-and-abandoned-directions), [Hermes decision boundary](hermes-decoding-seams.md#decision-boundary) |
 | L-14 | open question | Build a new decoder only if controlled profiling finds an enforcement-coverage or mask-performance gap in existing engines. | Algorithm and tokenizer integration are engine-specific. | [Architecture recommendation](architecture-comparison.md#recommended-first-architecture) |
+| L-15 | adopt | On CPU-offloaded local models, budget decoded tokens per step, especially reasoning; they dominate steady-state wall time. | Decode rates are host/model-specific; the budgeting rule is general. | [Direction review](direction-review.md#where-the-time-actually-goes), [local session](local-session-case-study.md#measured-trajectory) |
+| L-16 | open question | Hybrid/recurrent models reuse cache only back to a checkpoint. Keep rendered history append-only and measure uncached tokens per turn. Thinking-enabled history is untested. | Checkpoint behavior is backend/architecture-specific; per-turn measurement is general. | [Direction review](direction-review.md#where-the-time-actually-goes), [Sprint 2 attempt 10](../sprints/s2/sprint-tests/operational-ledger.md#attempt-10--useful-task-continued-session-and-main-cancellation-succeed) |
+| L-17 | adopt | Stop on memory-pressure signals (available RAM, page-out, reserves), not global page-in. Page-in also counts file and executable-image reads. | Counter names are Windows-specific; the signal choice is general. | [Sprint 2 ledger](../sprints/s2/sprint-tests/operational-ledger.md) |
+| L-18 | adopt | Operate the real system inside a pre-approved envelope. Reserve owner approval for new resource classes, not individual attempts. | Process rule; language-independent. | [Direction review](direction-review.md#what-went-wrong-and-the-corrections) |
+| L-19 | adopt | Keep system-prompt bytes identical across sessions for local serving. Hermes's fail-open environment probe appeared in some sessions and not others (1169 vs 1127 tokens), which defeats cross-session prefix reuse and paired arms. Disable it (`agent.environment_probe: false`) or pin it. | The probe is Hermes-specific; the determinism rule is general. | [Sprint 2 E2E results](../sprints/s2/sprint-tests/e2e-tests.md#d1-prompt-stability--within-a-session-only) |
 
 ## Consequence for detailed intents
 
-The first implementation intents must cite L-01 through L-14 as applicable,
+The first implementation intents must cite L-01 through L-19 as applicable,
 state which backend-specific assumptions they qualify, and make L-04/L-07
 metrics observable. The bounded evaluation protocol decides whether L-03's
 adaptive policy improves on static constraints and whether L-14 advances.

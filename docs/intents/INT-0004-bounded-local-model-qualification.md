@@ -2,12 +2,12 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0004
-- **State:** proposed
-- **Work evidence:** [T-201 and T-202 in the backlog](../work/tasks.md)
+- **State:** active
+- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 to T-209 completions](../work/completed-tasks.md); [T-202 and T-211](../work/tasks.md)
 - **Completion evidence:** none
-- **Code evidence:** none
-- **Test evidence:** none
-- **Documentation evidence:** [evaluation protocol](../lineage/local-evaluation-protocol.md)
+- **Code evidence:** [operational lab](../../evals/local_qualification/README.md); [explicit local context admission](../../agent/agent_init.py)
+- **Test evidence:** [Sprint 2 test report](../sprints/s2/sprint-tests/test-report.md); [Sprint 2 live E2E results](../sprints/s2/sprint-tests/e2e-tests.md); [Sprint 2 unit results](../sprints/s2/sprint-tests/unit-tests.md); [Sprint 2 integration results](../sprints/s2/sprint-tests/integration-tests.md)
+- **Documentation evidence:** [evaluation protocol](../lineage/local-evaluation-protocol.md); [operational ledger](../sprints/s2/sprint-tests/operational-ledger.md); [direction review](../lineage/direction-review.md)
 
 ## Intent
 
@@ -18,10 +18,21 @@ custom provider and an isolated profile. It compares the endpoint's native
 tool behavior with a static constrained action protocol at the same model and
 resource settings.
 
-The default pilot favors a smaller model that leaves memory and latency
-headroom. The observed Qwen3.8-27B artifact remains a bounded comparison. The
-owner must select the initial artifact/priority and acceptable interactive
-latency before T-201 executes.
+The owner selected the existing Qwen3.8-27B artifact as the first pilot and
+300 seconds as its total request deadline on 2026-09-23. The owner also
+explained that the live Hermes configuration allowed three hours because
+some historical requests exceeded five minutes. The pilot deadline bounds
+this small experiment; it is not a claim about all acceptable product latency
+and does not change that live configuration. The smaller local 7B artifact
+remains a possible later comparison, not an automatic fallback.
+
+Development follows the owner's reverse-E2E workflow: operate actual Hermes
+in a disposable environment, reproduce failures while doing useful work,
+make focused repairs, and replay the failed operation. Official unit and
+integration suites follow demonstrated operational confidence. A growing
+fixture suite or a synthetic response alone cannot substitute for operating
+the system. Basic build checks and a practical stop-control check are part
+of bringing up the environment, not a suite-first development gate.
 
 Boundaries and non-goals:
 
@@ -59,6 +70,12 @@ Boundaries and non-goals:
 6. Static constraints advance only if they improve valid execution or
    independently checked completion without exceeding the same resource and
    authority envelope. A negative or smaller-workload result is acceptable.
+7. Development evidence records the actual operation, observed failure,
+   diagnosis, repair revision and replay outcome. Formal unit/integration
+   testing follows successful operation and repair replay in the isolated
+   environment; regression coverage targets observed failures and essential
+   contracts. Resource-blocked operation remains unproven, not replaced by
+   passing mocks or declared operational confidence.
 
 ## Rationale
 
@@ -72,10 +89,10 @@ cancellable process boundary.
 
 ## Alternatives
 
-- **Begin with the 27B model at the largest declared context.** Rejected as a
-  default because the supplied run lost host responsiveness and did not
-  establish a safe envelope. It remains a bounded comparison if it passes the
-  same gate.
+- **Begin with the 27B model at the largest declared context.** Rejected:
+  the supplied run lost host responsiveness and did not establish a safe
+  envelope. The owner's selected 27B-first pilot instead uses a small fixed
+  context and the same memory/cancellation gates.
 - **Use Hermes's managed local runtime and lower compression settings.**
   Rejected for qualification because managed growth occurs before compression
   and would change the tested allocation.
@@ -90,9 +107,24 @@ cancellable process boundary.
 - The selected first model may be smaller than the best-quality candidate.
 - Fixed-context isolation gives up managed-runtime convenience in exchange for
   a stable experiment boundary.
+- Focused repairs to reproduced Hermes integration defects are in scope;
+  architecture expansion still requires its own evidence and intent. Keep
+  exploratory repair runs separate from the frozen comparative trials.
 
 ## Transition history
 - 2026-09-23: created as `proposed` from Sprint 1 lessons L-04, L-07, L-09, L-12, and L-13.
 - 2026-09-23: Sprint 1 test review made L-08's group-preserving,
   tokenizer-aware compaction boundary explicit in acceptance criterion 5 and
   the rationale; state remains `proposed`.
+- 2026-09-23: owner selected existing Qwen3.8-27B first and a 300-second
+  pilot request deadline, with historical three-hour live timeouts retained
+  as context. Updated priority and latency boundaries; state remains
+  `proposed` pending the Sprint 2 plan gate.
+- 2026-09-23: owner clarified reverse-E2E development order: operate an
+  isolated system, encounter and repair failures, replay, then run official
+  unit/integration suites. Added AC7; state remains `proposed`. This changes
+  the draft workflow, not the authority to start inference before plan approval.
+- 2026-09-24: owner approved the revised reverse-E2E Sprint 2 plan with
+  “ok now continue”; moved `proposed` → `planned`, linked work evidence.
+- 2026-09-24: clean independent plan review and canonical lock completed;
+  moved `planned` → `active` as the isolated-environment build began.

@@ -1997,21 +1997,32 @@ def _build_context_engine(agent, _agent_cfg, cs, _custom_providers, _effective_c
 
 
 def _enforce_minimum_context(agent):
-    # Reject windows below the 64K floor needed for reliable tool-calling; an explicit
-    # positive model.context_length on LM Studio is allowed below the floor.
+    # Keep the automatic 64K floor. Explicit local custom windows also support
+    # bounded experiments with automatic compression disabled, like LM Studio's pin.
     _ctx = getattr(agent.context_compressor, "context_length", 0)
     # A local Ollama server serves num_ctx, not the GGUF's advertised window: a Modelfile or
     # model.ollama_num_ctx at 64K+ is a usable window even when the metadata says 40K (#100437).
     # Only a local endpoint can honour num_ctx, so a stale override never admits a hosted model.
     if agent._ollama_num_ctx and agent.base_url and is_local_endpoint(agent.base_url):
         _ctx = max(_ctx or 0, agent._ollama_num_ctx)
-    _allow_lmstudio_explicit_below_floor = (
-        str(agent.provider or "").strip().lower() == "lmstudio"
+    _provider = str(agent.provider or "").strip().lower()
+    _allow_explicit_below_floor = (
+        (
+            _provider == "lmstudio"
+            or (
+                _provider == "custom"
+                and is_local_endpoint(agent.base_url or "")
+                and not agent.compression_enabled
+                and agent._config_context_length == _ctx
+                # A served window (num_ctx) must equal the pin; max() above hides a smaller one.
+                and agent._ollama_num_ctx in (None, agent._config_context_length)
+            )
+        )
         and isinstance(agent._config_context_length, int)
         and not isinstance(agent._config_context_length, bool)
         and agent._config_context_length > 0
     )
-    if _ctx and _ctx < MINIMUM_CONTEXT_LENGTH and not _allow_lmstudio_explicit_below_floor:
+    if _ctx and _ctx < MINIMUM_CONTEXT_LENGTH and not _allow_explicit_below_floor:
         floor_k = MINIMUM_CONTEXT_LENGTH // 1000
         if agent.base_url and is_local_endpoint(agent.base_url):
             # Any OpenAI-compatible local server (llama.cpp, vLLM, Ollama, ...) — the window is the

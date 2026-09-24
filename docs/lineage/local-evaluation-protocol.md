@@ -7,7 +7,7 @@ live Hermes configuration.
 
 ## Questions in order
 
-1. Can a smaller local model complete useful Hermes tasks while the host
+1. Can the selected local model complete useful Hermes tasks while the host
    remains responsive inside a fixed resource/context envelope? (L-07)
 2. At the same model and budget, do explicit static constraints improve action
    and task outcomes over the endpoint's native tool behavior? (L-01, L-04)
@@ -16,11 +16,10 @@ live Hermes configuration.
 4. Does profiling expose a constraint-coverage or mask-performance gap that
    justifies another engine or a new decoder? (L-14)
 
-The default first pilot favors responsiveness and resource headroom with a
-smaller model; the observed 27B artifact remains a bounded comparison. The
-owner may reverse that priority before a future run. This unresolved product
-preference and the exact candidate artifacts belong in the experiment
-manifest, not in claims made by this sprint.
+Sprint 1 proposed a smaller-model first pilot. On 2026-09-23 the owner
+selected the existing Qwen3.8-27B first, with a 300-second total request
+deadline for Sprint 2. Preserve the exact artifact and choice in the manifest.
+The smaller local model is a later comparison, not an automatic fallback.
 
 ## Isolation and manifest
 
@@ -53,10 +52,38 @@ instructional skills or change tools mid-conversation.
 
 ## Smoke and cancellation gate
 
+### Development order
+
+Following the owner's reverse-E2E clarification, bring up a disposable Hermes
+environment and operate it before running official unit/integration suites.
+Use only the instrumentation needed to observe and stop that environment.
+Check the external stop control practically during bring-up; do not build a
+large fixture matrix before touching the real application.
+
+After the small smoke and cancellation controls work, drive a short real
+workflow: inspect a fixture, edit it, execute a checker, encounter a failing
+command and recover. Observe follow-up turns and bounded context pressure.
+Reproduce each failure, diagnose it, repair the relevant code/configuration
+and replay the same operation. Preserve all failed attempts and revision
+identities. Changing a configuration between attempts creates a new manifest;
+it never resets the overall run budget or permits weakening stop gates.
+
+Operational confidence requires independently checked task completion,
+successful replay of repaired paths in fresh and continued sessions, and
+working main/auxiliary cancellation. Then run the affected official suites
+and add focused regression coverage for failures actually found. If the host
+cannot admit the model, operational confidence remains pending; green mocks
+cannot replace it. Development exploration is separate from the subsequent
+frozen, paired qualification experiment.
+
+### Per-attempt limits
+
 Start with a synthetic request of at most 4K input and 128 requested output
 tokens when the measured fixed prefix permits it. The provisional limits are:
 
-- 120 seconds total for each smoke request;
+- 300 seconds total for each Sprint 2 smoke request, including prefill
+  (owner-selected before execution; replaces the original provisional
+  120-second value);
 - at least 4 GiB available system RAM and 1 GiB dedicated VRAM headroom
   before launch and throughout the gate;
 - no automatic context growth, no paging storm, no unbounded retry, and no
@@ -70,6 +97,12 @@ These are conservative starting gates, not product promises. Inventory may
 show that an arm cannot safely fit; record it as `not-run: resource gate`
 instead of weakening the limit during execution. The operator retains a stop
 mechanism outside the model's authority.
+
+The owner's live Hermes timeout was three hours to accommodate historical
+requests longer than five minutes. Do not alter that configuration. The pilot
+deadline classifies a small request as completed or timed out; it does not
+establish a universal product-latency requirement. No time or memory gate is
+relaxed during an attempt.
 
 After the smoke passes, increase context only in predeclared increments up to
 the manifest cap. The run has a maximum request count and total wall time. Stop

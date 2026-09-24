@@ -17,3 +17,4 @@ so the index cannot contradict a chapter.
 | INT-0004 | [Bounded local-model qualification](INT-0004-bounded-local-model-qualification.md) |
 | INT-0005 | [Adaptive action policy at the Hermes provider boundary](INT-0005-adaptive-action-policy.md) |
 | INT-0006 | [Conditional constraint-engine and decoder research](INT-0006-constraint-engine-research.md) |
+| INT-0007 | [Decode budget and cache-stable long local sessions](INT-0007-decode-budget-long-session.md) |
