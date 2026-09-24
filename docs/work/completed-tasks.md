@@ -62,3 +62,10 @@
 - **Completed:** 2026-09-23T15:58:45Z
 - **Files modified:** docs/intents/INT-0003-animus-adaptive-constrained-decoding.md, docs/intents/INT-0004-bounded-local-model-qualification.md, docs/intents/INT-0005-adaptive-action-policy.md, docs/intents/INT-0006-constraint-engine-research.md, docs/intents/README.md, docs/README.md, docs/SUMMARY.md, docs/work/tasks.md
 - **Commit:** `58d756c2df62cdf2a51a129b4355af803aea0ddb`
+
+## T-201 (sprint 2)
+- **Description:** Bring up a disposable environment and record the candidate. M1: every attempt resolves to a published manifest with artifact/tokenizer/template/runtime hashes, source commit, dependencies, limits, task corpus, seed, toolset and an explicit pre-admission `not-measured` rendered prefix. M2: identity/admission refusals are exact (attempts 03-04; `identity_mismatch`/`admitted` contracts). Realized across 1f6abe7eca, 04d40088b5, c42152ca0b and this entry.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
+- **Completed:** 2026-09-24T16:49:29Z
+- **Files modified:** evals/local_qualification/prepare.py, evals/local_qualification/README.md, hermes_cli/local_runtime/gguf.py, docs/sprints/s2/sprint-tests/qualification/manifests/
+- **Commit:** PENDING

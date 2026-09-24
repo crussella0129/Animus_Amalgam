@@ -28,4 +28,15 @@ with `compression.enabled: false`, opts this lab into a bounded small window.
 The fork extends Hermes's existing explicit LM Studio context exception to
 this local custom/no-auto-compression case; automatic and hosted-model floors
 remain. The external wire still tokenizes the complete prompt and refuses
-more than 4096 tokens. No server capacity is fabricated or automatically grown.
+more than the manifest's input ceiling (6144 since the owner's second
+continuation). No server capacity is fabricated or automatically grown.
+
+`policy.py` holds the pure identity, admission and paging-stop decisions that
+`run.py` applies live; `tests/evals/test_local_qualification_*.py` pin them
+and the wire guard. Usage, from the repository root with the disposable venv:
+
+    PYTHONPATH=. <venv>/python evals/local_qualification/prepare.py --model <gguf> --server <llama-server> --lab .hermes-sandbox/s2
+    PYTHONPATH=. <venv>/python evals/local_qualification/run.py --lab .hermes-sandbox/s2 --mode exercise
+
+Commit first: `run.py` refuses a manifest frozen from a different or dirty
+revision. Create `<lab>/STOP` to stop an attempt through the owned cleanup path.
