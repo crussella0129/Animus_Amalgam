@@ -82,4 +82,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completed:** 2026-09-24T16:54:28Z
 - **Files modified:** agent/agent_init.py, evals/local_qualification/driver.py, evals/local_qualification/wire.py, tests/evals/test_local_qualification_wire.py, tests/agent/test_minimum_context_explicit_local.py
-- **Commit:** PENDING
+- **Commit:** `e5965195a85258a3a9f7edaa84d5e128a1cd60e0`
