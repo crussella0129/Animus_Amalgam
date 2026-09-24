@@ -69,7 +69,7 @@ def main():
         provider="custom",
         base_url=args.url,
         api_key="local-pilot",
-        toolsets=["terminal", "file"] if args.mode == "operate" else [],
+        toolsets=["terminal"] if args.mode == "operate" else [],
         reasoning="none",
         max_turns=6,
         run_budget=300,
@@ -120,14 +120,14 @@ def main():
                 "Write a numbered list of 100 distinct prime numbers. No introduction."
             ],
             "operate": [
-                "Read settings.json in the current directory and report retry_limit. Use the file tool.",
-                "Change retry_limit to 3 in settings.json using the file tool. Preserve valid JSON. Then run "
-                + json.dumps(sys.executable)
+                "Use the terminal to read settings.json in the current directory and report retry_limit.",
+                "Use the terminal to change retry_limit to 3 in settings.json. Preserve valid JSON. Then run "
+                + json.dumps(Path(sys.executable).as_posix())
                 + " check.py and report its actual result.",
                 "Run "
-                + json.dumps(sys.executable)
+                + json.dumps(Path(sys.executable).as_posix())
                 + " missing_check.py. When it fails, recover by running "
-                + json.dumps(sys.executable)
+                + json.dumps(Path(sys.executable).as_posix())
                 + " check.py. Report the failure and recovery truthfully.",
             ],
         }[args.mode]

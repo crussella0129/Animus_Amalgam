@@ -111,7 +111,7 @@ def main():
             "status": "not-measured",
             "reason": "server not yet admitted",
         },
-        "tools": {"smoke": [], "operation": ["terminal", "file"]},
+        "tools": {"smoke": [], "operation": ["terminal"], "tool_search": "off"},
     }
     manifest["id"] = json_digest(manifest)
     (lab / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -137,6 +137,7 @@ def main():
         "fallback_models": [],
         "display": {"streaming": True},
         "terminal": {"backend": "local", "cwd": str(lab / "fixture")},
+        "tools": {"tool_search": {"enabled": "off"}},
         "auxiliary": {
             "title_generation": {"enabled": False},
             "compression": {

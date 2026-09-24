@@ -145,3 +145,24 @@ The next owned backend will replay smoke, operate the fixture, then exercise
 main cancellation in fresh CLI processes, leaving the last launch for actual
 auxiliary cancellation. The owner observes the driver's recorded stage rather
 than inferring request purpose from prompt substrings. All budgets stay shared.
+
+## Attempt 08 — title fix succeeds; full tool prompt is too large
+
+Manifest `0c069dc3a608fcfe7a3d646899b19b83bca040efe7c1bf9974c5052902d61c58`
+replayed `AMALGAM_OK` in 10.594 seconds (1127 input tokens; first meaningful
+token at 9.203 seconds), with no automatic-title inference. These fresh-session
+prompts differ, and runtime/cache warmness is uncontrolled; this is not a
+paired speed comparison. The operational request then rendered to 5481 tokens
+and was refused before inference. Its eight exposed schemas included file
+tools plus the search/describe/call bridge introduced by process management.
+The fixture remained unchanged. An independent sentinel process survived the
+owned cleanup. Five launches and three physical requests are consumed.
+
+For the final authorized launch, choose the existing `terminal` toolset alone,
+with tool search disabled using its existing config setting. It can perform
+the same file read/edit/check/recovery task. Preserve its complete production
+instructions and schemas; this changes the selection only at a fresh session
+boundary, not mid-conversation, and does not trim a prompt to evade admission.
+The original 4096-token input gate remains. Attempt useful work and main
+cancellation; auxiliary cancellation will remain pending if the six-launch
+budget is reached. Do not silently start a seventh backend.
