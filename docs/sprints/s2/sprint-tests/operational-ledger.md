@@ -1,7 +1,8 @@
 # Sprint 2 operational development ledger
 
-Official unit/integration suites have not run. Operational confidence is
-pending. These are environment bring-up and actual-operation observations.
+Operational confidence was declared after attempt 11 (see the end of this
+ledger), before any official unit/integration suite ran. Earlier sections are
+the historical bring-up and repair record and are preserved as written.
 
 ## Environment bring-up — 2026-09-24
 
@@ -256,3 +257,90 @@ must restore a context checkpoint at or before the divergence, or reprocess
 from zero. The lab runs with `--ctx-checkpoints 0`. Continued-session turns in
 the next workflow therefore show whether Hermes's re-rendered history stays
 token-identical. That matters more to snowballing than any grammar setting.
+
+## Attempt 10 — useful task, continued session and main cancellation succeed
+
+Manifest `df1d80e16c394a1777ee19827001fe0f116999554e857aebe2dca412db9dcdb5`
+(source `c42152ca0b`) used one owned backend for three fresh Hermes CLI
+processes: smoke, the operational task and main cancellation.
+
+- **Smoke:** exact `AMALGAM_OK`; 1169 input tokens, 12.0 seconds.
+- **Useful task:** in one continued conversation, the real terminal toolset
+  read `settings.json` and reported 2. It changed the value to 3 with a Python
+  JSON rewrite and re-read the file. It then ran the real checker (`CHECK_OK`),
+  ran the deliberately missing script, observed exit code 2 and recovered by
+  rerunning the checker. It reported both the failure and the recovery
+  truthfully. The owner's independent checker then returned exit code 0 and
+  `CHECK_OK`, and the file held `{"retry_limit": 3}`. The task used eight
+  inference requests and five tool executions. Rendered input grew
+  from 3803 to 4543 tokens and stayed under the 6144 ceiling.
+- **Cache behavior (hybrid model, zero checkpoints):** after the first cold
+  3803-token prefill (29.8 s at 127.8 tokens/s), every continued request
+  processed only its new suffix. Uncached prompt tokens were 40, 70, 47, 37,
+  93, 124 and 37, each in about one second. Hermes's re-rendered history
+  therefore stayed token-identical with thinking disabled. The rollback risk
+  recorded above did not occur in this configuration. Thinking-enabled
+  history is untested.
+- **Where time went:** decode ran at 3.59–3.69 tokens/s. After the cold
+  prefill, each agent step spent 1 s on prefill and 2–19 s on decode (7–69
+  tokens). The steady-state bottleneck on this host is decode speed.
+- **Main cancellation:** the trigger fired with the slot actively processing
+  request 15. The graceful interrupt, owned-job close and listener closure
+  completed in 2.625 s (limit 5 s). All three owned roots exited 0.
+- **Resources:** minimum sampled available RAM was 5.73 GiB, minimum free VRAM
+  3.02 GiB and maximum page-out 0.2 MiB/s. Twelve samples exceeded 64 MiB/s
+  page-in, but no three consecutive post-load samples did, so the guard did
+  not stop the attempt. The GPU peaked at 61 °C. RAM sat below the 8 GiB
+  page-in-pressure line for 196 of 206 samples, so the conditional stop was
+  armed for most of the run and was not merely inactive.
+
+## Attempt 11 — auxiliary (compression) cancellation succeeds
+
+The real `compress_now` path sent one 1875-token summary request. Production
+compression sent no output cap; the wire applied the lab's 128-token limit.
+The trigger fired with the slot actively processing. Hermes's own interrupt
+closed the connection at 0.61 s. All owned roots exited 0 by 1.22 s and the
+listener closed at 1.78 s.
+
+## Operational confidence — declared after attempt 11, before formal suites
+
+The plan's criteria are met by receipts that predate every official test run
+in this sprint:
+
+1. Independently checked useful-task completion (attempt 10 independent
+   checker).
+2. Repaired paths replayed in fresh sessions and in a continued session. The
+   replays cover the explicit-context admission (06), disabled title
+   inference (07), terminal-only toolset (08) and conditional page-in policy
+   (continuation 2). Attempt 10 used three fresh CLI processes, and its
+   operation was a three-turn continued conversation.
+3. Main and auxiliary cancellation worked within 5 s while the backend was
+   active.
+4. No unresolved blocking defect. One non-blocking harness defect remains:
+   the child environment omits `SYSTEMDRIVE`, so a tool created a literal
+   `%SystemDrive%` directory in the fixture. It did not affect results.
+
+Aggregate after attempt 11: eleven attempts, eight launches, sixteen inference
+requests and 3125.8 charged seconds. Official unit/integration verification
+begins now.
+
+## Attempts 12–13 — live replay of the refactored harness
+
+For the formal contract tests, `run.py`'s inline identity, admission and
+paging decisions were extracted, unchanged, into `policy.py` (T-206). The
+refactor was then replayed live from its own clean revision (manifest
+`e1be868bc6ea4d283d38da2987d7b8dd4192e6e42ac4eff17e6422ac9d366166`).
+
+- **Attempt 12:** identity verification and ten seconds of live baseline
+  sampling ran through the extracted guard. Admission then refused the launch
+  correctly: 17,090,760,704 RAM bytes were available against 17,238,933,504
+  required, after Windows memory compression grew during the test run. No
+  launch or request was used, and there was no automatic retry.
+- **Attempt 13:** the owner closed desktop applications to free memory. The
+  deliberate re-attempt loaded the backend and returned exact `AMALGAM_OK`
+  (1127 input tokens, 10.5 s). Minimum sampled RAM was 8.25 GiB and page-out
+  0. Owned cleanup took 1.08 s and the listener closed.
+
+Final aggregate: thirteen attempts, nine of nine launches, seventeen of
+eighteen requests and 3,209 charged seconds. The launch allowance is
+exhausted, so any further live work belongs to the next sprint's envelope.

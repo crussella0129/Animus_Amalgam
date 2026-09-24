@@ -83,3 +83,10 @@
 - **Completed:** 2026-09-24T16:54:28Z
 - **Files modified:** agent/agent_init.py, evals/local_qualification/driver.py, evals/local_qualification/wire.py, tests/evals/test_local_qualification_wire.py, tests/agent/test_minimum_context_explicit_local.py
 - **Commit:** `e5965195a85258a3a9f7edaa84d5e128a1cd60e0`
+
+## T-208 (sprint 2)
+- **Description:** Operate isolated 27B Hermes; diagnose, repair and replay failures. R1: admission refusals recorded exact shortfalls with zero inference (attempts 03, 04, 12). R2: smokes ran inside the frozen envelope with independent answer checks, timing/cache observations and resource extrema (07, 08, 09, 10, 13). R3: main (10) and auxiliary compression (11) cancellation were each triggered with the slot processing and finished owned cleanup in 2.6 s and 1.8 s. R4: the ledger links every failure, diagnosis, repair revision and replay. Attempt 10 completed the independently checked read/edit/check/recover task in a continued session. Operational confidence was declared after attempt 11, before any formal suite ran.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
+- **Completed:** 2026-09-24T16:59:31Z
+- **Files modified:** docs/sprints/s2/sprint-tests/operational-ledger.md, docs/sprints/s2/sprint-tests/qualification/attempts.json, docs/sprints/s2/sprint-tests/qualification/manifests/, evals/local_qualification/{driver,run,prepare,wire,telemetry}.py (repair commits d09b9470b3 through c42152ca0b)
+- **Commit:** PENDING
