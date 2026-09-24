@@ -1,8 +1,9 @@
 # Sprint 2 operational development ledger
 
-Operational confidence was declared after attempt 11 (see the end of this
-ledger), before any official unit/integration suite ran. Earlier sections are
-the historical bring-up and repair record and are preserved as written.
+Operational confidence criteria were met by attempt 11 (ended 16:19:33Z),
+before any formal test ran. The confidence text itself was written at about
+16:28Z, after the first focused formal run began (about 16:21Z). Earlier
+sections are the historical bring-up and repair record, preserved as written.
 
 ## Environment bring-up — 2026-09-24
 
@@ -302,7 +303,7 @@ The trigger fired with the slot actively processing. Hermes's own interrupt
 closed the connection at 0.61 s. All owned roots exited 0 by 1.22 s and the
 listener closed at 1.78 s.
 
-## Operational confidence — declared after attempt 11, before formal suites
+## Operational confidence — criteria met by attempt 11, before formal suites
 
 The plan's criteria are met by receipts that predate every official test run
 in this sprint:
@@ -344,3 +345,23 @@ refactor was then replayed live from its own clean revision (manifest
 Final aggregate: thirteen attempts, nine of nine launches, seventeen of
 eighteen requests and 3,209 charged seconds. The launch allowance is
 exhausted, so any further live work belongs to the next sprint's envelope.
+
+## Time-accounting correction (test critique C-020)
+
+The second idle interval (monotonic 112853.2 → 117644.2, 4791.0 s) is labeled
+in the private ledger as an owner-approval wait. It actually spans the
+previous agent's handoff, an unknown owner-response delay, and the new agent's
+direction review and harness edits, with no lab process running. Totals at the
+end of each attempt:
+
+| Accounting | 10 | 11 | 12 | 13 |
+|---|---|---|---|---|
+| Wall clock, interval 2 excluded | 3,104 s | 3,208 s | 5,359 s | 5,570 s |
+| Wall clock, interval 2 charged (repairs count) | 7,895 s | 7,999 s | 10,150 s | 10,361 s |
+| Attempt-scoped (introduced here, **unratified**) | — | — | — | 3,209 s total |
+
+Under the originally approved rule ("including repairs"), all of attempts
+10–13 exceed the 60-minute allowance. Only attempt-scoped charging keeps them
+inside it, and the owner has not ratified that change. The checkpoint asks for
+ratification. Until then, attempts 10–13 are recorded as outside the
+originally approved time budget, though inside every resource and safety stop.

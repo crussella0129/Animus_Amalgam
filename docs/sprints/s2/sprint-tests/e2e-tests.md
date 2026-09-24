@@ -41,7 +41,10 @@
 - background title inference (07→08)
 - tool surface (08→09)
 - driver completion check (09→10)
-- policy extraction (T-206; replayed in 12–13)
+
+**Refactor replayed** (not a defect repair): the T-206 policy extraction was
+replayed live in attempts 12–13. Later extractions made in response to the
+critique are replayed by T-211.
 
 **Envelope amendments, which are not defect repairs** (owner-approved
 continuations):
@@ -54,15 +57,19 @@ continuations):
 The useful task peaked at 4543 rendered input tokens (attempt 10, request
 14). The locked 4096 ceiling would therefore not have admitted it. The
 **attempt-scoped time charging** used from attempt 10 was introduced by the
-agent and flagged, but the owner has not yet explicitly ratified it. Under the
-original wall-clock accounting since the first launch, attempts 10–13 fall
-outside the approved 60 minutes.
+agent and is **unratified**. Under the originally approved rule (wall clock,
+repairs charged), attempts 10–13 all exceed the 60-minute allowance. If the
+handoff and review interval is instead treated as idle, attempts 10–11 fit
+(3,104 s and 3,208 s) and 12–13 exceed it. The ledger's
+[time-accounting correction](operational-ledger.md#time-accounting-correction-test-critique-c-020)
+has the computation. Owner ratification is requested at the checkpoint.
 
 ## D1 prompt stability — within a session only
 
 Within one conversation, the serialized prompt stayed append-only. The
 uncached suffixes in attempt 10 were 40, 70, 47, 37, 93, 124 and 37 tokens.
-**Across sessions it did not stay stable.** The same no-tool smoke rendered
+**Across sessions it did not stay stable, so D1's stable-bytes clause fails
+across sessions.** The same no-tool smoke rendered
 to 1169 tokens in attempts 07 and 10 and to 1127 in 08, 09 and 13, although
 configuration and effective code were unchanged. A diff of the private
 prompts finds exactly one differing line in the system prompt:

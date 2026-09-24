@@ -31,8 +31,9 @@
 - 2026-09-24 resolved: the owner answered “continue” and asked for the
   direction to be checked. The session moved from GPT-6 (Codex) to Claude
   Opus 5.5 (Claude Code). The approved continuation (6144-token input, nine
-  launches, RAM-conditional page-in stop), plus attempt-scoped time charging,
-  unblocked the loop. Attempts 10–11 completed the useful task, the
+  launches, RAM-conditional page-in stop), plus agent-introduced
+  attempt-scoped time charging (unratified; under the original rule, attempts
+  10–13 exceed the 60-minute allowance), unblocked the loop. Attempts 10–11 completed the useful task, the
   continued session and both cancellations. Attempt 13 replayed the
   refactored harness after the owner freed memory. See the
   [direction review](../../lineage/direction-review.md).

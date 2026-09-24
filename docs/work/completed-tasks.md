@@ -97,3 +97,10 @@
 - **Completed:** 2026-09-24T18:22:29Z
 - **Files modified:** docs/sprints/s2/sprint-tests/unit-tests.md, docs/sprints/s2/sprint-tests/integration-tests.md, docs/sprints/s2/sprint-tests/e2e-tests.md, docs/sprints/s2/sprint-meta.md, docs/intents/INT-0004-bounded-local-model-qualification.md
 - **Commit:** `cab55c15dbd2211f48d80fc1d505d9cae1fb3e7d`
+
+## Corrections to sprint 2 entries (test critique, 2026-09-24)
+- **T-201:** Full M1 identity (interpreter, task corpus, tokenizer, template and seed) holds only for manifests from attempt 06 onward. Attempts 01–05 used incomplete bring-up manifests and ran zero inference; the receipt audit enforces that distinction.
+- **T-206:** A sentinel process was running only during attempts 08–09. Cleanup of at most 5 s holds for every attempt, per the receipt audit.
+- **T-208:** The operation that met the confidence criteria completed at 16:19:33Z (attempt 11). The confidence text was recorded after the first formal test run began (about 16:21Z). Smokes 07–09 were verified after the fact. Uncached and decoded token counts are published only for attempts 10–13.
+- **T-209:** The final Sprint 2 test set is 25 new or changed tests (policy 14, context floor 6, wire 5). The privacy screen is `test_published_evidence_excludes_private_paths_and_credentials`.
+- **Commit:** none (correction note; the corrected evidence is in the Sprint 2 test report)

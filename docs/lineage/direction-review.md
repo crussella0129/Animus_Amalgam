@@ -41,7 +41,7 @@ and its [sanitized receipts](../sprints/s2/sprint-tests/qualification/attempts.j
 | Problem | Evidence | Correction |
 |---|---|---|
 | The global page-in counter stopped healthy runs. It also counts file and executable-image reads. | Attempts 05 and 09 stopped with RAM ≥ 8.7 GiB available and page-out ≈ 0. | Page-in stops only below 8 GiB available RAM. Page-out, reserves, staleness and deadlines stay unconditional. This is tested in `tests/evals/test_local_qualification_policy.py`. |
-| The experiment clock charged repair time, and every limit change waited on the owner. | Three owner stops, including an overnight wait, across eleven attempts. | Each attempt is charged from start to end of cleanup. Repairs with no model loaded carry no host risk. |
+| The experiment clock charged repair time, and every limit change waited on the owner. | Three owner stops, including an overnight wait, across eleven attempts. | Proposed (agent-introduced, **unratified**): charge each attempt from start to end of cleanup, since repairs with no model loaded carry no host risk. Under the original rule, attempts 10–13 exceed the allowance; see the [ledger correction](../sprints/s2/sprint-tests/operational-ledger.md#time-accounting-correction-test-critique-c-020). |
 | The 4096-token input ceiling left 297 tokens beyond the fixed prompt. | The terminal-only prompt is 3799 tokens. | The ceiling is now 6144 inside the same 8192 context. The task peaked at 4543. |
 
 ## Where the time actually goes

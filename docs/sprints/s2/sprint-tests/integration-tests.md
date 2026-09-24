@@ -32,6 +32,16 @@ Isolation evidence for "no external-provider fallback":
 A request that bypassed the wire would not appear in wire receipts. What rules
 out a successful one is the missing credentials, not the wire.
 
+## Planned test `test_hermes_wire_and_isolation_contract` — disposition
+
+| Planned element | Disposition |
+|---|---|
+| Actual Hermes main/compression imports | Live only (attempts 06–13 main requests; attempt 11 real `compress_now`). There is no offline real-import capture test. |
+| Bounded physical attempts, 128-token cap | Request-level: every forwarded request carried `max_tokens: 128`, proven by the wire test and all live `backend_body` receipts. At the server level, llama-server reported `default_generation_settings.params.n_predict = -1` despite `--predict 128`. The server default is therefore unbounded, and the request cap is the only bound. Backend truncation at 128 was not observed (largest decode 69). D2's output-limit capability clause is **partial**; T-211 carries the decision and the truncation observation. |
+| Stable equivalent request bytes | **Fails across sessions** (environment probe, L-19); stable within a session. |
+| Temporary homes A→B→A | Not done (rationale above); carried by T-211. |
+| Mismatched server/context/rendered-input blocks generation | Unit: `test_ready_server_must_match_the_frozen_candidate` (3 cases). Integration: oversize, tools-overflow, misroute and exhausted-budget wire cases. |
+
 ## Affected-suite regression check
 
 - **Head run:** `HERMES_TEST_WORKERS=16 scripts/run_tests.sh tests/agent/ tests/hermes_cli/test_local_*.py`
@@ -73,7 +83,15 @@ changed three things:
 - made the wire's backend timeout injectable, with the same 2 s default;
 - tightened tests.
 
-These are behavior-preserving and unit-tested. The first launch of T-210
+A second critique round then added more changes:
+
+- a launch-time uncommitted-change refusal (`identity_mismatch(..., source_dirty_now)`,
+  with `run.py` running `git status --porcelain` at launch);
+- in production Hermes, a served window (`num_ctx`) that differs from the pin
+  now disqualifies the explicit-pin exception.
+
+The Hermes change is unit-tested and proven red on the prior code. The lab
+changes are behavior-preserving and unit-tested, and T-211's first launch
 replays them.
 
 ## Deferred with rationale (carried by T-211)

@@ -45,5 +45,7 @@
   - [End-to-end results](sprints/s2/sprint-tests/e2e-tests.md)
   - [Unit test results](sprints/s2/sprint-tests/unit-tests.md)
   - [Integration test results](sprints/s2/sprint-tests/integration-tests.md)
+  - [Test critique, round 1](sprints/s2/sprint-tests/critique-01.md)
+  - [Test critique, round 2](sprints/s2/sprint-tests/critique-02.md)
   - [Test critique](sprints/s2/sprint-tests/critique.md)
   - [Test report](sprints/s2/sprint-tests/test-report.md)
