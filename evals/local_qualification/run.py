@@ -159,13 +159,23 @@ def main():
         source_commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True, timeout=5, cwd=HERE.parents[1]
         ).strip()
+        source_dirty_now = bool(
+            subprocess.check_output(
+                ["git", "status", "--porcelain"],
+                text=True,
+                timeout=10,
+                cwd=HERE.parents[1],
+            ).strip()
+        )
         artifact_sha256 = {}
         for artifact, key in (("model", "model"), ("backend", "server")):
             with Path(paths[key]).open("rb") as stream:
                 artifact_sha256[artifact] = hashlib.file_digest(
                     stream, "sha256"
                 ).hexdigest()
-        mismatch = identity_mismatch(manifest, source_commit, artifact_sha256)
+        mismatch = identity_mismatch(
+            manifest, source_commit, artifact_sha256, source_dirty_now
+        )
         if mismatch:
             raise RuntimeError(mismatch)
         record(

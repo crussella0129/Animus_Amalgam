@@ -19,11 +19,18 @@ def manifest_digest(manifest: dict) -> str:
 
 
 def identity_mismatch(
-    manifest: dict, source_commit: str, artifact_sha256: dict[str, str]
+    manifest: dict,
+    source_commit: str,
+    artifact_sha256: dict[str, str],
+    source_dirty_now: bool,
 ) -> str | None:
     if manifest_digest(manifest) != manifest["id"]:
         return "candidate manifest digest mismatch"
-    if manifest["source_dirty"] or source_commit != manifest["source_commit"]:
+    if (
+        manifest["source_dirty"]
+        or source_dirty_now
+        or source_commit != manifest["source_commit"]
+    ):
         return "source revision differs from frozen candidate"
     for artifact in ("model", "backend"):
         if artifact_sha256.get(artifact) != manifest[artifact]["sha256"]:

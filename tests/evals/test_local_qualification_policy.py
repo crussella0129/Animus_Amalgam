@@ -6,6 +6,7 @@ file/image reads stopped the owner while RAM stayed above 8.7 GiB and page-out w
 
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -25,10 +26,16 @@ QUALIFICATION = ROOT / "docs" / "sprints" / "s2" / "sprint-tests" / "qualificati
 CONTINUATION_MANIFEST = (
     "df1d80e16c394a1777ee19827001fe0f116999554e857aebe2dca412db9dcdb5"
 )
-REQUIRED_FIELDS = {
+BRING_UP_FIELDS = {
     "schema", "source_commit", "source_dirty", "model", "backend", "placement",
     "limits", "owner_choice", "sampling", "dependencies", "rendered_prefix", "tools",
 }  # fmt: skip
+# Full M1 identity (interpreter, task corpus, tokenizer/template, seed) from the first
+# revision that carried it; earlier bring-up manifests must never have run inference.
+FULL_M1_FIELDS = BRING_UP_FIELDS | {"interpreter", "task_corpus_sha256"}
+PRIVATE_PATTERNS = re.compile(
+    r"[A-Za-z]:[\\/]+Users|/Users/|/home/|Bearer\s|\b[0-9a-f]{48}\b"
+)
 
 
 def _load(manifest_id):
@@ -44,18 +51,35 @@ def _artifacts(m):
     return {"model": m["model"]["sha256"], "backend": m["backend"]["sha256"]}
 
 
+def _rendered_prefix_is_honest(prefix):
+    # Either an explicit pre-admission unknown with a reason, or a measured count.
+    if prefix.get("status") == "not-measured":
+        return bool(prefix.get("reason"))
+    return prefix.get("status") == "measured" and isinstance(prefix.get("tokens"), int)
+
+
+def test_published_evidence_excludes_private_paths_and_credentials():
+    for path in [QUALIFICATION / "attempts.json", *QUALIFICATION.glob("manifests/*")]:
+        leaks = PRIVATE_PATTERNS.findall(path.read_text(encoding="utf-8"))
+        assert not leaks, (path.name, leaks[:3])
+
+
 def test_every_published_attempt_resolves_to_a_valid_frozen_manifest():
     attempts = json.loads((QUALIFICATION / "attempts.json").read_text())
     previous = {"launches": 0, "requests": 0}
     for attempt in attempts:
         m = _load(attempt["manifest_id"])
         assert manifest_digest(m) == m["id"] == attempt["outcome"]["manifest_id"]
-        assert REQUIRED_FIELDS <= set(m), attempt["attempt"]
+        assert BRING_UP_FIELDS <= set(m), attempt["attempt"]
+        full_m1 = FULL_M1_FIELDS <= set(m) and all(
+            m["model"].get(k) for k in ("tokenizer_sha256", "template_sha256")
+        )
+        full_m1 = full_m1 and "seed" in m["sampling"]
+        if not full_m1:
+            assert attempt["outcome"]["budget"]["requests"] == 0, attempt["attempt"]
         for artifact in ("model", "backend"):
             assert len(m[artifact]["sha256"]) == 64
-        # A pre-admission manifest labels unknown runtime facts; it never invents them.
-        assert m["rendered_prefix"]["status"] == "not-measured"
-        assert m["rendered_prefix"]["reason"]
+        assert _rendered_prefix_is_honest(m["rendered_prefix"]), attempt["attempt"]
         outcome = attempt["outcome"]
         assert outcome["reason"], "every attempt keeps its stop cause"
         assert outcome["cleanup_seconds"] <= 5
@@ -87,7 +111,9 @@ def test_changed_parameter_artifact_or_source_refuses_launch(
     manifest, change, expected
 ):
     assert (
-        identity_mismatch(manifest, manifest["source_commit"], _artifacts(manifest))
+        identity_mismatch(
+            manifest, manifest["source_commit"], _artifacts(manifest), False
+        )
         is None
     )
     m, artifacts, commit = (
@@ -96,7 +122,14 @@ def test_changed_parameter_artifact_or_source_refuses_launch(
         [manifest["source_commit"]],
     )
     change(m, commit, artifacts)
-    assert expected in identity_mismatch(m, commit[-1], artifacts)
+    assert expected in identity_mismatch(m, commit[-1], artifacts, False)
+
+
+def test_uncommitted_changes_at_launch_refuse_a_valid_manifest(manifest):
+    # The digest and commit still match; only the working tree changed after freezing.
+    assert "source revision" in identity_mismatch(
+        manifest, manifest["source_commit"], _artifacts(manifest), True
+    )
 
 
 def test_admission_requires_measured_capacity_on_each_device(manifest):

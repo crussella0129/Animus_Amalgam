@@ -12,10 +12,12 @@ import pytest
 LOCAL = "http://127.0.0.1:18082/v1"
 
 
-def _build_custom_agent(cfg, base_url=LOCAL, probed_ctx=8192):
+def _build_custom_agent(cfg, base_url=LOCAL, probed_ctx=8192, served_num_ctx=None):
     import agent.context_compressor as cc_mod
 
     with (
+        # The served window a local server reports; never probe the network in tests.
+        patch("agent.agent_init.query_ollama_num_ctx", return_value=served_num_ctx),
         patch("model_tools.get_tool_definitions", return_value=[]),
         patch("model_tools.check_toolset_requirements", return_value={}),
         patch("agent.process_bootstrap.OpenAI"),
@@ -45,19 +47,25 @@ def _cfg(compression=False, **model):
     }
 
 
-def test_pinned_local_window_without_auto_compression_is_admitted():
-    agent = _build_custom_agent(_cfg())
+@pytest.mark.parametrize("served", [None, 8192])
+def test_pinned_local_window_without_auto_compression_is_admitted(served):
+    agent = _build_custom_agent(_cfg(), served_num_ctx=served)
     assert agent.context_compressor.context_length == 8192
 
 
 @pytest.mark.parametrize(
-    "cfg, base_url",
+    "cfg, base_url, served",
     [
-        (_cfg(compression=True), LOCAL),  # automatic compression keeps the floor
-        (_cfg(), "https://example.invalid/v1"),  # only a local server can be pinned
-        (_cfg(ollama_num_ctx=16384), LOCAL),  # served window differs from the pin
+        (_cfg(compression=True), LOCAL, None),  # automatic compression keeps the floor
+        (
+            _cfg(),
+            "https://example.invalid/v1",
+            None,
+        ),  # only a local server can be pinned
+        (_cfg(ollama_num_ctx=16384), LOCAL, None),  # configured served window > pin
+        (_cfg(), LOCAL, 4096),  # detected served window < pin
     ],
 )
-def test_floor_still_applies_outside_the_explicit_local_pin(cfg, base_url):
+def test_floor_still_applies_outside_the_explicit_local_pin(cfg, base_url, served):
     with pytest.raises(ValueError, match="below the minimum"):
-        _build_custom_agent(cfg, base_url=base_url)
+        _build_custom_agent(cfg, base_url=base_url, served_num_ctx=served)

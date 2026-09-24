@@ -2014,6 +2014,8 @@ def _enforce_minimum_context(agent):
                 and is_local_endpoint(agent.base_url or "")
                 and not agent.compression_enabled
                 and agent._config_context_length == _ctx
+                # A served window (num_ctx) must equal the pin; max() above hides a smaller one.
+                and agent._ollama_num_ctx in (None, agent._config_context_length)
             )
         )
         and isinstance(agent._config_context_length, int)
