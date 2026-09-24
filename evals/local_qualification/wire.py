@@ -10,8 +10,17 @@ import urllib.request
 
 
 class Wire:
-    def __init__(self, backend_url, token, record, consume_request, input_limit):
+    def __init__(
+        self,
+        backend_url,
+        token,
+        record,
+        consume_request,
+        input_limit,
+        backend_timeout=2,
+    ):
         self.backend_url, self.token = backend_url, token
+        self.backend_timeout = backend_timeout
         self.record, self.consume_request = record, consume_request
         self.active = None
         self.failure = None
@@ -162,7 +171,7 @@ class Wire:
                 "Authorization": "Bearer " + self.token,
             },
         )
-        with urllib.request.urlopen(request, timeout=2) as response:
+        with urllib.request.urlopen(request, timeout=self.backend_timeout) as response:
             return json.load(response)
 
     def close(self):

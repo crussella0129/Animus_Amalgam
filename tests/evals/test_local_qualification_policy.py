@@ -1,4 +1,4 @@
-"""Sprint 2 lab contracts: frozen identity, per-device admission and paging stops.
+"""Sprint 2 lab contracts: frozen identity, receipts, admission, reserves and paging stops.
 
 The page-in rule is a regression for attempts 05 and 09, where global page-in from
 file/image reads stopped the owner while RAM stayed above 8.7 GiB and page-out was ~0.
@@ -16,35 +16,56 @@ from evals.local_qualification.policy import (
     admitted,
     identity_mismatch,
     manifest_digest,
+    reserve_breached,
+    server_identity_mismatch,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-MANIFESTS = (
-    ROOT / "docs" / "sprints" / "s2" / "sprint-tests" / "qualification" / "manifests"
+QUALIFICATION = ROOT / "docs" / "sprints" / "s2" / "sprint-tests" / "qualification"
+CONTINUATION_MANIFEST = (
+    "df1d80e16c394a1777ee19827001fe0f116999554e857aebe2dca412db9dcdb5"
 )
+REQUIRED_FIELDS = {
+    "schema", "source_commit", "source_dirty", "model", "backend", "placement",
+    "limits", "owner_choice", "sampling", "dependencies", "rendered_prefix", "tools",
+}  # fmt: skip
+
+
+def _load(manifest_id):
+    return json.loads((QUALIFICATION / "manifests" / f"{manifest_id}.json").read_text())
 
 
 @pytest.fixture
 def manifest():
-    frozen = [
-        m
-        for m in (json.loads(p.read_text()) for p in sorted(MANIFESTS.glob("*.json")))
-        if "page_in_stop_below_ram_bytes" in m["limits"]
-    ]
-    assert frozen, "expected a published manifest with the continuation limits"
-    return frozen[0]
+    return _load(CONTINUATION_MANIFEST)
 
 
 def _artifacts(m):
     return {"model": m["model"]["sha256"], "backend": m["backend"]["sha256"]}
 
 
-def test_published_manifest_identity_resolves_to_its_digest(manifest):
-    assert manifest_digest(manifest) == manifest["id"]
-    assert (
-        identity_mismatch(manifest, manifest["source_commit"], _artifacts(manifest))
-        is None
-    )
+def test_every_published_attempt_resolves_to_a_valid_frozen_manifest():
+    attempts = json.loads((QUALIFICATION / "attempts.json").read_text())
+    previous = {"launches": 0, "requests": 0}
+    for attempt in attempts:
+        m = _load(attempt["manifest_id"])
+        assert manifest_digest(m) == m["id"] == attempt["outcome"]["manifest_id"]
+        assert REQUIRED_FIELDS <= set(m), attempt["attempt"]
+        for artifact in ("model", "backend"):
+            assert len(m[artifact]["sha256"]) == 64
+        # A pre-admission manifest labels unknown runtime facts; it never invents them.
+        assert m["rendered_prefix"]["status"] == "not-measured"
+        assert m["rendered_prefix"]["reason"]
+        outcome = attempt["outcome"]
+        assert outcome["reason"], "every attempt keeps its stop cause"
+        assert outcome["cleanup_seconds"] <= 5
+        assert outcome.get("backend_listener_closed", True)
+        budget = outcome["budget"]
+        for counter in ("launches", "requests"):
+            assert previous[counter] <= budget[counter]  # never reset across revisions
+            previous[counter] = budget[counter]
+        assert budget["launches"] <= m["limits"]["max_launches"]
+        assert budget["requests"] <= m["limits"]["max_requests"]
 
 
 @pytest.mark.parametrize(
@@ -59,11 +80,16 @@ def test_published_manifest_identity_resolves_to_its_digest(manifest):
         (lambda m, c, a: a.__setitem__("model", "0" * 64), "model artifact"),
         (lambda m, c, a: a.__setitem__("backend", "0" * 64), "backend artifact"),
         (lambda m, c, a: c.append("f" * 40), "source revision"),
+        (lambda m, c, a: m.__setitem__("source_dirty", True), "digest"),
     ],
 )
 def test_changed_parameter_artifact_or_source_refuses_launch(
     manifest, change, expected
 ):
+    assert (
+        identity_mismatch(manifest, manifest["source_commit"], _artifacts(manifest))
+        is None
+    )
     m, artifacts, commit = (
         copy.deepcopy(manifest),
         _artifacts(manifest),
@@ -84,6 +110,36 @@ def test_admission_requires_measured_capacity_on_each_device(manifest):
     # Spare VRAM cannot pay for missing RAM: the devices are priced separately.
     assert not admitted(
         {"ram_available": cpu - 1, "vram_free": gpu + (8 << 30)}, placement, limits
+    )
+
+
+def test_running_attempt_stops_one_byte_below_either_reserve(manifest):
+    limits = manifest["limits"]
+    ram, vram = limits["ram_reserve_bytes"], limits["vram_reserve_bytes"]
+    assert not reserve_breached(ram, vram, limits)
+    assert reserve_breached(ram - 1, vram, limits)
+    assert reserve_breached(ram, vram - 1, limits)
+
+
+@pytest.mark.parametrize(
+    "props_change, expected",
+    [
+        (lambda p: p.__setitem__("total_slots", 2), "slot"),
+        (lambda p: p["default_generation_settings"].__setitem__("n_ctx", 16384), "context"),
+        (lambda p: p.__setitem__("model_path", "other.gguf"), "model path"),
+    ],
+)  # fmt: skip
+def test_ready_server_must_match_the_frozen_candidate(manifest, props_change, expected):
+    context = manifest["limits"]["context"]
+    props = {
+        "total_slots": 1,
+        "default_generation_settings": {"n_ctx": context},
+        "model_path": "pilot.gguf",
+    }
+    assert server_identity_mismatch(props, "pilot.gguf", context, str.__eq__) is None
+    props_change(props)
+    assert expected in server_identity_mismatch(
+        props, "pilot.gguf", context, str.__eq__
     )
 
 

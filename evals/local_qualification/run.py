@@ -23,6 +23,7 @@ from policy import (
     admitted,
     identity_mismatch,
     reserve_breached,
+    server_identity_mismatch,
 )
 from wire import Wire
 
@@ -325,16 +326,14 @@ def main():
             while time.monotonic() < deadline:
                 try:
                     props = wire.backend("/props")
-                    if (
-                        props["total_slots"] != 1
-                        or props["default_generation_settings"]["n_ctx"] != 8192
-                    ):
-                        load_error.append("server context/slot identity mismatch")
-                    if (
-                        Path(props["model_path"]).resolve()
-                        != Path(paths["model"]).resolve()
-                    ):
-                        load_error.append("server model path mismatch")
+                    mismatch = server_identity_mismatch(
+                        props,
+                        paths["model"],
+                        manifest["limits"]["context"],
+                        lambda a, b: Path(a).resolve() == Path(b).resolve(),
+                    )
+                    if mismatch:
+                        load_error.append(mismatch)
                     record("server_props", props=props)
                     loaded.set()
                     return

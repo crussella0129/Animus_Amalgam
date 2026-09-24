@@ -31,6 +31,21 @@ def identity_mismatch(
     return None
 
 
+def server_identity_mismatch(
+    props: dict, model_path: str, context: int, same_file
+) -> str | None:
+    """Refuse generation unless the ready server is the frozen one-slot
+    candidate. ``same_file`` compares paths so tests need no real files."""
+    if (
+        props["total_slots"] != 1
+        or props["default_generation_settings"]["n_ctx"] != context
+    ):
+        return "server context/slot identity mismatch"
+    if not same_file(props["model_path"], model_path):
+        return "server model path mismatch"
+    return None
+
+
 def admission_requirements(placement: dict, limits: dict) -> tuple[int, int]:
     cpu = (
         placement["cpu_weight_bytes"]
