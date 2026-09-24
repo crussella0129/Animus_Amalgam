@@ -89,4 +89,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completed:** 2026-09-24T16:59:31Z
 - **Files modified:** docs/sprints/s2/sprint-tests/operational-ledger.md, docs/sprints/s2/sprint-tests/qualification/attempts.json, docs/sprints/s2/sprint-tests/qualification/manifests/, evals/local_qualification/{driver,run,prepare,wire,telemetry}.py (repair commits d09b9470b3 through c42152ca0b)
-- **Commit:** PENDING
+- **Commit:** `d5b94380bd035e8798d6d4b04fa2c6766f6e2278`
