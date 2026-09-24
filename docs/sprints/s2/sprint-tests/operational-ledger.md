@@ -231,3 +231,28 @@ Use the first continuation launch for the useful workflow and main cancellation,
 the second for real auxiliary cancellation, with the third reserved for a
 diagnosed repair replay. Operational confidence still requires the actual
 success evidence; approving these changes is not approving a test verdict.
+
+## Owner continuation 2 — 2026-09-24 (agent handoff to Claude Opus 5.5)
+
+The owner answered the proposal above with “continue” and asked for the
+project direction to be checked and improved. The three proposed changes are
+now active: nine cumulative launches, a 6144-token rendered-input ceiling, and
+a post-load page-in stop that applies only below 8 GiB available RAM (page-in
+is still recorded on every sample). All other stops are unchanged.
+
+One accounting correction is made by the new agent and flagged to the owner:
+the 60-minute allowance now charges each attempt from its start to the end of
+cleanup, instead of wall time since the first launch. The allowance bounds
+host exposure; diagnosis and repair with no owned lab process running carry
+no host risk. Previously charged time (2836.9 seconds, including all earlier
+repair time) stays charged, so about 763 seconds of attempt time remain. No
+count is reset.
+
+Direction check before the next launch: the GGUF header shows `qwen35` is a
+hybrid model — 48 Gated DeltaNet recurrent layers and 16 full-attention layers
+(`full_attention_interval` 4) plus one next-token-prediction layer. llama.cpp
+cannot truncate recurrent state. A prompt that diverges from the cached tokens
+must restore a context checkpoint at or before the divergence, or reprocess
+from zero. The lab runs with `--ctx-checkpoints 0`. Continued-session turns in
+the next workflow therefore show whether Hermes's re-rendered history stays
+token-identical. That matters more to snowballing than any grammar setting.

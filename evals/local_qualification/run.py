@@ -76,8 +76,15 @@ def main():
     ledger = (
         json.loads(ledger_path.read_text())
         if ledger_path.exists()
-        else {"started": None, "launches": 0, "requests": 0, "attempts": 0}
+        else {
+            "started": None,
+            "launches": 0,
+            "requests": 0,
+            "attempts": 0,
+            "charged_seconds": 0,
+        }
     )
+    attempt_start = time.monotonic()
     ledger["attempts"] += 1
     attempt = lab / "receipts" / f"attempt-{ledger['attempts']:02d}-{args.mode}"
     attempt.mkdir()
@@ -206,9 +213,13 @@ def main():
                     and now - load_start
                     < manifest["limits"]["load_page_in_allowance_seconds"]
                 )
+                ram_pressure = (
+                    available < manifest["limits"]["page_in_stop_below_ram_bytes"]
+                )
                 paging_streak = (
                     paging_streak + 1
                     if not load_allowance
+                    and ram_pressure
                     and sample["hard_page_in_bytes_per_second"] > 64 << 20
                     else 0
                 )
@@ -218,14 +229,18 @@ def main():
                     else 0
                 )
                 last_sample = sample["at"]
-                record("sample", load_page_in_allowance=load_allowance, **sample)
+                record(
+                    "sample",
+                    load_page_in_allowance=load_allowance,
+                    ram_pressure=ram_pressure,
+                    **sample,
+                )
                 if paging_streak >= 3:
                     raise RuntimeError("hard page-in rate breached")
                 if page_out_streak >= 3:
                     raise RuntimeError("page-out rate breached")
             if (
-                ledger["started"] is not None
-                and now - ledger["started"] - ledger.get("idle_approval_seconds", 0)
+                ledger["charged_seconds"] + now - attempt_start
                 > manifest["limits"]["total_seconds"]
             ):
                 raise RuntimeError("aggregate live time budget exhausted")
@@ -463,6 +478,8 @@ def main():
                 probe.settimeout(0.2)
                 listener_closed = probe.connect_ex(("127.0.0.1", port)) != 0
         record("listener_cleanup", backend_listener_closed=listener_closed)
+        ledger["charged_seconds"] += time.monotonic() - attempt_start
+        write_json(ledger_path, ledger)
         write_json(
             attempt / "outcome.json",
             {

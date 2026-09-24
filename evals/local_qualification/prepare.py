@@ -88,13 +88,17 @@ def main():
         },
         "limits": {
             "context": 8192,
-            "input_tokens": 4096,
+            "input_tokens": 6144,
             "output_tokens": 128,
             "request_seconds": 300,
             "load_seconds": 300,
             "load_page_in_allowance_seconds": 60,
+            # Global page-in also counts file and image reads; after load it
+            # stops the owner only under real RAM pressure (owner continuation).
+            "page_in_stop_below_ram_bytes": 8 << 30,
             "max_requests": 18,
-            "max_launches": 6,
+            "max_launches": 9,
+            # Charged while owned lab processes are alive, not during repairs.
             "total_seconds": 3600,
             "ram_reserve_bytes": 4 << 30,
             "vram_reserve_bytes": 1 << 30,
