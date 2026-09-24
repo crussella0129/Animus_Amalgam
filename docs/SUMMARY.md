@@ -50,3 +50,5 @@
   - [Test critique, round 3](sprints/s2/sprint-tests/critique-03.md)
   - [Test critique](sprints/s2/sprint-tests/critique.md)
   - [Test report](sprints/s2/sprint-tests/test-report.md)
+- [Sprint 3](sprints/s3/sprint-meta.md)
+  - [Research report](sprints/s3/sprint-research/research-report.md)

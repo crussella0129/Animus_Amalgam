@@ -51,7 +51,8 @@ Boundaries and non-goals:
    prefix. For the hybrid `qwen35` model, a thinking-enabled continued session shows
    whether re-rendered history stays append-only. If it does not, the
    receipt identifies the divergence point and the rollback cost, and one
-   repair (Hermes history rendering or checkpoint spacing) is replayed.
+   repair is replayed: the existing `model.reasoning_echo` opt-in, Hermes
+   history rendering, or checkpoint spacing.
 4. Speculative decoding with the model's next-token layer is measured on and
    off for decode rate and output identity at temperature zero.
 5. With compression enabled, deterministic pruning of old tool results runs
@@ -72,6 +73,20 @@ then showed the 27B completing a real tool task with thinking disabled. Warm
 prefill took about one second per turn, and each step spent 2–19 s decoding
 at 3.6 tokens/s. See L-15 to L-17, L-19 and the
 [direction review](../lineage/direction-review.md).
+
+Sprint 3 research located the thinking-mode cache mechanism in code.
+
+- **Template:** the Qwen3.8 chat template re-renders every past assistant
+  turn with a `<think>{reasoning_content}</think>` block by default
+  (`preserve_thinking`).
+- **Hermes:** Hermes strips `reasoning_content` from replayed history for
+  custom routes unless `model.reasoning_echo` is set. With thinking on, the
+  cached prefix therefore diverges every turn.
+- **Backend:** the pinned llama.cpp build honors a per-request
+  `reasoning_budget_tokens`, so step budgets need no server restart.
+- **Suspected defect:** Hermes's compaction estimator ignores the echo
+  opt-in. See the
+  [Sprint 3 research report](../sprints/s3/sprint-research/research-report.md).
 
 ## Alternatives
 
@@ -97,3 +112,6 @@ at 3.6 tokens/s. See L-15 to L-17, L-19 and the
 ## Transition history
 - 2026-09-24: created as `proposed` from the Sprint 2 direction review
   requested by the owner (L-15 to L-19).
+- 2026-09-24: Sprint 3 research named the thinking-mode cache mechanism and
+  the existing controls (reasoning echo, per-request budget) in the Rationale
+  and AC3; state remains `proposed` pending the Sprint 3 plan gate.
