@@ -37,6 +37,7 @@ def child_environment(lab):
         "TMP",
         "PROCESSOR_ARCHITECTURE",
         "NUMBER_OF_PROCESSORS",
+        "PROGRAMFILES",
     }
     env = {k: v for k, v in os.environ.items() if k.upper() in allowed}
     env.update(
@@ -72,6 +73,7 @@ def main():
     ledger["attempts"] += 1
     attempt = lab / "receipts" / f"attempt-{ledger['attempts']:02d}-{args.mode}"
     attempt.mkdir()
+    write_json(attempt / "manifest.json", manifest)
     write_json(ledger_path, ledger)
     events = (attempt / "events.jsonl").open("w", encoding="utf-8")
     event_lock = threading.Lock()
