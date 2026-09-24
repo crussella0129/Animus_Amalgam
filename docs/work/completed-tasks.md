@@ -68,4 +68,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completed:** 2026-09-24T16:49:29Z
 - **Files modified:** evals/local_qualification/prepare.py, evals/local_qualification/README.md, hermes_cli/local_runtime/gguf.py, docs/sprints/s2/sprint-tests/qualification/manifests/
-- **Commit:** PENDING
+- **Commit:** `05330b2e7dddbe818f4133ad40b2a5a59a6b2aeb`
