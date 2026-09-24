@@ -75,4 +75,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completed:** 2026-09-24T16:54:16Z
 - **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/run.py, evals/local_qualification/prepare.py, evals/local_qualification/telemetry.py, tests/evals/test_local_qualification_policy.py
-- **Commit:** PENDING
+- **Commit:** `501ff12df51b5c390a6fcc8e2bdc6be5d3ccb4d4`
