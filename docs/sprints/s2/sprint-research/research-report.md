@@ -87,6 +87,14 @@ the inventory. Existing tests were read, not executed during research.
 
 ## 5. Recommended Approach
 
+**Subsequent owner clarification:** development must follow reverse-E2E:
+operate an isolated Hermes environment, diagnose and repair encountered
+failures, replay, then run official unit/integration suites. AC7 and the
+revised draft plans capture that direction. The initial fixture-first,
+smoke-only sequence below records the research recommendation that prompted
+the correction; it is not the current execution order. Keep setup minimal
+and prove useful operation rather than only the harness.
+
 Use a small standalone Rust evaluation supervisor for process ownership,
 deadlines and resource gates, with thin Python glue exercising actual Hermes
 main and compression paths. Rust is viable for Windows process ownership;

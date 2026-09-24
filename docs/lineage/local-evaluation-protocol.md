@@ -52,6 +52,32 @@ instructional skills or change tools mid-conversation.
 
 ## Smoke and cancellation gate
 
+### Development order
+
+Following the owner's reverse-E2E clarification, bring up a disposable Hermes
+environment and operate it before running official unit/integration suites.
+Use only the instrumentation needed to observe and stop that environment.
+Check the external stop control practically during bring-up; do not build a
+large fixture matrix before touching the real application.
+
+After the small smoke and cancellation controls work, drive a short real
+workflow: inspect a fixture, edit it, execute a checker, encounter a failing
+command and recover. Observe follow-up turns and bounded context pressure.
+Reproduce each failure, diagnose it, repair the relevant code/configuration
+and replay the same operation. Preserve all failed attempts and revision
+identities. Changing a configuration between attempts creates a new manifest;
+it never resets the overall run budget or permits weakening stop gates.
+
+Operational confidence requires independently checked task completion,
+successful replay of repaired paths in fresh and continued sessions, and
+working main/auxiliary cancellation. Then run the affected official suites
+and add focused regression coverage for failures actually found. If the host
+cannot admit the model, operational confidence remains pending; green mocks
+cannot replace it. Development exploration is separate from the subsequent
+frozen, paired qualification experiment.
+
+### Per-attempt limits
+
 Start with a synthetic request of at most 4K input and 128 requested output
 tokens when the measured fixed prefix permits it. The provisional limits are:
 

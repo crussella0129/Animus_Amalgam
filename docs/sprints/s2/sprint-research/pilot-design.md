@@ -3,6 +3,13 @@
 This is research provenance for the draft plan, not an approved run manifest.
 The stable authority is [INT-0004](../../../intents/INT-0004-bounded-local-model-qualification.md).
 
+The owner subsequently clarified reverse-E2E development order. The revised
+[build plan](../sprint-plans/draft-build-plan.md) and
+[test plan](../sprint-plans/draft-test-plan.md) replace this document's initial
+fixture-first, smoke-only execution recommendation. Its inventory and owner
+model/deadline choices remain relevant; the initial three-request/30-minute
+budget below is historical, not the revised draft's development budget.
+
 ## Owner choices
 
 On 2026-09-23 the owner selected “Existing Qwen3.8-27B first” and “300

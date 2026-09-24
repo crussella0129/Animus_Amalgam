@@ -26,6 +26,14 @@ this small experiment; it is not a claim about all acceptable product latency
 and does not change that live configuration. The smaller local 7B artifact
 remains a possible later comparison, not an automatic fallback.
 
+Development follows the owner's reverse-E2E workflow: operate actual Hermes
+in a disposable environment, reproduce failures while doing useful work,
+make focused repairs, and replay the failed operation. Official unit and
+integration suites follow demonstrated operational confidence. A growing
+fixture suite or a synthetic response alone cannot substitute for operating
+the system. Basic build checks and a practical stop-control check are part
+of bringing up the environment, not a suite-first development gate.
+
 Boundaries and non-goals:
 
 - Do not modify or replay against the owner's default/live Hermes profile.
@@ -62,6 +70,12 @@ Boundaries and non-goals:
 6. Static constraints advance only if they improve valid execution or
    independently checked completion without exceeding the same resource and
    authority envelope. A negative or smaller-workload result is acceptable.
+7. Development evidence records the actual operation, observed failure,
+   diagnosis, repair revision and replay outcome. Formal unit/integration
+   testing follows successful operation and repair replay in the isolated
+   environment; regression coverage targets observed failures and essential
+   contracts. Resource-blocked operation remains unproven, not replaced by
+   passing mocks or declared operational confidence.
 
 ## Rationale
 
@@ -93,6 +107,9 @@ cancellable process boundary.
 - The selected first model may be smaller than the best-quality candidate.
 - Fixed-context isolation gives up managed-runtime convenience in exchange for
   a stable experiment boundary.
+- Focused repairs to reproduced Hermes integration defects are in scope;
+  architecture expansion still requires its own evidence and intent. Keep
+  exploratory repair runs separate from the frozen comparative trials.
 
 ## Transition history
 - 2026-09-23: created as `proposed` from Sprint 1 lessons L-04, L-07, L-09, L-12, and L-13.
@@ -103,3 +120,7 @@ cancellable process boundary.
   pilot request deadline, with historical three-hour live timeouts retained
   as context. Updated priority and latency boundaries; state remains
   `proposed` pending the Sprint 2 plan gate.
+- 2026-09-23: owner clarified reverse-E2E development order: operate an
+  isolated system, encounter and repair failures, replay, then run official
+  unit/integration suites. Added AC7; state remains `proposed`. This changes
+  the draft workflow, not the authority to start inference before plan approval.
