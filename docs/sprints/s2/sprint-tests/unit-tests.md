@@ -1,31 +1,42 @@
 # Sprint 2 Unit Test Results (after operational confidence)
 
-- **Tested head:** `4bc4f5ea89` (all tested code is unchanged from `e5965195a8`)
+- **Tested heads:** first `4bc4f5ea89`, then the Test-phase critique-response
+  commit named in the test report, which is the final head for these files.
 - **Date:** 2026-09-24
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
-  env, `TZ=UTC`) on the owner's Windows 11 host, Python 3.11.16. Focused runs
-  used 48 workers; the affected-suite run used 16.
-- **Ordering:** each test below was written after operational confidence
-  (attempt 11). Each targets an observed defect or an essential envelope
-  contract named in the locked test plan.
+  env, `TZ=UTC`) on the owner's Windows 11 host, Python 3.11.16.
+- **Ordering:** every test below was written after operational confidence
+  (attempt 11 ended 16:19:33Z; see the E2E timeline). Each targets an
+  observed defect or an envelope contract named in the locked test plan.
+- **Result:** `tests/evals/test_local_qualification_policy.py` 12 passed;
+  `tests/agent/test_minimum_context_explicit_local.py` 4 passed.
 
 | Test (plan name) | EARS | Result | Assertion |
 |---|---|---|---|
-| `manifest_identity_contract` → `tests/evals/test_local_qualification_policy.py::test_published_manifest_identity_resolves_to_its_digest` | M1 | pass | The published continuation manifest's content digest equals its `id`, and it passes identity against its own commit and artifact hashes. |
-| `manifest_identity_contract` → `…::test_changed_parameter_artifact_or_source_refuses_launch` (4 cases) | M2 | pass | Changing an execution parameter (`input_tokens`), the model hash, the backend hash or the source commit each yields a named refusal (digest / model artifact / backend artifact / source revision). |
-| `admission_stop_contract` → `…::test_admission_requires_measured_capacity_on_each_device` | M2, S2 | pass | Admission passes at exactly the per-device requirement and fails one byte below on either device or with no sample. Spare VRAM cannot pay for missing RAM. |
-| `admission_stop_contract` → `…::test_page_in_stops_only_under_ram_pressure_while_page_out_always_counts` | S2 | pass | Regression for attempts 05 and 09. High page-in never stops the attempt at or above the RAM-pressure line, or inside the load allowance. Below the line, it stops on exactly the third consecutive sample, and a quiet sample resets the streak. Three high page-out samples stop regardless of RAM or load phase. |
-| Explicit local context floor → `tests/agent/test_minimum_context_explicit_local.py` (2) | D1 (reproduced Hermes defect, attempt 06) | pass | A local custom route pinned at 8192 with auto-compression off constructs a real `AIAgent`. The same pin with compression on still raises "below the minimum". **Proven red on base:** with `agent/agent_init.py` from `cd2185c288`, the admission test fails (1 failed, 1 passed). |
+| `qualification_receipt_audit` → `tests/evals/test_local_qualification_policy.py::test_every_published_attempt_resolves_to_a_valid_frozen_manifest` | M1, P1, S1 (live half) | pass | Checks all 13 published attempts: (1) each resolves to a published manifest whose content digest equals its id and its outcome's `manifest_id`; (2) the required identity fields are present, with 64-hex model and backend hashes; (3) the rendered prefix is labeled `not-measured` with a reason, never invented; (4) a stop cause is kept; (5) cleanup took at most 5 s and the listener closed where recorded; (6) launch and request counters never reset and never exceed that revision's limits. |
+| `manifest_identity_contract` → `…::test_changed_parameter_artifact_or_source_refuses_launch` (5 cases) | M2 | pass | The frozen continuation manifest first passes identity. Changing an execution parameter, the model hash, the backend hash, the source commit, or the `source_dirty` flag then yields the named refusal. |
+| `admission_stop_contract` → `…::test_admission_requires_measured_capacity_on_each_device` | M2, S2 | pass | Admission passes at exactly the per-device requirement. It fails one byte below on either device and with no sample, and spare VRAM cannot pay for missing RAM. |
+| `admission_stop_contract` → `…::test_running_attempt_stops_one_byte_below_either_reserve` | S2 | pass | The reserve stop does not fire at the reserve, and does fire one byte below it on RAM or on VRAM. |
+| `admission_stop_contract` → `…::test_ready_server_must_match_the_frozen_candidate` (3 cases) | D2 | pass | A ready server with two slots, a different context, or a different model path is refused before generation. The frozen shape passes. |
+| `admission_stop_contract` → `…::test_page_in_stops_only_under_ram_pressure_while_page_out_always_counts` | S2 | pass | Regression for attempts 05 and 09. High page-in never stops the run at or above the RAM-pressure line, or inside the load allowance. Below the line, it stops on exactly the third consecutive sample, and a quiet sample resets the streak. Three high page-out samples stop the run regardless of RAM or load phase. |
+| Explicit local context floor → `tests/agent/test_minimum_context_explicit_local.py::test_pinned_local_window_without_auto_compression_is_admitted` | D1 (Hermes defect, attempt 06) | pass | A local custom route pinned at 8192 with auto-compression off constructs a real `AIAgent` whose window is 8192. **Proven red on base:** with `agent/agent_init.py` from `cd2185c288` it fails. |
+| `…::test_floor_still_applies_outside_the_explicit_local_pin` (3 cases) | D1 boundary | pass | Each of these still raises "below the minimum": the same pin with auto-compression on, a non-local custom URL, and a served window (`ollama_num_ctx` 16384) that disagrees with the pin. |
 
-Existing affected coverage re-run: `tests/agent/test_ollama_num_ctx.py` (13
-passed; existing floor/refusal wording contracts unchanged) and
-`tests/hermes_cli/test_local_runtime_gguf.py` (1 passed; the added
-`tensor_sizes` did not change the header reader's existing contract).
+Existing affected coverage re-run and passing:
 
-## Not unit-tested (explicit)
+- `tests/agent/test_ollama_num_ctx.py` (13): the existing floor and refusal
+  wording contracts are unchanged.
+- `tests/hermes_cli/test_local_runtime_gguf.py` (1): the added `tensor_sizes`
+  field kept the reader's contract.
+- `tests/hermes_cli/test_local_runtime_processes.py` (8).
 
-- Stale or missing telemetry and scheduler-lag stops remain inline,
-  time-based checks in `run.py::observe`. They were exercised live (attempt
-  01: a collector exit stopped the attempt before admission) but have no
-  deterministic unit test. This is carried to T-210, where the harness is
-  extended anyway.
+## Not unit-tested (carried by T-211)
+
+These checks remain inline in `run.py::observe` and the launch path:
+
+- stale or missing telemetry, and scheduler lag;
+- the launch-count and aggregate-time predicates;
+- stall- and deadline-triggered cleanup.
+
+A collector exit was exercised live in attempt 01. The launch cap was reached
+but not exceeded, since no tenth launch was attempted.
