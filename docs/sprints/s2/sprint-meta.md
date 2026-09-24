@@ -37,3 +37,9 @@
   continued session and both cancellations. Attempt 13 replayed the
   refactored harness after the owner freed memory. See the
   [direction review](../../lineage/direction-review.md).
+- 2026-09-24 Test phase: four critic rounds (block, block,
+  proceed-with-caveats, proceed-with-caveats). The final verdict is in
+  [critique.md](sprint-tests/critique.md). `check-book.sh` at the
+  test-report commit reported "valid v2 Book (7 intent chapters)".
+  `check-tracked.sh` ran at Test exit; its result is recorded at Loop. Owner
+  ratification of the attempt-scoped time charging is still requested.

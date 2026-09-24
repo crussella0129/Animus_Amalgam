@@ -1,7 +1,8 @@
 # Sprint 2 operational development ledger
 
 Operational confidence criteria were met by attempt 11 (ended 16:19:33Z),
-before any formal test ran. The confidence text itself was written at about
+before any formal test ran. This is conditional † on owner ratification of
+attempt-scoped time charging. The confidence text itself was written at about
 16:28Z, after the first focused formal run began (about 16:21Z). Earlier
 sections are the historical bring-up and repair record, preserved as written.
 
@@ -323,8 +324,9 @@ in this sprint:
    checker).
 2. Repaired paths replayed in fresh sessions and in a continued session. The
    replays cover the explicit-context admission (06), disabled title
-   inference (07), terminal-only toolset (08) and conditional page-in policy
-   (continuation 2). Attempt 10 used three fresh CLI processes, and its
+   inference (07) and terminal-only toolset (08). The conditional page-in
+   policy (continuation 2) is an owner-approved envelope amendment, not a
+   repair. Attempt 10 used three fresh CLI processes, and its
    operation was a three-turn continued conversation.
 3. Main and auxiliary cancellation worked within 5 s while the backend was
    active.

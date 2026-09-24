@@ -94,16 +94,16 @@ The Hermes change is unit-tested and proven red on the prior code. The
 extractions are behavior-preserving and unit-tested. The launch-time dirty
 check is a **new refusal**: unit-tested, but not yet exercised live. Any
 `git status --porcelain` output (untracked files included) now blocks a
-launch. The **next lab launch**, whichever of T-210 or T-211 runs first,
-replays all of these.
+launch. T-211 owns the live replay on the next lab launch; T-210 lists it as
+a prerequisite.
 
 ## Deferred with rationale (carried by T-211)
 
 - **Profile A→B→A for the lab wire.** One disposable home was reused across
   attempts, and no profile multiplexing occurs on this path. Shared home and
   fixture state is acknowledged: fixtures are only written when absent, and
-  the operate fixture now holds 3. A multiplexed-profile regression belongs
-  with a change that touches profile scope.
+  the operate fixture now holds 3. T-211 names an A→B→A temporary-home check for the lab wire and
+  Hermes route.
 - **Not exercised:**
   - backend output-cap truncation (the largest decode was 69 of 128 tokens);
   - stall- and deadline-triggered cleanup;

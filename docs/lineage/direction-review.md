@@ -96,7 +96,8 @@ Implications, in priority order:
 ## Recommended next sprint
 
 The goal is to keep a 20–30-turn local session fast, on the same harness and
-stop rules:
+stop rules. It starts after T-211 replays the post-attempt-13 lab changes and
+sets `agent.environment_probe: false`:
 
 - a longer multi-file task that accumulates real tool results;
 - a larger fixed context, priced by the lab estimator before launch (it prices

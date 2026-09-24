@@ -6,7 +6,7 @@
 - **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 to T-209 completions](../work/completed-tasks.md); [T-202 and T-211](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** [operational lab](../../evals/local_qualification/README.md); [explicit local context admission](../../agent/agent_init.py)
-- **Test evidence:** [Sprint 2 live E2E results](../sprints/s2/sprint-tests/e2e-tests.md); [Sprint 2 unit results](../sprints/s2/sprint-tests/unit-tests.md); [Sprint 2 integration results](../sprints/s2/sprint-tests/integration-tests.md)
+- **Test evidence:** [Sprint 2 test report](../sprints/s2/sprint-tests/test-report.md); [Sprint 2 live E2E results](../sprints/s2/sprint-tests/e2e-tests.md); [Sprint 2 unit results](../sprints/s2/sprint-tests/unit-tests.md); [Sprint 2 integration results](../sprints/s2/sprint-tests/integration-tests.md)
 - **Documentation evidence:** [evaluation protocol](../lineage/local-evaluation-protocol.md); [operational ledger](../sprints/s2/sprint-tests/operational-ledger.md); [direction review](../lineage/direction-review.md)
 
 ## Intent

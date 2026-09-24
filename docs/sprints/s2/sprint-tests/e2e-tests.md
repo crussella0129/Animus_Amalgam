@@ -13,7 +13,7 @@
   sampling) and a `not_measured_per_request` list.
 - **Timeline (confidence before formal suites):**
   - Attempt 11 ended at 16:19:33Z, per its outcome-receipt mtime. This
-    completed the operational-confidence criteria.
+    completed the operational-confidence criteria (conditional †; see below).
   - The first formal test invocation followed at about 16:21Z (session
     record).
   - The confidence text was written into the ledger at about 16:28Z, but
