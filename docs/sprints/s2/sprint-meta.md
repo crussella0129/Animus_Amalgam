@@ -4,7 +4,7 @@
 - **Book schema version:** 2
 - **Start timestamp:** 2026-09-24T03:27:07Z
 - **End timestamp:** (filled at Loop Phase)
-- **Model:** GPT-6
+- **Model:** GPT-6 (Codex) through attempt 09; Claude Opus 5.5 (Claude Code) from the owner's second continuation
 - **Bundle version:** 0.22.0
 - **Exit status:** in-progress
 - **Token count:** (filled at Loop Phase if observable)
