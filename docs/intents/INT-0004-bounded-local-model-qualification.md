@@ -2,7 +2,7 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0004
-- **State:** planned
+- **State:** active
 - **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [T-201 and T-202](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
@@ -126,3 +126,5 @@ cancellable process boundary.
   the draft workflow, not the authority to start inference before plan approval.
 - 2026-09-24: owner approved the revised reverse-E2E Sprint 2 plan with
   “ok now continue”; moved `proposed` → `planned`, linked work evidence.
+- 2026-09-24: clean independent plan review and canonical lock completed;
+  moved `planned` → `active` as the isolated-environment build began.
