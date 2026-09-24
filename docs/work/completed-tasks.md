@@ -69,3 +69,10 @@
 - **Completed:** 2026-09-24T16:49:29Z
 - **Files modified:** evals/local_qualification/prepare.py, evals/local_qualification/README.md, hermes_cli/local_runtime/gguf.py, docs/sprints/s2/sprint-tests/qualification/manifests/
 - **Commit:** `05330b2e7dddbe818f4133ad40b2a5a59a6b2aeb`
+
+## T-206 (sprint 2)
+- **Description:** Add only observation and stop controls needed for operation. S1: the existing kill-on-close Job Object owner (reused, not duplicated) terminated every owned tree within 5 s in attempts 08-11 while an unrelated sentinel survived; the Windows-only regression test_owner_exit_kills_router_tree_not_external pins owner loss. S2: identity, admission, reserve and paging stops are pure policy decisions with no model callback or retry, pinned by test_local_qualification_policy; the post-load page-in stop applies only under RAM pressure (owner continuation 2).
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
+- **Completed:** 2026-09-24T16:54:16Z
+- **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/run.py, evals/local_qualification/prepare.py, evals/local_qualification/telemetry.py, tests/evals/test_local_qualification_policy.py
+- **Commit:** PENDING

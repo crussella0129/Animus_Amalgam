@@ -1,7 +1,6 @@
 # Agent Tasks (Persistent Backlog)
 
 - [ ] T-106 (backlog) [intent: INT-0001]: Write a follow-on intent rather than rewriting INT-0001 once it is realized. It sets the upstream sync policy: how NousResearch/hermes-agent changes enter main, and how main returns to dev through sync-work-branch.sh. It covers conflict handling for docs/ and the .gitignore sprint-loops block, which inherited CI checks must pass on dev-to-main checkpoints, content screening before public pushes (Sprint 0 plan critique C-002), and a reusable Book test harness with negative (mutation) cases that CI runs on checkpoints (Sprint 0 test critique C-002) — touches: docs/intents/, docs/intents/README.md, docs/SUMMARY.md
-- [ ] T-206 (sprint 2) [intent: INT-0004]: Add only observation and stop controls needed for operation — touches: evals/local_qualification/
 - [ ] T-207 (sprint 2) [intent: INT-0004]: Wire the real Hermes entry point and observe requests — touches: isolated environment, evals/local_qualification/, reproduced Hermes defects
 - [ ] T-208 (sprint 2) [intent: INT-0004]: Operate isolated 27B Hermes; diagnose, repair and replay failures — touches: operational ledger, fixtures, focused implementation repairs
 - [ ] T-209 (sprint 2) [intent: INT-0004]: After operational confidence run focused formal checks and publish evidence — touches: affected tests, sprint results, Book evidence

@@ -13,6 +13,7 @@ from pathlib import Path
 
 from hermes_cli.local_runtime.estimator import ctx_bytes, profile_from_gguf
 from hermes_cli.local_runtime.gguf import read_gguf_header
+from policy import manifest_digest
 
 
 def digest(path: Path) -> str:
@@ -117,7 +118,7 @@ def main():
         },
         "tools": {"smoke": [], "operation": ["terminal"], "tool_search": "off"},
     }
-    manifest["id"] = json_digest(manifest)
+    manifest["id"] = manifest_digest(manifest)
     (lab / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     # Paths are local-only; no secrets from the live profile are copied.
     (lab / "paths.json").write_text(

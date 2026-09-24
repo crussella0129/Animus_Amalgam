@@ -17,6 +17,13 @@ import time
 import psutil
 
 from hermes_cli.local_runtime.processes import spawn_server
+from policy import (
+    PagingGuard,
+    admission_requirements,
+    admitted,
+    identity_mismatch,
+    reserve_breached,
+)
 from wire import Wire
 
 HERE = Path(__file__).resolve().parent
@@ -138,8 +145,7 @@ def main():
     sample_path = attempt / "sample.json"
     wire = None
     last_sample = None
-    paging_streak = 0
-    page_out_streak = 0
+    paging = PagingGuard(manifest["limits"])
     loaded = threading.Event()
     load_start = None
     previous_tick = time.monotonic()
@@ -149,25 +155,18 @@ def main():
     port = None
     interrupt_file = attempt / "INTERRUPT"
     try:
-        identity = {k: v for k, v in manifest.items() if k != "id"}
-        actual_digest = hashlib.sha256(
-            json.dumps(
-                identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-            ).encode()
-        ).hexdigest()
-        if actual_digest != manifest["id"]:
-            raise RuntimeError("candidate manifest digest mismatch")
         source_commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True, timeout=5, cwd=HERE.parents[1]
         ).strip()
-        if manifest["source_dirty"] or source_commit != manifest["source_commit"]:
-            raise RuntimeError("source revision differs from frozen candidate")
-        for artifact in ("model", "backend"):
-            artifact_path = Path(paths["model" if artifact == "model" else "server"])
-            with artifact_path.open("rb") as stream:
-                actual = hashlib.file_digest(stream, "sha256").hexdigest()
-            if actual != manifest[artifact]["sha256"]:
-                raise RuntimeError(f"{artifact} artifact differs from frozen candidate")
+        artifact_sha256 = {}
+        for artifact, key in (("model", "model"), ("backend", "server")):
+            with Path(paths[key]).open("rb") as stream:
+                artifact_sha256[artifact] = hashlib.file_digest(
+                    stream, "sha256"
+                ).hexdigest()
+        mismatch = identity_mismatch(manifest, source_commit, artifact_sha256)
+        if mismatch:
+            raise RuntimeError(mismatch)
         record(
             "identity_verified",
             file_cache_state="uncontrolled; artifact verification reads model bytes",
@@ -180,7 +179,7 @@ def main():
         collector_start = time.monotonic()
 
         def observe():
-            nonlocal previous_tick, last_sample, paging_streak, page_out_streak
+            nonlocal previous_tick, last_sample
             now = time.monotonic()
             if (lab / "STOP").exists():
                 raise RuntimeError("operator STOP requested")
@@ -199,7 +198,7 @@ def main():
             if now - sample["at"] > 3:
                 raise RuntimeError("critical telemetry stale")
             available = psutil.virtual_memory().available
-            if available < 4 << 30 or sample["vram_free"] < 1 << 30:
+            if reserve_breached(available, sample["vram_free"], manifest["limits"]):
                 record(
                     "reserve_breach",
                     current_ram_available=available,
@@ -213,32 +212,16 @@ def main():
                     and now - load_start
                     < manifest["limits"]["load_page_in_allowance_seconds"]
                 )
-                ram_pressure = (
-                    available < manifest["limits"]["page_in_stop_below_ram_bytes"]
-                )
-                paging_streak = (
-                    paging_streak + 1
-                    if not load_allowance
-                    and ram_pressure
-                    and sample["hard_page_in_bytes_per_second"] > 64 << 20
-                    else 0
-                )
-                page_out_streak = (
-                    page_out_streak + 1
-                    if sample["page_out_bytes_per_second"] > 64 << 20
-                    else 0
-                )
+                stop = paging.observe(sample, available, load_allowance)
                 last_sample = sample["at"]
                 record(
                     "sample",
                     load_page_in_allowance=load_allowance,
-                    ram_pressure=ram_pressure,
+                    ram_pressure=available < paging.pressure_below,
                     **sample,
                 )
-                if paging_streak >= 3:
-                    raise RuntimeError("hard page-in rate breached")
-                if page_out_streak >= 3:
-                    raise RuntimeError("page-out rate breached")
+                if stop:
+                    raise RuntimeError(stop)
             if (
                 ledger["charged_seconds"] + now - attempt_start
                 > manifest["limits"]["total_seconds"]
@@ -251,21 +234,9 @@ def main():
             sample = observe()
             time.sleep(0.25)
         placement = manifest["placement"]
-        cpu_needed = (
-            placement["cpu_weight_bytes"] + placement["cpu_overhead_bytes"] + (4 << 30)
-        )
-        gpu_needed = (
-            placement["gpu_weight_bytes"]
-            + placement["context_bytes_upper"]
-            + placement["gpu_overhead_bytes"]
-            + (1 << 30)
-        )
+        cpu_needed, gpu_needed = admission_requirements(placement, manifest["limits"])
         record("admission", cpu_needed=cpu_needed, gpu_needed=gpu_needed, sample=sample)
-        if (
-            sample is None
-            or sample["ram_available"] < cpu_needed
-            or sample["vram_free"] < gpu_needed
-        ):
+        if not admitted(sample, placement, manifest["limits"]):
             reason = "not-run: resource gate"
             return
         if ledger["launches"] >= manifest["limits"]["max_launches"]:
