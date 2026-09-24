@@ -31,3 +31,51 @@ pending. These are environment bring-up and actual-operation observations.
 
 Formatting/linting are bring-up checks. Formal tests remain deferred until
 the real Hermes workflow and repair replays establish confidence.
+
+## Actual attempts — 2026-09-24
+
+All five attempts retain local events, outcomes and their immutable manifest.
+The aggregate ledger currently records two model launches and zero inference
+requests. Admission refusals consume an attempt number, not a launch.
+
+| Attempt | Manifest prefix | Operation and observation | Repair / next step |
+|---|---|---|---|
+| 01 smoke | `977056c8c365` | GPU collector exited before admission: NVML initialization failed in the isolated environment. No launch. | Restoring only the OS `ProgramFiles` variable made the real GPU probe work; repair `0f8e4fe799`. Successful telemetry replay in 02. |
+| 02 smoke | `3f8cb887b347` | Model loaded in 35.484 seconds, then the RAM/VRAM reserve predicate stopped it before any prompt. Last one-second sample had 6,016,237,568 RAM bytes and 3,638,558,720 VRAM bytes free; exact 250 ms breach RAM was not retained in this revision. Cleanup 1.485 seconds. | Backend warned that CPU tensor overrides with mmap should use load mode `none`. Repair `7b9fbe4455` also records exact reserve-breach RAM. |
+| 03 smoke | `dfec2d620c88` | Admission refused: 14,183,669,760 RAM bytes available versus 17,238,933,504 required. CubiKan had restarted its WSL build. | Owner explicitly gave Amalgam priority and authorized stopping the restarted build. |
+| 04 smoke | `dfec2d620c88` | Admission refused while Windows was still reclaiming WSL memory; no launch. | Windows later reported 20,503,040,000 RAM bytes available and no running WSL distributions. |
+| 05 smoke | `dfec2d620c88` | Load mode `none` replay stopped after three page-in samples above 64 MiB/s. Samples were approximately 146.9, 116.6 and 1434.7 MiB/s. Last RAM/VRAM samples remained above reserves (8,790,188,032 and 4,245,684,224 bytes). Cleanup 1.000 seconds including receipt closure. No ready backend/CLI request. | Do not call this swap exhaustion or a successful load. Add page-out observation; resolve the load-phase policy below before another load. |
+
+The previous raw paging observations cannot separate model-file reads from
+pagefile reads. Microsoft's [counter guidance](https://learn.microsoft.com/en-us/troubleshoot/windows-server/performance/ram-virtual-memory-pagefile-management)
+explains why paging activity alone does not establish a RAM shortage. The
+fixed backend's [Windows file implementation](https://github.com/ggml-org/llama.cpp/blob/b29c606e28a01b1bc8c1351026a0fa6e616bf6c4/src/llama-mmap.cpp)
+ignores its direct-I/O constructor option on Windows, so changing to `dio`
+would not establish an unbuffered-load remedy here. These are diagnostic
+limits, not permission to silently relax the approved gate.
+
+Bring-up corrections also add the CLI's real interrupt API before the owned
+hard stop, check backend listener closure, support an operator STOP file,
+preserve existing fixtures when regenerating a manifest, and remove an
+unsupported `--aggressive` option from the actual compression entry point.
+These corrections still need operational replay; formatting is not coverage.
+
+## Proposed load-phase amendment — pending owner decision
+
+The locked plan applies the 64 MiB/s page-in stop threshold even while reading
+the model for the first time. A bounded diagnostic amendment would:
+
+- Retain every historical attempt and all aggregate launch/request/time limits.
+- Observe page-in and page-out throughout the run.
+- During at most the first 60 seconds of model loading only, record page-in
+  spikes without making page-in alone a stop cause. Stop on page-out exceeding
+  64 MiB/s for three consecutive samples, or any existing RAM/VRAM, stale
+  telemetry, responsiveness, ownership or deadline breach.
+- After backend readiness, restore the original page-in stop rule immediately;
+  carry it through all CLI startup, main and auxiliary requests. If readiness
+  is not reached within 60 seconds, the exception ends and the original rule
+  applies while the existing 300-second load deadline remains.
+
+This is a reviewable proposal, not active policy. No next load is authorized
+under this amendment until the owner accepts it. Operational confidence,
+useful-task execution, cancellation coverage and official suites remain pending.

@@ -166,3 +166,8 @@ class Wire:
     def close(self):
         self.server.shutdown()
         self.server.server_close()
+        # The backend has already exited; allow its response thread to finish
+        # recording before the owner's receipt stream is closed.
+        if not self.lock.acquire(timeout=1):
+            raise RuntimeError("wire handler did not settle during owned cleanup")
+        self.lock.release()

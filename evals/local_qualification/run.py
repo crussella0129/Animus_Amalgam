@@ -128,6 +128,8 @@ def main():
     reason = "unfinished"
     server = None
     driver = None
+    port = None
+    interrupt_file = attempt / "INTERRUPT"
     try:
         collector = spawn(
             [sys.executable, "-B", str(HERE / "telemetry.py"), str(sample_path)],
@@ -138,6 +140,8 @@ def main():
         def observe():
             nonlocal previous_tick, last_sample, paging_streak
             now = time.monotonic()
+            if (lab / "STOP").exists():
+                raise RuntimeError("operator STOP requested")
             if now - previous_tick > 2:
                 raise RuntimeError("supervisor scheduler lag exceeded two seconds")
             previous_tick = now
@@ -323,6 +327,8 @@ def main():
                 args.mode,
                 "--result",
                 str(attempt / "result.json"),
+                "--interrupt-file",
+                str(interrupt_file),
             ],
             "cli",
         )
@@ -353,10 +359,18 @@ def main():
             reason = f"CLI exited: {driver.returncode}"
             if args.mode.endswith("cancel"):
                 reason = "cancellation inconclusive: CLI ended before active trigger"
-    except Exception as exc:
+    except (Exception, KeyboardInterrupt) as exc:
         reason = f"stopped: {type(exc).__name__}: {exc}"
     finally:
         stop_start = time.monotonic()
+        if driver is not None and driver.poll() is None:
+            interrupt_file.touch()
+            record("graceful_interrupt", grace_seconds=2)
+            while driver.poll() is None and time.monotonic() - stop_start < 2:
+                # A resource emergency can shorten grace, never delay the hard stop.
+                if psutil.virtual_memory().available < 4 << 30:
+                    break
+                time.sleep(0.1)
         # The owned job is the external hard stop; no provider callback is needed.
         for proc, job in reversed(owned):
             job.close()
@@ -369,6 +383,12 @@ def main():
         )
         if wire is not None:
             wire.close()
+        listener_closed = True
+        if port is not None:
+            with socket.socket() as probe:
+                probe.settimeout(0.2)
+                listener_closed = probe.connect_ex(("127.0.0.1", port)) != 0
+        record("listener_cleanup", backend_listener_closed=listener_closed)
         write_json(
             attempt / "outcome.json",
             {
@@ -376,6 +396,7 @@ def main():
                 "manifest_id": manifest["id"],
                 "budget": ledger,
                 "cleanup_seconds": time.monotonic() - stop_start,
+                "backend_listener_closed": listener_closed,
             },
         )
         events.close()

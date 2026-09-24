@@ -8,6 +8,7 @@ import importlib.metadata
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 from hermes_cli.local_runtime.estimator import ctx_bytes, profile_from_gguf
@@ -98,6 +99,8 @@ def main():
             "vram_reserve_bytes": 1 << 30,
         },
         "owner_choice": {"model": "existing 27B first", "pilot_seconds": 300},
+        "interpreter": sys.version,
+        "task_corpus_sha256": digest(Path(__file__).with_name("driver.py")),
         "sampling": {"temperature": 0, "top_p": 1, "seed": 42},
         "dependencies": sorted(
             f"{d.metadata['Name']}=={d.version}"
@@ -143,15 +146,16 @@ def main():
     (lab / "home" / "config.yaml").write_text(
         json.dumps(config, indent=2), encoding="utf-8"
     )
-    (lab / "fixture" / "settings.json").write_text(
-        '{"retry_limit": 2}\n', encoding="utf-8"
-    )
-    (lab / "fixture" / "check.py").write_text(
-        "import json\nfrom pathlib import Path\n"
+    fixtures = {
+        "settings.json": '{"retry_limit": 2}\n',
+        "check.py": "import json\nfrom pathlib import Path\n"
         'assert json.loads(Path("settings.json").read_text())["retry_limit"] == 3\n'
         'print("CHECK_OK")\n',
-        encoding="utf-8",
-    )
+    }
+    for name, content in fixtures.items():
+        path = lab / "fixture" / name
+        if not path.exists():
+            path.write_text(content, encoding="utf-8")
     print(
         json.dumps({"manifest_id": manifest["id"], "placement": manifest["placement"]})
     )

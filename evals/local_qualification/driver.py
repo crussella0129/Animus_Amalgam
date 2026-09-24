@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import sys
+import threading
+import time
 
 
 def main():
@@ -17,6 +19,7 @@ def main():
         required=True,
     )
     parser.add_argument("--result", type=Path, required=True)
+    parser.add_argument("--interrupt-file", type=Path, required=True)
     args = parser.parse_args()
     os.chdir(args.lab / "fixture")
     from cli import HermesCLI
@@ -43,6 +46,13 @@ def main():
     ):
         raise RuntimeError("Hermes CLI agent initialization failed")
     cli.agent.max_tokens = 128
+
+    def watch_interrupt():
+        while not args.interrupt_file.exists():
+            time.sleep(0.1)
+        cli.agent.interrupt(hard_cancel=True, tool_reason="pilot cancellation")
+
+    threading.Thread(target=watch_interrupt, daemon=True).start()
     if args.mode == "aux-cancel":
         from agent.conversation_compression_manual import (
             compress_now,
@@ -61,7 +71,7 @@ def main():
                     "content": f"Record {i} acknowledged. Verify settings.json with check.py before claiming completion.",
                 },
             ])
-        result = compress_now(cli.agent, history, parse_compress_args("--aggressive"))
+        result = compress_now(cli.agent, history, parse_compress_args(""))
         responses = [{"compression_status": result.status}]
     else:
         prompts = {
