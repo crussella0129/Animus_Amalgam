@@ -2,8 +2,8 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0007
-- **State:** proposed
-- **Work evidence:** none
+- **State:** planned
+- **Work evidence:** [Sprint 3 build plan](../sprints/s3/sprint-plans/build-plan.md); [T-210 to T-216, T-221 and T-222 in the Sprint 3 plan, and T-217 to T-219 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
 - **Test evidence:** none
@@ -40,12 +40,15 @@ Boundaries and non-goals:
 ## Acceptance criteria
 
 1. On a multi-file task that accumulates real tool results over at least 20
-   turns, per-turn receipts record uncached prompt tokens, decoded tokens
+   turns (a turn is one model request), per-turn receipts record uncached prompt tokens, decoded tokens
    (reasoning and visible separately), decode rate, wall time, independent
    completion and resource extrema.
 2. Arms at the same model, context and task compare thinking off, a bounded
-   reasoning budget and unbounded thinking. They report decoded tokens and
-   wall time per independently checked completion, including failures.
+   reasoning budget and unbounded thinking. Each arm runs at the sampling
+   configuration that screens best for its thinking mode, chosen among
+   greedy decoding and the model's and vendor's recommended settings. Arms
+   report decoded tokens and wall time per independently checked
+   completion, including failures.
 3. With the environment probe disabled (L-19), two fresh sessions render
    byte-identical system prompts, and the second reuses the first's cached
    prefix. For the hybrid `qwen35` model, a thinking-enabled continued session shows
@@ -60,9 +63,21 @@ Boundaries and non-goals:
    with no backend restart. A compression that does not reduce history
    before the cap is a failed trial.
 6. The resulting default local policy is written down with its evidence. It
-   is either a decode budget and settings that keep the long session within
-   the owner's latency tolerance, or a documented negative result naming the
-   limiting resource.
+   is either a decode budget and settings that maximize verified throughput
+   (machine time per independently verified completion, which the owner
+   prefers over per-step latency), or a documented negative result naming
+   the limiting resource.
+7. Local-route request, load and compression deadlines derive from the
+   throughput measured on the host that is running, times the work about to
+   be done, with a margin. Stall windows and backstops derive from the same
+   measured throughput. There are no fixed time constants, so one policy
+   serves hosts of any speed. Enforcement is a stall rule (no progress within
+   a window scaled to the host's measured rates) plus a worst-case backstop
+   (the most work a step can contain, at this host's floor rates, times the
+   margin). A slow step that keeps making progress is never stopped by time
+   before that backstop. A backstop stop is a recorded failure. Receipts record predicted and actual time
+   for every request. A step stopped by a stall, a host-derived backstop or
+   a resource guard is a recorded failure, never a silent retry.
 
 ## Rationale
 
@@ -98,7 +113,11 @@ Sprint 3 research located the thinking-mode cache mechanism in code.
   Replacing the owner's selected 27B without paired evidence would discard
   the baseline.
 - **Raise timeouts again.** Rejected by INT-0004: waiting longer bounds
-  neither resources nor history.
+  neither resources nor history. AC7 is different. It replaces fixed ceilings
+  with work-derived deadlines plus stall detection. A slow step that is making
+  progress gets enough time, and a wedged one is still stopped. The original
+  session's five compressions died at a fixed 600 s ceiling while still
+  progressing.
 
 ## Consequences
 
@@ -115,3 +134,24 @@ Sprint 3 research located the thinking-mode cache mechanism in code.
 - 2026-09-24: Sprint 3 research named the thinking-mode cache mechanism and
   the existing controls (reasoning echo, per-request budget) in the Rationale
   and AC3; state remains `proposed` pending the Sprint 3 plan gate.
+- 2026-09-24: during Sprint 3 planning, the owner asked for time budgets
+  derived from measured throughput and the work about to be done, plus a
+  safety margin, instead of fixed caps. Added AC7 and the alternatives note.
+  The owner approved the Sprint 3 plan; moved `proposed` → `planned` with
+  the build plan and T-210 to T-214 as Work evidence.
+- 2026-09-24: after the plan critique, the owner decided four things.
+  - Backstops and stall windows are host-derived, because the software must
+    run on other machines of unknown speed. AC7 was reworded to remove every
+    fixed time constant.
+  - Sampling is an experiment axis: a screening round, then full runs of
+    the winners (AC2).
+  - Throughput over per-step latency is the AC6 criterion.
+  - Sprint 3 takes the core (lab, deadline module, sampling and thinking
+    screen, winners' full runs, echo). MTP (AC4), uncapped thinking (part of
+    AC2) and the compression trial (AC5) move to Sprint 4.
+
+  State remains `planned`.
+- 2026-09-24: the plan re-review clarified two semantics without changing
+  the outcome. A turn in AC1 is one model request. AC7 enforcement is a stall
+  rule plus a host-derived worst-case backstop, and a backstop stop is a
+  recorded failure. State remains `planned`.

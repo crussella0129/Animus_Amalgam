@@ -378,3 +378,12 @@ Under the originally approved rule ("including repairs"), all of attempts
 inside it, and the owner has not ratified that change. The checkpoint asks for
 ratification. Until then, attempts 10–13 are recorded as outside the
 originally approved time budget, though inside every resource and safety stop.
+
+## Owner ratification — 2026-09-24 (after Sprint 2 close)
+
+During Sprint 3 planning, the owner answered in chat: "Ratify, keep using it"
+for attempt-scoped time charging. The conditions marked † in this ledger, the
+[test report](test-report.md) and the completed-task corrections are
+therefore satisfied. R3, R4, AC7 and Sprint 2's operational confidence are
+unconditional. Sprint 3 uses the same rule and replaces fixed time caps with
+the owner's work-derived deadlines (INT-0007 AC7).

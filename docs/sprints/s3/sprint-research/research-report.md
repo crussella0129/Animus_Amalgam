@@ -72,11 +72,16 @@ Qwen3.8 chat template excerpt (for historical assistant turns):
 - [llama.cpp `server-context.cpp` at the pinned commit](https://github.com/ggml-org/llama.cpp/blob/b29c606e28a01b1bc8c1351026a0fa6e616bf6c4/tools/server/server-context.cpp) — covers three things: the `preserve_reasoning` template kwarg, enabled by default when supported (about lines 1480–1500); the live per-completion `reasoning_end` control that forces thinking to stop (about line 2479); and context-checkpoint creation, eviction and restore (about lines 2309–2370 and 3296–3365). Checkpoint size is logged only at trace verbosity.
 - [llama.cpp `arg.cpp` at the pinned commit](https://github.com/ggml-org/llama.cpp/blob/b29c606e28a01b1bc8c1351026a0fa6e616bf6c4/common/arg.cpp) — covers the server-wide `--reasoning-budget` / `--reasoning-budget-message` (about line 3707), `--ctx-checkpoints` (default 32), `--checkpoint-min-step` (default 8192), and `--spec-type draft-mtp` with `--spec-draft-n-max`.
 
+- [Qwen3.8-27B model card](https://huggingface.co/Qwen/Qwen3.8-27B) — the vendor's sampling guidance, which the GGUF metadata's `general.sampling` also points to.
+  - Thinking mode: temperature 1.0, top-p 0.95, top-k 20, min-p 0, presence penalty 0, repetition penalty 1.0.
+  - Non-thinking mode: temperature 0.7, top-p 0.8, top-k 20, min-p 0, presence penalty 1.5, repetition penalty 1.0.
+  - The card does not explicitly warn against greedy decoding.
+
 ## 4. Risks, Unknowns, Dependencies
 - **Risk — host headroom:** RAM admission needs 16.06 GiB, and 16.07 GiB was available at research time, with no margin. A 32K context and MTP draft state add VRAM (about 0.8 GiB of margin at 32K before MTP). Admission may refuse; do not stop the owner's applications without asking.
 - **Risk — thinking latency:** at about 3.6 tokens/s, 500 reasoning tokens take about 140 s. An unbounded-thinking arm will hit the 300 s request cap. That is a valid negative datum, not a harness failure. Reasoning tokens also count against `max_tokens`, so thinking arms need a larger per-arm output cap.
 - **Risk — latent estimator mismatch:** with `reasoning_echo` on, preflight and tail walks both undercount the wire prompt, which risks late compaction or overflow. Expect to find it by operating, and repair it at its source (`stale_thinking_reaches_wire` must honor the opt-in).
-- **Risk — non-determinism:** the owner's live sampling is temperature 1. The lab uses temperature 0 and seed 42 for comparability. Results may not transfer exactly to live sampling.
+- **Risk — sampling:** the owner's live sampling (temperature 1) matches the vendor's thinking-mode guidance. Greedy decoding is common for comparability, but it may behave differently in thinking mode. Planning resolved this as a seeded screen over greedy and the vendor settings (see the revisions below).
 - **Unknown:** whether the template's `reasoning_content|trim` re-render is byte-identical to the generated think block. Newline handling decides whether echo fully restores append-only prefixes.
 - **Unknown:** recurrent-state checkpoint size (it drives RAM cost as spacing gets denser). Measure it at trace verbosity.
 - **Unknown:** MTP acceptance rate and output identity at temperature 0 on this build.
@@ -119,6 +124,16 @@ Rationale: the evidence locates the cost in decoded tokens and cache loss.
 Existing controls (`reasoning_echo`, per-request reasoning budgets, MTP,
 checkpoint spacing, proactive pruning) can each be exercised without new
 architecture. The one suspected defect has a precise source location.
+
+## Revisions after planning (2026-09-24)
+
+The owner's planning decisions changed three recommendations:
+
+- MTP, uncapped thinking and the compression trial move to Sprint 4 (backlog T-217 to T-219).
+- Sampling becomes a seeded screen rather than fixed temperature 0.
+- Every time limit derives from measured host throughput, with no fixed seconds.
+
+Pinned-source note (`server-context.cpp`): the `prompt_progress` start event (about lines 3416–3420) and the per-batch events (about lines 3805–3809) are sent only when both `stream` and `return_progress` are true. The lab therefore forces streaming upstream.
 
 ## Artifacts
 None saved separately. The evidence is linked inline: the pinned llama.cpp
