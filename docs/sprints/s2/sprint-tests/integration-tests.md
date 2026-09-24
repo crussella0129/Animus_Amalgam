@@ -37,7 +37,7 @@ out a successful one is the missing credentials, not the wire.
 | Planned element | Disposition |
 |---|---|
 | Actual Hermes main/compression imports | Live only (attempts 06–13 main requests; attempt 11 real `compress_now`). There is no offline real-import capture test. |
-| Bounded physical attempts, 128-token cap | Request-level: every forwarded request carried `max_tokens: 128`, proven by the wire test and all live `backend_body` receipts. At the server level, llama-server reported `default_generation_settings.params.n_predict = -1` despite `--predict 128`. The server default is therefore unbounded, and the request cap is the only bound. Backend truncation at 128 was not observed (largest decode 69). D2's output-limit capability clause is **partial**; T-211 carries the decision and the truncation observation. |
+| Bounded physical attempts, 128-token cap | Request-level: every forwarded request carried a 128-token cap, proven by the wire test and the published `output_limit: 128` field on every live request. At the server level, llama-server's `/props` (private `server_props` event, attempt 13; `events.jsonl` sha256 `926667d6…`, listed in the receipt's `private_evidence_sha256`) reported `default_generation_settings.params.n_predict = -1` despite `--predict 128`. The server default is therefore unbounded, and the request cap is the only bound. Backend truncation at 128 was not observed (largest decode 69). D2's output-limit capability clause is **partial**; T-211 carries the decision and the truncation observation. |
 | Stable equivalent request bytes | **Fails across sessions** (environment probe, L-19); stable within a session. |
 | Temporary homes A→B→A | Not done (rationale above); carried by T-211. |
 | Mismatched server/context/rendered-input blocks generation | Unit: `test_ready_server_must_match_the_frozen_candidate` (3 cases). Integration: oversize, tools-overflow, misroute and exhausted-budget wire cases. |
@@ -90,9 +90,12 @@ A second critique round then added more changes:
 - in production Hermes, a served window (`num_ctx`) that differs from the pin
   now disqualifies the explicit-pin exception.
 
-The Hermes change is unit-tested and proven red on the prior code. The lab
-changes are behavior-preserving and unit-tested, and T-211's first launch
-replays them.
+The Hermes change is unit-tested and proven red on the prior code. The
+extractions are behavior-preserving and unit-tested. The launch-time dirty
+check is a **new refusal**: unit-tested, but not yet exercised live. Any
+`git status --porcelain` output (untracked files included) now blocks a
+launch. The **next lab launch**, whichever of T-210 or T-211 runs first,
+replays all of these.
 
 ## Deferred with rationale (carried by T-211)
 

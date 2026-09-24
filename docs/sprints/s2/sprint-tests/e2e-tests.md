@@ -27,11 +27,22 @@
 | Test | EARS | Attempts | Result | Evidence |
 |---|---|---|---|---|
 | `live_admission_receipt` | R1, M2 | 03, 04, 12 | pass | Each refusal recorded the exact RAM shortfall, zero launches and zero inference. Attempt 12 missed by 148,172,800 bytes, and no automatic retry followed. |
-| `live_smoke` | R2 | 07, 08, 09, 10, 13 | pass | Exact `AMALGAM_OK` each time. The driver checked attempts 10 and 13 at run time. Attempts 07–09 predate that check (added in `a85c947692`) and were verified afterwards from private results; the receipts label each case. |
-| `live_main_cancel` | R3, S1 | 10 | pass | The trigger fired with the slot processing request 15. Owned cleanup took 2.08 s, the listener closed at 2.63 s, and all roots exited 0. No sentinel was running in this attempt. |
-| `live_auxiliary_cancel` | R3, D2 | 11 | pass | The real `compress_now` request (1875 tokens, no production output cap) was active at the trigger. Hermes's interrupt closed the connection at 0.61 s; cleanup took 1.22 s and the listener closed at 1.78 s. |
-| `operational_repair_replay` | R4, AC7 | 01–11 | pass, under the amended envelope | The real terminal toolset read, edited and checked the fixture, failed on a missing script and recovered, and reported truthfully. The independent checker returned exit 0 and `CHECK_OK`. |
+| `live_smoke` | R2 | 07, 08, 09 (within budget); 10, 13 conditional † | pass | Exact `AMALGAM_OK` each time. The driver checked attempts 10 and 13 at run time. Attempts 07–09 predate that check (added in `a85c947692`) and were verified afterwards from private results; the receipts label each case. |
+| `live_main_cancel` | R3, S1 | 10 | pass, conditional † | The trigger fired with the slot processing request 15. Owned cleanup took 2.08 s, the listener closed at 2.63 s, and all roots exited 0. No sentinel was running in this attempt. |
+| `live_auxiliary_cancel` | R3, D2 | 11 | pass, conditional † | The real `compress_now` request (1875 tokens, no production output cap) was active at the trigger. Hermes's interrupt closed the connection at 0.61 s; cleanup took 1.22 s and the listener closed at 1.78 s. |
+| `operational_repair_replay` | R4, AC7 | 01–11 | pass, conditional † | The real terminal toolset read, edited and checked the fixture, failed on a missing script and recovered, and reported truthfully. The independent checker returned exit 0 and `CHECK_OK`. |
 | `owned_job_cleanup_windows_live` (live half) | S1 | 08, 09 | pass | An independently launched sentinel survived owned cleanup in both attempts. Every published attempt's cleanup took at most 5 s, as audited by `test_every_published_attempt_resolves_to_a_valid_frozen_manifest`. |
+
+† **Conditional on owner ratification of attempt-scoped time charging.**
+Under the originally approved rule (wall clock, repairs charged), the
+60-minute budget was already spent before attempt 10 began: 7,628 s by the
+end of interval 2. The plan says to keep confidence pending once the budget
+is exhausted. If the owner declines, R3, R4, AC7 and operational confidence
+become evidence gathered outside the approved time envelope, though inside
+every resource and safety stop, and confidence returns to pending. Attempts
+07–09 carry R2 inside the budget on every reading. AC2's aggregate-time gate
+is unproven: its predicate is untested and carried by T-211. The receipts'
+`charged_seconds` use the unratified rule.
 
 **Defect repairs replayed** (fresh and continued sessions):
 

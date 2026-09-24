@@ -305,6 +305,17 @@ listener closed at 1.78 s.
 
 ## Operational confidence — criteria met by attempt 11, before formal suites
 
+**Conditional:** this record depends on owner ratification of attempt-scoped
+time charging (see the time-accounting correction below). If the owner
+declines, confidence returns to pending.
+
+**Scope of the round-2 context-floor fix:** only a served window that the
+server *reports* (Ollama `num_ctx`) is compared with the pin. On llama.cpp,
+the pin is operator-trusted, and the lab's readiness `n_ctx` check guards the
+served window. llama-server's `/props` reported
+`default_generation_settings.params.n_predict = -1` despite `--predict 128`
+(attempt 13 private `server_props`), so only the per-request cap bounds output.
+
 The plan's criteria are met by receipts that predate every official test run
 in this sprint:
 

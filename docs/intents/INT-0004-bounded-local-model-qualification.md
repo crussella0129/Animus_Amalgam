@@ -3,7 +3,7 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0004
 - **State:** active
-- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 and T-202](../work/tasks.md)
+- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 to T-209 completions](../work/completed-tasks.md); [T-202 and T-211](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** [operational lab](../../evals/local_qualification/README.md); [explicit local context admission](../../agent/agent_init.py)
 - **Test evidence:** [Sprint 2 live E2E results](../sprints/s2/sprint-tests/e2e-tests.md); [Sprint 2 unit results](../sprints/s2/sprint-tests/unit-tests.md); [Sprint 2 integration results](../sprints/s2/sprint-tests/integration-tests.md)
