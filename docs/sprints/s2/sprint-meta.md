@@ -28,3 +28,11 @@
   stopped before execution by the global page-in guard. Useful-task completion
   and dedicated main/auxiliary cancellation remain unresolved. The operational
   ledger contains a concrete next-step proposal; official suites remain not run.
+- 2026-09-24 resolved: the owner answered “continue” and asked for the
+  direction to be checked. The session moved from GPT-6 (Codex) to Claude
+  Opus 5.5 (Claude Code). The approved continuation (6144-token input, nine
+  launches, RAM-conditional page-in stop), plus attempt-scoped time charging,
+  unblocked the loop. Attempts 10–11 completed the useful task, the
+  continued session and both cancellations. Attempt 13 replayed the
+  refactored harness after the owner freed memory. See the
+  [direction review](../../lineage/direction-review.md).

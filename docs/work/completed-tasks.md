@@ -90,3 +90,10 @@
 - **Completed:** 2026-09-24T16:59:31Z
 - **Files modified:** docs/sprints/s2/sprint-tests/operational-ledger.md, docs/sprints/s2/sprint-tests/qualification/attempts.json, docs/sprints/s2/sprint-tests/qualification/manifests/, evals/local_qualification/{driver,run,prepare,wire,telemetry}.py (repair commits d09b9470b3 through c42152ca0b)
 - **Commit:** `d5b94380bd035e8798d6d4b04fa2c6766f6e2278`
+
+## T-209 (sprint 2)
+- **Description:** After operational confidence, run focused formal checks and publish evidence. The formal suites ran only after the attempt-11 confidence record: 12 new contract tests plus the existing affected coverage, all green on head. The affected-suite regression check against pre-sprint cd2185c288 found identical failing test IDs (120 on both), so zero regressions. P1: the receipt audit found 13 attempts resolving to 9 digest-valid manifests, every stop cause preserved, pre-admission unknowns labeled, and no user paths, credentials or tokens. P2: INT-0004 stays active with AC3/AC5/AC6 on T-202, and no native/static, adaptive or model-quality claim is made.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
+- **Completed:** 2026-09-24T18:22:29Z
+- **Files modified:** docs/sprints/s2/sprint-tests/unit-tests.md, docs/sprints/s2/sprint-tests/integration-tests.md, docs/sprints/s2/sprint-tests/e2e-tests.md, docs/sprints/s2/sprint-meta.md, docs/intents/INT-0004-bounded-local-model-qualification.md
+- **Commit:** PENDING
