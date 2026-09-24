@@ -16,16 +16,32 @@ def main():
     parser.add_argument("--url", required=True)
     parser.add_argument(
         "--mode",
-        choices=["smoke", "operate", "workflow", "main-cancel", "aux-cancel"],
+        choices=[
+            "smoke",
+            "operate",
+            "workflow",
+            "exercise",
+            "main-cancel",
+            "aux-cancel",
+        ],
         required=True,
     )
     parser.add_argument("--result", type=Path, required=True)
     parser.add_argument("--interrupt-file", type=Path, required=True)
     args = parser.parse_args()
-    if args.mode == "workflow":
+    if args.mode in ("workflow", "exercise"):
         # Fresh CLI processes share one already-admitted backend. Toolsets stay
         # fixed within each conversation and all calls retain the owner's budget.
-        for mode in ("smoke", "operate"):
+        stages = (
+            ("smoke", "operate", "main-cancel")
+            if args.mode == "exercise"
+            else ("smoke", "operate")
+        )
+        for mode in stages:
+            stage_path = args.result.with_name("stage.json")
+            pending = stage_path.with_suffix(".tmp")
+            pending.write_text(json.dumps({"mode": mode}), encoding="utf-8")
+            os.replace(pending, stage_path)
             subprocess.run(
                 [
                     sys.executable,

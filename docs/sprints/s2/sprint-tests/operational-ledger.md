@@ -121,3 +121,27 @@ owned backend (`workflow` mode), preserving each conversation's fixed toolset
 and the aggregate budget. This leaves two of the six launches for main and
 auxiliary cancellation after the startup repair, rather than wasting a model
 reload between the smoke and useful task.
+
+## Attempt 07 — first real answer, background-title collision
+
+Manifest `9ecf14193525bf430368d19cec1f6a3ef292fc76dedc779c7fe394950ac4e5a7`
+replayed the context repair successfully. Real Hermes produced exactly
+`AMALGAM_OK`: 1169 rendered input tokens, 6 output tokens, 71.906 seconds total,
+65.984 seconds to first meaningful token. Backend prompt processing was
+65.962 seconds, decode 5.913 seconds. Its first 256-token prompt batch took
+57.76 seconds; subsequent batches were much faster. This does not establish
+continued-session latency or useful-task completion.
+
+Hermes then dispatched an automatic title request (267 input tokens). The
+backend completed it (13 output tokens), but the smoke CLI exited and its
+background connection closed while the wire relayed the response. The wire
+recorded a connection reset and stopped the whole attempt, including the new
+operational CLI. Four launches and two physical requests have now been used.
+Both requests remain counted; the extra title is not discarded as noise.
+
+The existing `auxiliary.title_generation.enabled: false` setting now disables
+this unrelated inference in the disposable profile. No live setting changes.
+The next owned backend will replay smoke, operate the fixture, then exercise
+main cancellation in fresh CLI processes, leaving the last launch for actual
+auxiliary cancellation. The owner observes the driver's recorded stage rather
+than inferring request purpose from prompt substrings. All budgets stay shared.

@@ -138,11 +138,12 @@ def main():
         "display": {"streaming": True},
         "terminal": {"backend": "local", "cwd": str(lab / "fixture")},
         "auxiliary": {
+            "title_generation": {"enabled": False},
             "compression": {
                 "provider": "custom",
                 "model": "amalgam-pilot",
                 "base_url": "http://127.0.0.1:18082/v1",
-            }
+            },
         },
     }
     (lab / "home" / "config.yaml").write_text(

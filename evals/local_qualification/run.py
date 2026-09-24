@@ -58,7 +58,14 @@ def main():
     parser.add_argument("--lab", type=Path, required=True)
     parser.add_argument(
         "--mode",
-        choices=["smoke", "operate", "workflow", "main-cancel", "aux-cancel"],
+        choices=[
+            "smoke",
+            "operate",
+            "workflow",
+            "exercise",
+            "main-cancel",
+            "aux-cancel",
+        ],
         required=True,
     )
     args = parser.parse_args()
@@ -388,7 +395,13 @@ def main():
                 elapsed = time.monotonic() - wire.active["started"]
                 if elapsed > 300:
                     raise RuntimeError("request deadline exceeded")
-                if args.mode.endswith("cancel") and elapsed > 5:
+                stage_path = attempt / "stage.json"
+                active_mode = (
+                    json.loads(stage_path.read_text())["mode"]
+                    if args.mode == "exercise" and stage_path.exists()
+                    else args.mode
+                )
+                if active_mode.endswith("cancel") and elapsed > 5:
                     slots = wire.backend("/slots")
                     record("cancel_trigger", slots=slots, request=wire.active)
                     if not any(slot.get("is_processing") for slot in slots):
@@ -402,7 +415,7 @@ def main():
             time.sleep(0.25)
         if reason == "unfinished":
             reason = f"CLI exited: {driver.returncode}"
-            if args.mode.endswith("cancel"):
+            if args.mode.endswith("cancel") or args.mode == "exercise":
                 reason = "cancellation inconclusive: CLI ended before active trigger"
     except (Exception, KeyboardInterrupt) as exc:
         reason = f"stopped: {type(exc).__name__}: {exc}"
