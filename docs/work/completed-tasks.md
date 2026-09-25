@@ -126,4 +126,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md), [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-09-25T02:16:17Z
 - **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/bringup.py (run.py and wire.py timing in the T-211 commit)
-- **Commit:** PENDING
+- **Commit:** `9086be2dae74636d3acf0b620678d418c5f015e5`
