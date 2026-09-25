@@ -57,6 +57,7 @@ def admission_requirements(placement: dict, limits: dict) -> tuple[int, int]:
     cpu = (
         placement["cpu_weight_bytes"]
         + placement["cpu_overhead_bytes"]
+        + placement.get("checkpoint_ram_bytes", 0)
         + limits["ram_reserve_bytes"]
     )
     gpu = (
@@ -74,6 +75,39 @@ def admitted(sample: dict | None, placement: dict, limits: dict) -> bool:
         sample is not None
         and sample["ram_available"] >= cpu
         and sample["vram_free"] >= gpu
+    )
+
+
+def telemetry_stale(sample_at: float, now: float, period: float) -> bool:
+    """A critical sample older than three collection periods is unusable."""
+    return now - sample_at > 3 * period
+
+
+def supervisor_lagged(previous_tick: float, now: float, period: float) -> bool:
+    """The owner itself is starved when its loop misses two telemetry periods."""
+    return now - previous_tick > 2 * period
+
+
+def launch_allowed(launches: int, limits: dict) -> bool:
+    return launches < limits["max_launches"]
+
+
+def request_allowed(requests: int, limits: dict) -> bool:
+    return requests < limits["max_requests"]
+
+
+def budget_exceeded(charged_seconds: float, budget_seconds: float | None) -> bool:
+    """Host-derived sprint budget; absent only during the calibration attempt."""
+    return budget_seconds is not None and charged_seconds > budget_seconds
+
+
+def load_progressed(previous: dict | None, sample: dict, log_grew: bool) -> bool:
+    """A load makes progress while backend memory grows or its log advances."""
+    if log_grew or previous is None:
+        return True
+    return (
+        sample["vram_used"] > previous["vram_used"]
+        or sample["ram_available"] < previous["ram_available"]
     )
 
 

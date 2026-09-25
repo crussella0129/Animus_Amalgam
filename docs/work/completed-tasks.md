@@ -120,3 +120,10 @@
 - **Completed:** 2026-09-25T02:16:15Z
 - **Files modified:** evals/local_qualification/{prepare,run,driver,wire}.py, evals/local_qualification/arms.json, evals/local_qualification/README.md
 - **Commit:** `24dc2e317e876f5592a91dd1d69b2f7b54053700`
+
+## T-221 (sprint 3)
+- **Description:** Apply the time model in the lab; extract stop predicates; forced streaming; bring-up stop check. T1: requests, loads and gaps are held only to throughput-module stall rules, host-derived backstops and resource stops, with predicted and actual time recorded (run.py, wire.py, committed with T-211). T2: stale telemetry, supervisor lag, launch count, request count, sprint budget and load progress are pure predicates in policy.py. T3: every replaced timer comes from host-derived rules; only the telemetry, loop and slot-poll cadences and the 2 s grace and 5 s cleanup remain fixed. T4: the wire streams upstream with return_progress, strips progress from the client and reassembles non-streaming responses. T5: bringup.py passed with no model loaded. The stall fired at its 2.0 s window, the 5-process owned tree was gone in 0.047 s, and the sentinel survived.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md), [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-09-25T02:16:17Z
+- **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/bringup.py (run.py and wire.py timing in the T-211 commit)
+- **Commit:** PENDING
