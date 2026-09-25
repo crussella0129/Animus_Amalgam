@@ -119,4 +119,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completed:** 2026-09-25T02:16:15Z
 - **Files modified:** evals/local_qualification/{prepare,run,driver,wire}.py, evals/local_qualification/arms.json, evals/local_qualification/README.md
-- **Commit:** PENDING
+- **Commit:** `24dc2e317e876f5592a91dd1d69b2f7b54053700`
