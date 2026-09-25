@@ -1,0 +1,62 @@
+{
+  "time_params": {
+    "margin": 2.0,
+    "stall_multiple": 20.0,
+    "floor_fraction": 0.5,
+    "planning_uncached_tokens": 2048,
+    "min_prefill_sample_tokens": 256,
+    "min_decode_sample_tokens": 16,
+    "rate_smoothing": 0.3,
+    "min_observation_periods": 4
+  },
+  "owner_time_model_decision": "2026-09-24: attempt-scoped charging ratified; every deadline, stall window and backstop derives from throughput measured on the running host (no fixed seconds); sprint budget is host-derived and stop-and-report",
+  "sampling": {
+    "greedy": {"temperature": 0.0, "top_p": 1.0, "top_k": 0, "min_p": 0.0, "presence_penalty": 0.0, "repeat_penalty": 1.0},
+    "vendor-nonthinking": {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0, "presence_penalty": 1.5, "repeat_penalty": 1.0},
+    "model-default": {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0.0, "repeat_penalty": 1.0},
+    "mid-probe": {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0.0, "repeat_penalty": 1.0}
+  },
+  "session_arms": {
+    "off-greedy": {"thinking": false, "output_cap": 512, "reasoning_budget": null, "sampling": "greedy", "selectable": true},
+    "off-vendor": {"thinking": false, "output_cap": 512, "reasoning_budget": null, "sampling": "vendor-nonthinking", "selectable": true},
+    "off-model-default": {"thinking": false, "output_cap": 512, "reasoning_budget": null, "sampling": "model-default", "selectable": true},
+    "on-greedy": {"thinking": true, "output_cap": 768, "reasoning_budget": 256, "sampling": "greedy", "selectable": true},
+    "on-vendor": {"thinking": true, "output_cap": 768, "reasoning_budget": 256, "sampling": "model-default", "selectable": true},
+    "on-mid-probe": {"thinking": true, "output_cap": 768, "reasoning_budget": 256, "sampling": "mid-probe", "selectable": false}
+  },
+  "launch_profiles": {
+    "calibration": {"context": 32768, "ctx_checkpoints": 4, "checkpoint_min_step": null, "trace": true},
+    "sprint": {"context": 32768, "ctx_checkpoints": "calibrated", "checkpoint_min_step": null, "trace": false},
+    "density": {"context": 32768, "ctx_checkpoints": "calibrated", "checkpoint_min_step": 512, "trace": true}
+  },
+  "attempt_plans": {
+    "calibration": {
+      "launch": "calibration",
+      "sessions": [
+        {"arm": "off-greedy", "workload": "smoke", "echo": false},
+        {"arm": "off-greedy", "workload": "smoke", "echo": false},
+        {"arm": "off-greedy", "workload": "decode-sample", "echo": false},
+        {"arm": "off-greedy", "workload": "main-cancel", "echo": false}
+      ]
+    },
+    "screen": {
+      "launch": "sprint",
+      "sessions": [
+        {"arm": "off-greedy", "workload": "long:1-3", "echo": false},
+        {"arm": "off-vendor", "workload": "long:1-3", "echo": false},
+        {"arm": "off-model-default", "workload": "long:1-3", "echo": false},
+        {"arm": "on-greedy", "workload": "long:1-3", "echo": false},
+        {"arm": "on-vendor", "workload": "long:1-3", "echo": false},
+        {"arm": "on-mid-probe", "workload": "long:1-3", "echo": false}
+      ]
+    },
+    "R0": {"launch": "sprint", "sessions": [{"arm": "winner:off", "workload": "long:all", "echo": false}]},
+    "R1": {"launch": "sprint", "sessions": [{"arm": "winner:on", "workload": "long:all", "echo": false}]},
+    "R2": {"launch": "sprint", "sessions": [{"arm": "winner:on", "workload": "long:all", "echo": true}]},
+    "R3": {"launch": "density", "sessions": [{"arm": "winner:on", "workload": "long:all", "echo": false}]}
+  },
+  "planned_requests": {"smoke": 1, "decode-sample": 1, "main-cancel": 1, "long:1-3": 8, "long:all": 30},
+  "session_request_limit_multiple": 3,
+  "max_turns_per_user_turn": 30,
+  "screen_winners": {}
+}

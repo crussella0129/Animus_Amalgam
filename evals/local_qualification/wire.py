@@ -1,4 +1,10 @@
-"""Inspect and bound the real CLI's local wire; no synthetic model replies."""
+"""Inspect and bound the real CLI's local wire; no synthetic model replies.
+
+Every request goes upstream streaming with ``return_progress`` (the pinned llama.cpp sends
+progress only on streaming requests). Progress chunks are consumed here and never reach the
+client; a non-streaming client gets one reassembled response. The active slot's ``/slots``
+counters are polled as a second progress signal, covering deltas the server's parser withholds.
+"""
 
 import hashlib
 import http.client
@@ -8,6 +14,74 @@ import threading
 import time
 import urllib.request
 
+# Thinking is controlled only through chat_template_kwargs; these would conflict upstream.
+_CONFLICTING_FIELDS = ("max_completion_tokens", "reasoning_effort", "reasoning")
+
+
+def bound_body(body, arm, sampling, seed):
+    """The backend body for one request under a session arm (pure, for tests)."""
+    bounded = {k: v for k, v in body.items() if k not in _CONFLICTING_FIELDS}
+    bounded.update(
+        sampling,
+        seed=seed,
+        max_tokens=arm["output_cap"],
+        stream=True,
+        return_progress=True,
+        chat_template_kwargs={"enable_thinking": bool(arm["thinking"])},
+    )
+    bounded.pop("reasoning_budget_tokens", None)
+    if arm["thinking"] and arm.get("reasoning_budget") is not None:
+        bounded["reasoning_budget_tokens"] = arm["reasoning_budget"]
+    return bounded
+
+
+class Reassembler:
+    """Folds streamed chat-completion deltas into one non-streaming response."""
+
+    def __init__(self):
+        self.content, self.reasoning, self.tool_calls = [], [], {}
+        self.finish_reason, self.last = None, {}
+
+    def add(self, data):
+        self.last = data
+        for choice in data.get("choices", []):
+            delta = choice.get("delta", {})
+            self.content.append(delta.get("content") or "")
+            self.reasoning.append(delta.get("reasoning_content") or "")
+            for call in delta.get("tool_calls") or []:
+                slot = self.tool_calls.setdefault(
+                    call.get("index", 0),
+                    {
+                        "id": None,
+                        "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    },
+                )
+                slot["id"] = call.get("id") or slot["id"]
+                fn = call.get("function") or {}
+                slot["function"]["name"] += fn.get("name") or ""
+                slot["function"]["arguments"] += fn.get("arguments") or ""
+            self.finish_reason = choice.get("finish_reason") or self.finish_reason
+
+    def response(self):
+        message = {"role": "assistant", "content": "".join(self.content) or None}
+        if any(self.reasoning):
+            message["reasoning_content"] = "".join(self.reasoning)
+        if self.tool_calls:
+            message["tool_calls"] = [
+                self.tool_calls[i] for i in sorted(self.tool_calls)
+            ]
+        return {
+            "id": self.last.get("id"),
+            "object": "chat.completion",
+            "created": self.last.get("created"),
+            "model": self.last.get("model"),
+            "choices": [
+                {"index": 0, "message": message, "finish_reason": self.finish_reason}
+            ],
+            "usage": self.last.get("usage"),
+        }
+
 
 class Wire:
     def __init__(
@@ -16,15 +90,20 @@ class Wire:
         token,
         record,
         consume_request,
-        input_limit,
-        backend_timeout=2,
+        probe_timeout,
+        observation_period,
+        predictor=None,
     ):
         self.backend_url, self.token = backend_url, token
-        self.backend_timeout = backend_timeout
         self.record, self.consume_request = record, consume_request
+        self.probe_timeout, self.observation_period = probe_timeout, observation_period
+        # predictor(uncached_tokens, output_cap) -> seconds; None while calibrating.
+        self.predictor = predictor
         self.active = None
         self.failure = None
+        self.session = None
         self.lock = threading.Lock()
+        self._upstream = None
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -41,144 +120,309 @@ class Wire:
                     self.send_error(503, type(exc).__name__)
 
             def do_POST(self):
-                if self.path != "/v1/chat/completions" or not owner.lock.acquire(False):
-                    self.send_error(409, "Unexpected endpoint or concurrent request")
-                    owner.failure = "unexpected or concurrent inference request"
-                    return
-                connection = None
-                try:
-                    size = int(self.headers.get("Content-Length", "0"))
-                    if not 0 < size <= 1024 * 1024:
-                        raise ValueError("request size outside pilot bound")
-                    body = json.loads(self.rfile.read(size))
-                    original = dict(body)
-                    if body.get("model") != "amalgam-pilot":
-                        raise ValueError("wrong model")
-                    # The lab's backend budget covers auxiliary calls, whose
-                    # production helper intentionally omits user output caps.
-                    # Preserve both bodies so this is never mistaken for an
-                    # unmodified stock-Hermes request.
-                    body.update(
-                        max_tokens=128,
-                        temperature=0,
-                        top_p=1,
-                        seed=42,
-                        chat_template_kwargs={"enable_thinking": False},
-                    )
-                    body.pop("max_completion_tokens", None)
-                    prompt = owner.backend("/apply-template", body)["prompt"]
-                    tokens = owner.backend(
-                        "/tokenize",
-                        {
-                            "content": prompt,
-                            "add_special": False,
-                            "parse_special": True,
-                        },
-                    )["tokens"]
-                    if len(tokens) > input_limit:
-                        owner.record(
-                            "rejected_request",
-                            input_tokens=len(tokens),
-                            original_body=original,
-                        )
-                        raise ValueError(
-                            f"rendered input {len(tokens)} exceeds {input_limit}"
-                        )
-                    request_id = owner.consume_request()
-                    owner.active = {
-                        "request_id": request_id,
-                        "started": time.monotonic(),
-                    }
-                    owner.record(
-                        "request",
-                        request_id=request_id,
-                        original_body=original,
-                        backend_body=body,
-                        input_tokens=len(tokens),
-                        prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest(),
-                        token_ids=tokens,
-                    )
-                    port = int(owner.backend_url.rsplit(":", 1)[1])
-                    connection = http.client.HTTPConnection(
-                        "127.0.0.1", port, timeout=300
-                    )
-                    connection.request(
-                        "POST",
-                        self.path,
-                        json.dumps(body),
-                        {
-                            "Content-Type": "application/json",
-                            "Authorization": "Bearer " + owner.token,
-                        },
-                    )
-                    response = connection.getresponse()
-                    self.send_response(response.status)
-                    self.send_header(
-                        "Content-Type",
-                        response.getheader("Content-Type", "application/json"),
-                    )
-                    self.end_headers()
-                    first = None
-                    while True:
-                        line = response.readline()
-                        if not line:
-                            break
-                        if line.startswith(b"data: {"):
-                            data = json.loads(line[6:])
-                            meaningful = any(
-                                c.get("delta", {}).get("content")
-                                or c.get("delta", {}).get("tool_calls")
-                                for c in data.get("choices", [])
-                            )
-                            if meaningful and first is None:
-                                first = time.monotonic() - owner.active["started"]
-                            owner.record("chunk", request_id=request_id, data=data)
-                        self.wfile.write(line)
-                        self.wfile.flush()
-                    owner.record(
-                        "response_end",
-                        request_id=request_id,
-                        status=response.status,
-                        seconds=time.monotonic() - owner.active["started"],
-                        meaningful_first_token_seconds=first,
-                    )
-                except Exception as exc:
-                    owner.failure = f"{type(exc).__name__}: {exc}"
-                    owner.record("wire_failure", error=owner.failure)
-                    try:
-                        self.send_error(
-                            422, "pilot gate rejected or failed; inspect local receipt"
-                        )
-                    except OSError:
-                        pass
-                finally:
-                    if connection is not None:
-                        connection.close()
-                    owner.active = None
-                    owner.lock.release()
+                owner._handle(self)
 
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         self.server.daemon_threads = True
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.url = f"http://127.0.0.1:{self.server.server_port}/v1"
 
-    def backend(self, path, body=None):
+    def begin_session(
+        self, session_id, arm, sampling, seed, input_ceiling, request_limit
+    ):
+        self.failure = None
+        self.session = {
+            "id": session_id,
+            "arm": arm,
+            "sampling": sampling,
+            "seed": seed,
+            "input_ceiling": input_ceiling,
+            "request_limit": request_limit,
+            "requests": 0,
+            "last_finish": None,
+            "first_request": None,
+        }
+
+    def end_session(self):
+        session, self.session = self.session, None
+        return session
+
+    @staticmethod
+    def probe(base_url, token, path, timeout, body=None, method=None):
         request = urllib.request.Request(
-            self.backend_url + path,
+            base_url + path,
             data=None if body is None else json.dumps(body).encode(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + self.token,
+                "Authorization": "Bearer " + token,
             },
+            method=method,
         )
-        with urllib.request.urlopen(request, timeout=self.backend_timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.load(response)
+
+    def backend(self, path, body=None, method=None):
+        return self.probe(
+            self.backend_url, self.token, path, self.probe_timeout, body, method
+        )
+
+    def probe_slots(self):
+        return self.backend("/slots")
+
+    def erase_slot(self):
+        return self.backend("/slots/0?action=erase", {}, method="POST")
+
+    def cancel_active(self):
+        """Close the upstream stream; llama.cpp stops the slot when its client disconnects."""
+        upstream = self._upstream
+        if upstream is not None:
+            try:
+                upstream.close()
+            except OSError:
+                pass
+
+    def _progress(self, **fields):
+        active = self.active
+        if active is not None:
+            now = time.monotonic()
+            if active.get("first_event") is None:
+                active["first_event"] = now - active["started"]
+            active.update(last_progress=now, **fields)
+
+    def _poll_slots(self, request_id):
+        seen = None
+        while self.active is not None and self.active["request_id"] == request_id:
+            try:
+                slots = self.backend("/slots")
+                counters = [
+                    (
+                        s.get("n_prompt_tokens_processed"),
+                        s.get("next_token", [{}])[0].get("n_decoded")
+                        if isinstance(s.get("next_token"), list)
+                        else s.get("n_decoded"),
+                    )
+                    for s in slots
+                    if s.get("is_processing")
+                ]
+                if counters and counters != seen:
+                    if seen is not None:
+                        self._progress(slots_progress=counters)
+                    seen = counters
+            except (OSError, ValueError, KeyError, IndexError):
+                pass
+            time.sleep(self.observation_period)
+
+    def _reject(self, handler, reason, **data):
+        self.failure = reason
+        self.record("wire_failure", error=reason, **data)
+        try:
+            handler.send_error(
+                422, "pilot gate rejected or failed; inspect local receipt"
+            )
+        except OSError:
+            pass
+
+    def _handle(self, handler):
+        if handler.path != "/v1/chat/completions" or not self.lock.acquire(False):
+            handler.send_error(409, "Unexpected endpoint or concurrent request")
+            self.failure = "unexpected or concurrent inference request"
+            return
+        connection = None
+        request_id = None
+        try:
+            session = self.session
+            if session is None:
+                raise ValueError("request outside a lab session")
+            size = int(handler.headers.get("Content-Length", "0"))
+            if not 0 < size <= 4 * 1024 * 1024:
+                raise ValueError("request size outside pilot bound")
+            original = json.loads(handler.rfile.read(size))
+            if original.get("model") != "amalgam-pilot":
+                raise ValueError("wrong model")
+            client_streams = bool(original.get("stream"))
+            body = bound_body(
+                original, session["arm"], session["sampling"], session["seed"]
+            )
+            prompt = self.backend("/apply-template", body)["prompt"]
+            tokens = len(
+                self.backend(
+                    "/tokenize",
+                    {"content": prompt, "add_special": False, "parse_special": True},
+                )["tokens"]
+            )
+            if tokens > session["input_ceiling"]:
+                raise ValueError(
+                    f"rendered input {tokens} exceeds {session['input_ceiling']}"
+                )
+            if session["requests"] >= session["request_limit"]:
+                raise ValueError("session request limit reached")
+            request_id = self.consume_request()
+            session["requests"] += 1
+            messages = original.get("messages") or []
+            system = (
+                messages[0]
+                if messages and messages[0].get("role") == "system"
+                else None
+            )
+            started = time.monotonic()
+            cap = session["arm"]["output_cap"]
+            predicted = self.predictor(tokens, cap) if self.predictor else None
+            self.active = {
+                "request_id": request_id,
+                "started": started,
+                "last_progress": started,
+                "phase": "pre_first_event",
+                "input_tokens": tokens,
+                "output_cap": cap,
+                "first_token": None,
+                "progress": None,
+                "predicted_initial": predicted,
+                "predicted_rearmed": None,
+            }
+            event = {
+                "request_id": request_id,
+                "session": session["id"],
+                "original_body": original,
+                "backend_body": body,
+                "input_tokens": tokens,
+                "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+                "system_sha256": hashlib.sha256(
+                    json.dumps(system, sort_keys=True).encode()
+                ).hexdigest()
+                if system
+                else None,
+                "tools_sha256": hashlib.sha256(
+                    json.dumps(original.get("tools"), sort_keys=True).encode()
+                ).hexdigest(),
+                "client_streams": client_streams,
+                "continuation_of_length_finish": session["last_finish"] == "length",
+            }
+            if session["first_request"] is None:
+                session["first_request"] = {
+                    k: event[k]
+                    for k in (
+                        "input_tokens",
+                        "prompt_sha256",
+                        "system_sha256",
+                        "tools_sha256",
+                    )
+                }
+            self.record("request", **event)
+            threading.Thread(
+                target=self._poll_slots, args=(request_id,), daemon=True
+            ).start()
+            port = int(self.backend_url.rsplit(":", 1)[1])
+            connection = http.client.HTTPConnection("127.0.0.1", port)
+            self._upstream = connection
+            connection.request(
+                "POST",
+                handler.path,
+                json.dumps(body),
+                {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + self.token,
+                },
+            )
+            response = connection.getresponse()
+            if client_streams:
+                handler.send_response(response.status)
+                handler.send_header("Content-Type", "text/event-stream")
+                handler.end_headers()
+            folded = Reassembler()
+            texts = {"reasoning": [], "content": []}
+            timings = id_slot = None
+            while True:
+                line = response.readline()
+                if not line:
+                    break
+                if not line.startswith(b"data: {"):
+                    if client_streams and line.strip() == b"data: [DONE]":
+                        handler.wfile.write(line + b"\n")
+                        handler.wfile.flush()
+                    continue
+                data = json.loads(line[6:])
+                if "prompt_progress" in data:
+                    progress = data["prompt_progress"]
+                    phase = (
+                        "prefill"
+                        if progress.get("processed", 0) < progress.get("total", 0)
+                        else "decode"
+                    )
+                    if self.predictor and self.active["predicted_rearmed"] is None:
+                        # First progress event: the exact uncached count is now known.
+                        uncached = progress.get("total", 0) - progress.get("cache", 0)
+                        self.active["predicted_rearmed"] = (
+                            time.monotonic() - started + self.predictor(uncached, cap)
+                        )
+                    self._progress(phase=phase, progress=progress)
+                    self.record("progress", request_id=request_id, **progress)
+                    continue
+                id_slot = data.get("id_slot", id_slot)
+                timings = data.get("timings", timings)
+                folded.add(data)
+                for choice in data.get("choices", []):
+                    delta = choice.get("delta", {})
+                    texts["reasoning"].append(delta.get("reasoning_content") or "")
+                    texts["content"].append(delta.get("content") or "")
+                    meaningful = (
+                        delta.get("content")
+                        or delta.get("reasoning_content")
+                        or delta.get("tool_calls")
+                    )
+                    if meaningful:
+                        if self.active["first_token"] is None:
+                            self.active["first_token"] = time.monotonic() - started
+                        self._progress(phase="decode")
+                if client_streams:
+                    handler.wfile.write(line + b"\n")
+                    handler.wfile.flush()
+            if not client_streams:
+                payload = json.dumps(folded.response()).encode()
+                handler.send_response(response.status)
+                handler.send_header("Content-Type", "application/json")
+                handler.send_header("Content-Length", str(len(payload)))
+                handler.end_headers()
+                handler.wfile.write(payload)
+            split = {}
+            for kind, parts in texts.items():
+                text = "".join(parts)
+                split[kind] = (
+                    len(self.backend("/tokenize", {"content": text})["tokens"])
+                    if text
+                    else 0
+                )
+            session["last_finish"] = folded.finish_reason
+            self.record(
+                "response_end",
+                request_id=request_id,
+                session=session["id"],
+                status=response.status,
+                seconds=time.monotonic() - started,
+                meaningful_first_token_seconds=self.active["first_token"],
+                first_event_seconds=self.active.get("first_event"),
+                predicted_initial_seconds=self.active["predicted_initial"],
+                predicted_rearmed_seconds=self.active["predicted_rearmed"],
+                id_slot=id_slot,
+                finish_reason=folded.finish_reason,
+                timings=timings,
+                reasoning_tokens=split["reasoning"],
+                visible_tokens=split["content"],
+                tool_calls=len(folded.tool_calls),
+                progress=self.active.get("progress"),
+            )
+        except Exception as exc:
+            self._reject(handler, f"{type(exc).__name__}: {exc}", request_id=request_id)
+        finally:
+            self._upstream = None
+            if connection is not None:
+                connection.close()
+            self.active = None
+            self.lock.release()
 
     def close(self):
         self.server.shutdown()
         self.server.server_close()
-        # The backend has already exited; allow its response thread to finish
-        # recording before the owner's receipt stream is closed.
+        # Let a response thread finish recording before the owner's receipt stream closes.
         if not self.lock.acquire(timeout=1):
             raise RuntimeError("wire handler did not settle during owned cleanup")
         self.lock.release()

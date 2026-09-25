@@ -113,3 +113,10 @@
 - **Completed:** 2026-09-25T02:05:19Z
 - **Files modified:** hermes_cli/local_runtime/throughput.py
 - **Commit:** `6526875b951ed9847ddfd9e8eff49d43da32f5fb`
+
+## T-211 (sprint 3)
+- **Description:** Arm manifests, fresh per-session state outside the repo, clean environment, receipt and manifest fields. M1: arms.json drives the launch flags (32K, checkpoints, trace verbosity, --slot-save-path added at launch, no --predict) and per-session request bounds (cap, input ceiling, thinking, reasoning budget, sampling, echo), verified in the dry-run manifest. M2: sessions get a fresh home and fixture under a lab root outside the repo; the environment has no PYTHONPATH, has SYSTEMDRIVE and puts the task venv first on PATH; the home sets environment_probe false and Hermes stream-stale and request timeouts at or above the backstop. M3: the wire records first token, id_slot, finish_reason, length continuations, a reasoning/visible split, predicted and actual time; the driver records tool-call validity. M4: the manifest records the time parameters, calibration record, Hermes timeouts, owner decision and allowlist. M2 and M3 are exercised live in T-222. Finding: the app's MSIX virtualization redirects AppData writes, so the lab root is C:/Users/<user>/amalgam-lab. run.py and wire.py also carry T-221's timing logic, which cannot be separated file by file.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md)
+- **Completed:** 2026-09-25T02:16:15Z
+- **Files modified:** evals/local_qualification/{prepare,run,driver,wire}.py, evals/local_qualification/arms.json, evals/local_qualification/README.md
+- **Commit:** PENDING
