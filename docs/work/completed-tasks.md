@@ -106,3 +106,10 @@
 - **T-208 (time budget):** Attempts 10–13 ran under agent-introduced, owner-unratified attempt-scoped time charging. Under the originally approved rule, the 60-minute allowance was exhausted before attempt 10 (7,628 s by the end of interval 2). R3, R4, AC7 and operational confidence are therefore conditional on owner ratification. Attempt 13's smoke is outside the budget on every wall-clock reading.
 - **T-209:** The final Sprint 2 test set is 26 new or changed tests (policy 15, context floor 6, wire 5). The privacy screen is `test_published_evidence_excludes_private_paths_and_credentials`.
 - **Commit:** none (correction note; the corrected evidence is in the Sprint 2 test report)
+
+## T-215 (sprint 3)
+- **Description:** Host-calibrated throughput and deadline module. H1: rates update only from qualifying samples (a 1-token prefill leaves P unchanged), floors are fixed from calibration, and prediction is monotonic. H2: a step with progress inside the stall window is never stopped before the backstop; silence past the window stalls; reaching the backstop is a recorded failure. H3: windows and backstops scale inversely with the calibrated rates (a 10x faster host gets a 10x shorter request backstop: 1,877 s to 188 s) and contain no fixed-seconds constant. Checked behaviorally at build; formal tests in T-214.
+- **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-09-25T02:05:19Z
+- **Files modified:** hermes_cli/local_runtime/throughput.py
+- **Commit:** PENDING

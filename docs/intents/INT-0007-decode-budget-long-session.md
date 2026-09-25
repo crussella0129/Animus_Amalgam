@@ -2,7 +2,7 @@
 
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0007
-- **State:** planned
+- **State:** active
 - **Work evidence:** [Sprint 3 build plan](../sprints/s3/sprint-plans/build-plan.md); [T-210 to T-216, T-221 and T-222 in the Sprint 3 plan, and T-217 to T-219 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** none
@@ -155,3 +155,5 @@ Sprint 3 research located the thinking-mode cache mechanism in code.
   the outcome. A turn in AC1 is one model request. AC7 enforcement is a stall
   rule plus a host-derived worst-case backstop, and a backstop stop is a
   recorded failure. State remains `planned`.
+- 2026-09-24: Sprint 3 plans locked after four critique rounds (final:
+  proceed-with-caveats). Moved `planned` → `active` as Build began with T-215.
