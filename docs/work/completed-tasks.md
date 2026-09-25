@@ -112,4 +112,4 @@
 - **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-09-25T02:05:19Z
 - **Files modified:** hermes_cli/local_runtime/throughput.py
-- **Commit:** PENDING
+- **Commit:** `6526875b951ed9847ddfd9e8eff49d43da32f5fb`
