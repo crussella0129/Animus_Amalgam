@@ -325,7 +325,8 @@ def build_reference(python: Path) -> None:
     if scores[0] != 0 or scores[3] < 1 or scores[-1] != len(ITEMS):
         raise SystemExit(f"reference path does not score 0 → (turn 3) ≥1 → 4: {scores}")
     reference["scores_after_turn"] = scores
-    reference_path.write_text(json.dumps(reference, indent=1) + "\n", encoding="utf-8")
+    # LF on every host: the task-corpus digest hashes these bytes.
+    reference_path.write_bytes((json.dumps(reference, indent=1) + "\n").encode("utf-8"))
     print(json.dumps({"scores_after_turn": scores}))
 
 
