@@ -356,3 +356,40 @@ for this attempt was 764.7 s.
   On this host, decode speed is the bottleneck, as Sprint 2 found.
 - **Resources:** the minimum available RAM per request was 6.29 GiB, against
   the 4 GiB reserve.
+
+## Attempt 09 — R1 (thinking on, greedy, budget 256, echo off)
+
+Manifest `R1-29e3a70e4c9e`. The load took 14.8 s and L3 passed. The single
+session finished with no stop. The maximum supervisor lag was 0.33 s and
+cleanup took 0.97 s. Charged time for this attempt was 1,427.2 s.
+
+- **Verified: 4/4.** There was no contamination.
+- **Requests: 20,** so **INT-0007 AC1's coverage is met.**
+- **Machine time:** 1,389 s. Decoded tokens: 4,233, of which 1,999 were
+  reasoning. That is **347 s and 1,058 decoded tokens per verified item**,
+  about 1.9 times R0 for the same verified result.
+- **Reasoning budget:** 3 of 20 requests hit it (255 tokens).
+
+**Divergence (O2).** With echo off, every continued request rolls back
+almost exactly the previous turn's generated tokens, reasoning included. A
+468-token turn, for example, was followed by a 472-token rollback.
+llama.cpp restores the context checkpoint it created at the end of the
+previous prompt. It then reprocesses the re-rendered assistant turn, without
+its think block, plus the new tool result. The divergence point is
+therefore the start of the previous assistant turn, every turn.
+
+| Measure | Value |
+|---|---|
+| Rollback range | 58–640 tokens |
+| Median uncached prompt per continued request | 161 tokens |
+| Largest uncached prompt (a tool output) | 1,095 tokens |
+| Peak rendered input | 7,867 tokens |
+
+The re-render cost is real but small, because each checkpoint sits just
+before the generation.
+
+**O3 — R3 is not run.** R1's median uncached prompt per continued request
+was 161, which does not exceed the 2,000 threshold. The second condition,
+frozen checkpoints of at least 2, was met (5). Checkpoint density has
+nothing to recover here: the default end-of-prompt checkpoint already
+bounds each rollback to one turn.
