@@ -133,7 +133,14 @@ class Wire:
         self.url = f"http://127.0.0.1:{self.server.server_port}/v1"
 
     def begin_session(
-        self, session_id, arm, sampling, seed, input_ceiling, request_limit
+        self,
+        session_id,
+        arm,
+        sampling,
+        seed,
+        input_ceiling,
+        request_limit,
+        precheck=None,
     ):
         self.failure = None
         self.session = {
@@ -146,6 +153,8 @@ class Wire:
             "requests": 0,
             "last_finish": None,
             "first_request": None,
+            # precheck(original_body) -> result; runs once, on the first request, before generation.
+            "precheck": precheck,
         }
 
     def end_session(self):
@@ -278,6 +287,12 @@ class Wire:
                 )
             if session["requests"] >= session["request_limit"]:
                 raise ValueError("session request limit reached")
+            if session["precheck"] is not None:
+                check, session["precheck"] = session["precheck"], None
+                result = check(original)
+                self.record("task_precheck", session=session["id"], **result)
+                if not result["passed"]:
+                    raise ValueError("task pre-check failed (L3)")
             request_id = self.consume_request()
             session["requests"] += 1
             messages = original.get("messages") or []

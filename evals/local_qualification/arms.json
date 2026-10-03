@@ -34,7 +34,7 @@
       "launch": "calibration",
       "sessions": [
         {"arm": "off-greedy", "workload": "smoke", "echo": false},
-        {"arm": "off-greedy", "workload": "smoke", "echo": false},
+        {"arm": "off-greedy", "workload": "smoke", "echo": false, "erase": false},
         {"arm": "off-greedy", "workload": "decode-sample", "echo": false},
         {"arm": "off-greedy", "workload": "main-cancel", "echo": false}
       ]
@@ -42,6 +42,8 @@
     "screen": {
       "launch": "sprint",
       "sessions": [
+        {"arm": "off-greedy", "workload": "smoke", "echo": false},
+        {"arm": "off-greedy", "workload": "smoke", "echo": false, "erase": false},
         {"arm": "off-greedy", "workload": "long:1-3", "echo": false},
         {"arm": "off-vendor", "workload": "long:1-3", "echo": false},
         {"arm": "off-model-default", "workload": "long:1-3", "echo": false},

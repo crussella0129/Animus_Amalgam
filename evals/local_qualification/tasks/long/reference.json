@@ -1,0 +1,125 @@
+{
+ "turns": [
+  [
+   {
+    "command": "ls -R",
+    "output": ".:\nREADME.md\ncheck.py\ninventory\n\n./inventory:\n__init__.py\nmodels.py\npricing.py\nreport.py\n",
+    "exit_code": 0
+   },
+   {
+    "command": "cat README.md inventory/models.py inventory/pricing.py inventory/report.py check.py",
+    "output": "# inventory\n\nA tiny stock-keeping package. `inventory/models.py` holds items and stock\nlevels, `inventory/pricing.py` values one line after its percentage discount,\nand `inventory/report.py` renders a text report with the total stock value.\n\nRun `python check.py` to run the checks.\n\"\"\"Items and the inventory that holds them.\"\"\"\n\nfrom dataclasses import dataclass\n\n\n@dataclass\nclass Item:\n    name: str\n    unit_price: float\n    quantity: int\n    discount_percent: float = 0.0\n\n\nclass Inventory:\n    def __init__(self):\n        self.items = {}\n\n    def add(self, name, unit_price, quantity, discount_percent=0.0):\n        if quantity < 0:\n            raise ValueError(\"quantity must not be negative\")\n        if name in self.items:\n            self.items[name].quantity += quantity\n        else:\n            self.items[name] = Item(name, unit_price, quantity, discount_percent)\n\n    def remove(self, name, quantity):\n        \"\"\"Take stock out; removing more than is held is an error.\"\"\"\n        item = self.items[name]\n        item.quantity -= quantity\n\n    def quantity(self, name):\n        return self.items[name].quantity if name in self.items else 0\n\"\"\"Prices for inventory lines.\"\"\"\n\n\ndef line_price(item):\n    \"\"\"Value of one inventory line after the item's percentage discount.\"\"\"\n    discounted = item.unit_price * item.discount_percent / 100\n    return round(discounted * item.quantity, 2)\n\"\"\"Plain-text stock reports.\"\"\"\n\nfrom inventory.pricing import line_price\n\n\ndef total_value(inventory):\n    \"\"\"Total value of all stock, after discounts.\"\"\"\n    return round(sum(item.quantity for item in inventory.items.values()), 2)\n\n\ndef render(inventory):\n    lines = [f\"{'item':<12}{'qty':>5}{'value':>10}\"]\n    for item in sorted(inventory.items.values(), key=lambda i: i.name):\n        lines.append(f\"{item.name:<12}{item.quantity:>5}{line_price(item):>10.2f}\")\n    lines.append(f\"{'total':<17}{total_value(inventory):>10.2f}\")\n    return \"\\n\".join(lines)\n\"\"\"Run the project's checks and print one PASS/FAIL line per check.\"\"\"\n\nimport sys\n\nfrom inventory import Inventory, line_price, total_value\nfrom inventory.models import Item\n\n\ndef check_remove_guard():\n    inv = Inventory()\n    inv.add(\"bolt\", 0.5, 3)\n    try:\n        inv.remove(\"bolt\", 5)\n    except ValueError:\n        return inv.quantity(\"bolt\") == 3\n    return False\n\n\ndef check_discount():\n    return line_price(Item(\"nut\", 2.0, 10, discount_percent=25)) == 15.0\n\n\ndef check_total():\n    inv = Inventory()\n    inv.add(\"nut\", 2.0, 10, discount_percent=25)\n    inv.add(\"washer\", 0.1, 50)\n    return total_value(inv) == 20.0\n\n\nCHECKS = [check_remove_guard, check_discount, check_total]\n\n\ndef main():\n    failed = 0\n    for check in CHECKS:\n        try:\n            ok = check()\n        except Exception as exc:  # report, never crash the runner\n            ok = False\n            print(f\"FAIL {check.__name__}: {type(exc).__name__}: {exc}\")\n            failed += 1\n            continue\n        print(f\"{'PASS' if ok else 'FAIL'} {check.__name__}\")\n        failed += not ok\n    print(f\"{len(CHECKS) - failed}/{len(CHECKS)} checks passed\")\n    sys.exit(1 if failed else 0)\n\n\nif __name__ == \"__main__\":\n    main()\n",
+    "exit_code": 0
+   },
+   {
+    "reply": "It is a tiny stock-keeping package. models.py holds items and their quantities, pricing.py values one inventory line after its percentage discount, report.py renders a plain-text report with the total stock value, and check.py runs three checks against them."
+   }
+  ],
+  [
+   {
+    "command": "python check.py",
+    "output": "FAIL check_remove_guard\nFAIL check_discount\nFAIL check_total\n0/3 checks passed\n",
+    "exit_code": 1
+   },
+   {
+    "reply": "All three checks fail: check_remove_guard (removing more than is held is not refused), check_discount (the line price is wrong) and check_total (the total is wrong). 0/3 pass."
+   }
+  ],
+  [
+   {
+    "command": "python - <<'EOF'\nfrom pathlib import Path\np = Path('inventory/models.py')\ns = p.read_text()\nold = '        item = self.items[name]\\n        item.quantity -= quantity'\nassert old in s\np.write_text(s.replace(old, '        item = self.items[name]\\n        if quantity > item.quantity:\\n            raise ValueError(\"cannot remove more than is held\")\\n        item.quantity -= quantity'))\nEOF",
+    "output": "",
+    "exit_code": 0
+   },
+   {
+    "command": "python check.py",
+    "output": "PASS check_remove_guard\nFAIL check_discount\nFAIL check_total\n1/3 checks passed\n",
+    "exit_code": 1
+   },
+   {
+    "reply": "Inventory.remove now raises ValueError and leaves the stock unchanged when asked to remove more than is held. check_remove_guard passes; check_discount and check_total still fail."
+   }
+  ],
+  [
+   {
+    "command": "python - <<'EOF'\nfrom pathlib import Path\np = Path('inventory/pricing.py')\ns = p.read_text()\nold = 'discounted = item.unit_price * item.discount_percent / 100'\nassert old in s\np.write_text(s.replace(old, 'discounted = item.unit_price * (1 - item.discount_percent / 100)'))\nEOF",
+    "output": "",
+    "exit_code": 0
+   },
+   {
+    "command": "python check.py",
+    "output": "PASS check_remove_guard\nPASS check_discount\nFAIL check_total\n2/3 checks passed\n",
+    "exit_code": 1
+   },
+   {
+    "reply": "line_price computed the discount amount instead of the discounted price. It now multiplies by (1 - discount/100). check_discount passes; check_total still fails."
+   }
+  ],
+  [
+   {
+    "command": "python - <<'EOF'\nfrom pathlib import Path\np = Path('inventory/report.py')\ns = p.read_text()\nold = 'sum(item.quantity for item in inventory.items.values())'\nassert old in s\np.write_text(s.replace(old, 'sum(line_price(item) for item in inventory.items.values())'))\nEOF",
+    "output": "",
+    "exit_code": 0
+   },
+   {
+    "command": "python check.py",
+    "output": "PASS check_remove_guard\nPASS check_discount\nPASS check_total\n3/3 checks passed\n",
+    "exit_code": 0
+   },
+   {
+    "reply": "total_value summed quantities instead of line values. It now sums line_price for each item. All three checks pass."
+   }
+  ],
+  [
+   {
+    "command": "python - <<'EOF'\nfrom pathlib import Path\np = Path('inventory/models.py')\ns = p.read_text()\nold = '    def quantity(self, name):'\nassert old in s\np.write_text(s.replace(old, '    def low_stock(self, threshold):\\n        return sorted(n for n, item in self.items.items() if item.quantity < threshold)\\n\\n    def quantity(self, name):'))\nEOF",
+    "output": "",
+    "exit_code": 0
+   },
+   {
+    "command": "python - <<'EOF'\nfrom pathlib import Path\np = Path('check.py')\ns = p.read_text()\nold = 'CHECKS = [check_remove_guard, check_discount, check_total]'\nassert old in s\np.write_text(s.replace(old, 'def check_low_stock():\\n    inv = Inventory()\\n    inv.add(\"washer\", 0.1, 5)\\n    inv.add(\"bolt\", 0.5, 1)\\n    inv.add(\"nut\", 2.0, 0)\\n    return inv.low_stock(5) == [\"bolt\", \"nut\"]\\n\\n\\nCHECKS = [check_remove_guard, check_discount, check_total, check_low_stock]'))\nEOF",
+    "output": "",
+    "exit_code": 0
+   },
+   {
+    "command": "python check.py",
+    "output": "PASS check_remove_guard\nPASS check_discount\nPASS check_total\nPASS check_low_stock\n4/4 checks passed\n",
+    "exit_code": 0
+   },
+   {
+    "reply": "Added Inventory.low_stock(threshold), which returns the sorted names of items below the threshold, and check_low_stock in check.py, included in CHECKS. All four checks pass."
+   }
+  ],
+  [
+   {
+    "command": "python check.py",
+    "output": "PASS check_remove_guard\nPASS check_discount\nPASS check_total\nPASS check_low_stock\n4/4 checks passed\n",
+    "exit_code": 0
+   },
+   {
+    "command": "python -c \"from inventory import Inventory, render; inv = Inventory(); inv.add('nut', 2.0, 10, 25); inv.add('washer', 0.1, 50); print(render(inv))\"",
+    "output": "item          qty     value\nnut            10     15.00\nwasher         50      5.00\ntotal                 20.00\n",
+    "exit_code": 0
+   },
+   {
+    "reply": "All four checks pass. The report shows nut 10 at 15.00, washer 50 at 5.00 and a total of 20.00."
+   }
+  ],
+  [
+   {
+    "reply": "- inventory/models.py: remove() refuses to remove more than is held; added low_stock(threshold).\n- inventory/pricing.py: line_price applies the discount instead of returning it.\n- inventory/report.py: total_value sums line values instead of quantities.\n- check.py: added check_low_stock and included it in CHECKS."
+   }
+  ]
+ ],
+ "scores_after_turn": [
+  0,
+  0,
+  0,
+  1,
+  2,
+  3,
+  4,
+  4,
+  4
+ ]
+}

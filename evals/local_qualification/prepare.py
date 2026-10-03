@@ -87,6 +87,8 @@ def resolve_sessions(arms: dict, plan: dict) -> list[dict]:
             "sampling": arms["sampling"][arm["sampling"]],
             "workload": spec["workload"],
             "reasoning_echo": spec["echo"],
+            # A kept slot lets a session reuse the previous session's cached prefix (C3).
+            "erase_slot": spec.get("erase", True),
             "planned_requests": planned,
             "request_limit": planned * multiple,
         })

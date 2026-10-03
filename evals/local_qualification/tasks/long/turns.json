@@ -1,0 +1,10 @@
+[
+  "This folder is a small Python project. Look around and tell me in a few sentences what it does. Don't change anything yet.",
+  "Run the project's checks and tell me which ones fail.",
+  "Fix the problem behind check_remove_guard in inventory/models.py, then run the checks again.",
+  "Now fix whatever makes check_discount fail, and run the checks.",
+  "Fix the cause of the check_total failure and run all the checks again.",
+  "Add a method Inventory.low_stock(threshold) that returns the names of the items whose quantity is below the threshold, sorted alphabetically. Add a check for it named check_low_stock to check.py and include it in CHECKS.",
+  "Run all the checks once more, then print the report from render() for an inventory holding 10 nuts at 2.00 with a 25% discount and 50 washers at 0.10.",
+  "Summarize what you changed, file by file, in a short list."
+]

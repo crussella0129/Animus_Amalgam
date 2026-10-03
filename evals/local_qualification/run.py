@@ -8,6 +8,7 @@ and INT-0004's OS-level kill safety (grace and cleanup), none of which is token 
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import json
 import os
@@ -52,6 +53,7 @@ from policy import (
     supervisor_lagged,
     telemetry_stale,
 )
+import verify_long
 from wire import Wire
 
 HERE = Path(__file__).resolve().parent
@@ -63,6 +65,9 @@ OBSERVATION_PERIOD = 0.5  # /slots poll (retained)
 BASELINE_SAMPLES = 10  # telemetry samples before admission (retained)
 GRACE_S, CLEANUP_S = 2, 5  # INT-0004 AC2 OS-level kill safety (retained)
 MAX_CHECKPOINTS = 32
+VERIFY_S = 120  # hidden-verifier process bound (retained: OS safety, not token work)
+AC1_MIN_REQUESTS = 20
+ARMS = json.loads((HERE / "arms.json").read_text(encoding="utf-8"))
 ENV_ALLOWED = {
     "SYSTEMROOT",
     "WINDIR",
@@ -142,8 +147,11 @@ def session_config(url, context, echo, timer, fixture) -> dict:
     }
 
 
-def fresh_session(attempt: Path, index: int, workload: str) -> tuple[Path, Path, Path]:
-    root = attempt / f"session-{index:02d}"
+def fresh_session(attempt: Path, workload: str) -> tuple[Path, Path, Path]:
+    """Fresh state at the same paths every session: Hermes renders its home and working
+    directory into the system prompt, so per-session paths would make two identical
+    sessions' prefixes differ (C3). Each session is archived when it ends."""
+    root = attempt / "live"
     home, fixture = root / "home", root / "fixture"
     home.mkdir(parents=True)
     task = workload.partition(":")[0]
@@ -373,6 +381,7 @@ def main():
             time.sleep(LOOP_PERIOD)
         placement = manifest["placement"]
         cpu_needed, gpu_needed = admission_requirements(placement, limits)
+        admission_sample = sample
         record_event(
             "admission", cpu_needed=cpu_needed, gpu_needed=gpu_needed, sample=sample
         )
@@ -492,11 +501,20 @@ def main():
             predictor,
             kernel.bytes,
         )
-        for index, spec in enumerate(manifest["sessions"], start=1):
+        task_state = {"prechecked": False}
+        queue, index = list(manifest["sessions"]), 0
+        while queue:
+            spec, index = queue.pop(0), index + 1
             outcome = run_session(index, spec, locals())
             session_outcomes.append(outcome)
             if outcome.get("attempt_stop"):
                 raise RuntimeError(outcome["attempt_stop"])
+            if (outcome.get("verification") or {}).get("contamination"):
+                if spec.get("rerun_of") is None:
+                    queue.insert(0, {**spec, "rerun_of": index})
+                else:
+                    outcome["contaminated_twice"] = True
+                    record_event("contaminated_twice", session=index)
         reason = "sessions complete"
         if manifest["plan"] == "calibration":
             write_calibration(
@@ -504,7 +522,7 @@ def main():
                 attempt,
                 hash_s,
                 t_load,
-                sample,
+                admission_sample,
                 cpu_needed,
                 session_outcomes,
                 params,
@@ -607,7 +625,7 @@ def run_session(index, spec, ctx):
     )
     limits, context = manifest["limits"], manifest["launch"]["context"]
     arm, workload = spec["arm"], spec["workload"]
-    kernel = ctx["kernel"]
+    kernel, task_state = ctx["kernel"], ctx["task_state"]
 
     def wait_while(busy, seconds):
         """Every supervisor wait keeps the guards running; True if busy() cleared in time."""
@@ -625,8 +643,8 @@ def run_session(index, spec, ctx):
         if cal
         else uncalibrated_stall_window(t_load, params, OBSERVATION_PERIOD)
     )
-    root, home, fixture = fresh_session(attempt, index, workload)
-    if index > 1:
+    root, home, fixture = fresh_session(attempt, workload)
+    if index > 1 and spec.get("erase_slot", True):
         if not wait_while(lambda: wire.slot_busy(OBSERVATION_PERIOD), settle_window):
             return {"session": index, "attempt_stop": "backend slot did not settle"}
         record_event("slot_erase", session=index, result=wire.erase_slot())
@@ -643,6 +661,16 @@ def run_session(index, spec, ctx):
     interrupt_file = root / "INTERRUPT"
     interrupt_file_holder["path"] = interrupt_file
     result_path = root / "result.json"
+    precheck = None
+    if workload.startswith("long") and not task_state["prechecked"]:
+        task_state["prechecked"] = True
+        caps = [a["output_cap"] for a in ARMS["session_arms"].values()]
+        precheck = functools.partial(
+            verify_long.precheck,
+            wire.backend,
+            smallest_cap=min(caps),
+            input_ceiling=context - max(caps) - limits["input_margin_tokens"],
+        )
     wire.begin_session(
         index,
         arm,
@@ -650,6 +678,7 @@ def run_session(index, spec, ctx):
         manifest["seed"],
         context - arm["output_cap"] - limits["input_margin_tokens"],
         spec["request_limit"],
+        precheck,
     )
     record_event(
         "session_start",
@@ -658,6 +687,7 @@ def run_session(index, spec, ctx):
         workload=workload,
         reasoning_echo=spec["reasoning_echo"],
         hermes_timer_seconds=timer,
+        rerun_of=spec.get("rerun_of"),
     )
     driver = spawn(
         [
@@ -697,10 +727,31 @@ def run_session(index, spec, ctx):
     cpu = log_size = 0.0
     stop = None
     cancelled = False
+    extrema = {"request_id": None}
+
+    def close_extrema():
+        if extrema["request_id"] is not None:
+            record_event("request_resources", **extrema)
+        extrema.clear()
+        extrema["request_id"] = None
+
     while driver.poll() is None:
-        observe()
+        sample, _ = observe()
         now = time.monotonic()
         active = wire.active
+        current = active["request_id"] if active is not None else None
+        if current != extrema["request_id"]:
+            close_extrema()
+            extrema["request_id"] = current
+        if current is not None and sample is not None:
+            for key, value, pick in (
+                ("ram_available_min", sample["ram_available"], min),
+                ("vram_free_min", sample["vram_free"], min),
+                ("page_in_max", sample["hard_page_in_bytes_per_second"], max),
+                ("page_out_max", sample["page_out_bytes_per_second"], max),
+                ("gpu_temperature_max", sample["gpu_temperature"], max),
+            ):
+                extrema[key] = pick(extrema.get(key, value), value)
         if wire.failure:
             stop = f"wire: {wire.failure}"
             break
@@ -754,6 +805,7 @@ def run_session(index, spec, ctx):
             stop = "cancelled request did not settle within the cleanup bound"
             break
         time.sleep(LOOP_PERIOD)
+    close_extrema()
     if stop and driver.poll() is None:
         interrupt_file.touch()
         wire.cancel_active()
@@ -772,7 +824,22 @@ def run_session(index, spec, ctx):
         )
     session = wire.end_session()
     result = json.loads(result_path.read_text()) if result_path.exists() else None
-    verification = verify_session(workload, fixture, result)
+    verified = {}
+    verifier = threading.Thread(
+        target=lambda: verified.update(
+            value=verify_session(
+                workload,
+                fixture,
+                result,
+                Path(paths["task_venv"]),
+                manifest["allowlist"],
+            )
+        ),
+        daemon=True,
+    )
+    verifier.start()
+    wait_while(verifier.is_alive, VERIFY_S)
+    verification = verified.get("value", {"error": "verifier did not finish"})
     for event in (
         json.loads(line) for line in (attempt / "events.jsonl").open(encoding="utf-8")
     ):
@@ -803,25 +870,46 @@ def run_session(index, spec, ctx):
         "cancelled": cancelled,
         "slot_idle_after_cancel": slot_idle,
         "kernel_cache_growth_bytes": kernel.bytes() - kernel_session_start,
+        "rerun_of": spec.get("rerun_of"),
     }
+    if workload == "long:all":
+        # AC1 coverage is recorded apart from completion: fewer requests is a finding.
+        outcome["ac1_request_coverage"] = session["requests"] >= AC1_MIN_REQUESTS
     record_event("session_end", **outcome)
+    # The session's whole tree goes before its state is archived, so nothing it started
+    # (a background shell, say) outlives it into the next session at the same paths.
+    for proc, job, _name in ctx["owned"]:
+        if proc is driver:
+            job.close()
+    archive = attempt / f"session-{index:02d}"
+    if not wait_while(lambda: not renamed(root, archive), CLEANUP_S):
+        return {**outcome, "attempt_stop": "session state could not be archived"}
     return outcome
 
 
-def verify_session(workload, fixture, result):
+def renamed(source: Path, target: Path) -> bool:
+    try:
+        source.rename(target)
+    except OSError:
+        return False  # a scanner may briefly hold a handle
+    return True
+
+
+def verify_session(workload, fixture, result, venv, allowlist):
     """Independent checks from fixture state or exact expected answers, never model claims."""
     if workload in ("smoke", "decode-sample"):
         return {"expected_answer": bool(result and result.get("expected_answer"))}
-    if workload.startswith("long") and (HERE / "verify_long.py").exists():
-        out = subprocess.run(
-            [sys.executable, "-B", str(HERE / "verify_long.py"), str(fixture)],
-            capture_output=True,
-            text=True,
-        )
-        try:
-            return json.loads(out.stdout)
-        except ValueError:
-            return {"error": out.stderr[-2000:]}
+    if workload.startswith("long"):
+        python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        return {
+            "score": verify_long.score(fixture, python),
+            # Hermes points TMPDIR and its scratch directory into the session's own home.
+            "contamination": verify_long.contamination(
+                (result or {}).get("conversation") or [],
+                fixture,
+                [*allowlist, str(fixture.parent / "home")],
+            ),
+        }
     return None
 
 

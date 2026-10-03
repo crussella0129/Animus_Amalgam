@@ -28,6 +28,22 @@ limits and task sequence.
   cache, `<lab>/kernel-cache`. It is driver state: a cold cache made the
   first prompt 30× slower. Its growth counts as progress, and a request that
   grew it is excluded from rate samples.
+
+  Every session runs at the same paths (`<attempt>/live`), because Hermes
+  renders its home and working directory into the system prompt. When the
+  session ends, the lab closes its process tree and archives the state to
+  `session-NN`. A session spec with `"erase": false` keeps the previous
+  session's slot, to measure cross-session prefix reuse.
+- **`verify_long.py`** — the long task's hidden verifier, kept outside the
+  fixture.
+  - It scores the fixture state (3 defects and 1 feature).
+  - It runs the L3 pre-check on the first long request, with Hermes's own
+    system prompt and tools.
+  - It flags terminal paths outside the fixture (L4).
+  - `build-reference` runs the reference path and records its outputs.
+- **`publish.py`** — writes one attempt's correlated receipts into the
+  Book. Prompts and tool output stay in the lab, and a privacy screen fails
+  closed.
 - **`wire.py`** — sits between Hermes and llama.cpp.
   - It applies each session's arm bounds and forwards every request once,
     upstream as streaming with `return_progress`.
