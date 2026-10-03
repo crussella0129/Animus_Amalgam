@@ -296,3 +296,40 @@ below, committed with the screen results):
 **Envelope:** 8 of 12 launches used (lab attempts 02, 04, 05 and 06, plus 4
 diagnostics). Requests: 92 of 400 (88 lab and 4 diagnostic). 4 launches
 remain for R0, R1, R2 and the conditional R3.
+
+## Attempt 07 — R0 stopped by the other half of the telemetry race
+
+Manifest `R0-7b7136c02fd2` was frozen at `d33c1e4371`, with `off-greedy` on
+the long task and all 8 turns. Admitted at 17.51 GiB; the load took 18.8 s.
+L3 passed. The first two requests reused cache as in the screen (3,759
+tokens cached, 243 uncached).
+
+**Failure.** The telemetry process died while request 91 was in flight,
+with `PermissionError: [WinError 5]` on `os.replace(sample.tmp,
+sample.json)`. The supervisor stopped with "critical telemetry process
+exited", and cleanup aborted the request. Charged time for this attempt was
+148.5 s.
+
+**Diagnosis.** This is the same race as attempt 05, from the writer's side.
+Windows also refuses to replace a file that another process has open. The
+attempt-05 repair covered only the reader, so the bug class was not closed.
+The other cross-process file paths in the lab were checked and are safe:
+
+- `result.json` is read only after its writer exits.
+- `events.jsonl` and `budget.json` each have a single writer.
+- Logs are only `stat`'d while live.
+
+**Repair.** The writer retries the replace for up to 0.5 s. If the
+supervisor still holds the file, it skips that sample instead of dying, and
+the supervisor's staleness rule bounds how long that may last. An offline
+stress run tested both sides over 20 s, with the reader in a tight loop:
+
+- **Writer:** 1,365 publishes, 0 skipped.
+- **Reader:** 967 refused opens out of about 170,000 reads, all tolerated.
+- **Corruption:** no torn read and no crash.
+
+**Envelope:** 9 of 12 launches used. 3 remain, for R0, R1 and R2. R3 is
+conditional on O3: R1's median uncached tokens per continued request must
+exceed 2,000. The screen's thinking-on sessions measured 245–292, so R3 is
+unlikely to be needed. A further failed launch would need the owner's
+approval to extend the envelope.

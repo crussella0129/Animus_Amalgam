@@ -11,6 +11,24 @@ import psutil
 import win32pdh
 
 
+def publish(pending: Path, destination: Path) -> bool:
+    """Replace the sample; False when the supervisor held it open for the whole try.
+
+    Windows refuses to replace a file another process has open, and the supervisor opens
+    this one four times a second. A skipped sample is bounded by the supervisor's
+    staleness rule; dying here would stop the attempt (attempt 07).
+    """
+    deadline = time.monotonic() + 0.5
+    while True:
+        try:
+            os.replace(pending, destination)
+            return True
+        except PermissionError:
+            if time.monotonic() > deadline:
+                return False
+            time.sleep(0.01)
+
+
 def main():
     destination = Path(sys.argv[1])
     query = win32pdh.OpenQuery()
@@ -57,7 +75,7 @@ def main():
             }
             pending = destination.with_suffix(".tmp")
             pending.write_text(json.dumps(sample), encoding="utf-8")
-            os.replace(pending, destination)
+            publish(pending, destination)
     finally:
         win32pdh.CloseQuery(query)
 
