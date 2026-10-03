@@ -101,7 +101,13 @@ def session_env(home: Path, venv: Path) -> dict:
     env = {k: v for k, v in os.environ.items() if k.upper() in ENV_ALLOWED}
     scripts = venv / ("Scripts" if os.name == "nt" else "bin")
     env["PATH"] = str(scripts) + os.pathsep + env.get("PATH", "")
+    # A private TEMP: Git Bash mounts /tmp on it, and the owner's TEMP would carry files
+    # from one session into the next.
+    temp = home / "tmp"
+    temp.mkdir(parents=True, exist_ok=True)
     env.update(
+        TEMP=str(temp),
+        TMP=str(temp),
         HERMES_HOME=str(home),
         PYTHONUNBUFFERED="1",
         PYTHONDONTWRITEBYTECODE="1",
@@ -915,6 +921,7 @@ def verify_session(workload, fixture, result, venv, allowlist):
                 (result or {}).get("conversation") or [],
                 fixture,
                 [*allowlist, str(fixture.parent / "home")],
+                fixture.parent / "home" / "tmp",
             ),
         }
     return None

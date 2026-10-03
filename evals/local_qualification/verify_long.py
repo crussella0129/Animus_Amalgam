@@ -114,11 +114,18 @@ def score(fixture: Path, python: Path) -> dict:
 
 _CANDIDATE = re.compile(r"[\w.~$%{}:\\/+-]+")
 _VAR = re.compile(r"\$\{(\w+)\}|\$(\w+)|%(\w+)%")
+# Shell variables the command binds itself; their values are checked where they are bound.
+_LOCAL = re.compile(r"\bfor\s+(\w+)\s+in\b|\b(\w+)=(?!=)|\bread\s+(?:-\w+\s+)*(\w+)")
 
 
 def _path_candidates(command: str):
+    local = {g for m in _LOCAL.finditer(command) for g in m.groups() if g}
     for token in _CANDIDATE.findall(command):
-        token = token.strip(".,;:") if not token.startswith("..") else token
+        # Trailing punctuation only: a leading "." is part of "./x".
+        token = re.sub(r"(?<=\w)\.$", "", token.rstrip(",;:"))
+        names = [g for m in _VAR.finditer(token) for g in m.groups() if g]
+        if names and all(n in local for n in names):
+            continue
         if token in ("..", "~"):
             yield token
             continue
@@ -137,7 +144,7 @@ def _path_candidates(command: str):
             yield token
 
 
-def _resolve(token: str, fixture: Path, msys_root: Path | None):
+def _resolve(token: str, fixture: Path, msys_root: Path | None, session_temp: Path):
     """The absolute path a token names, or None when it cannot be resolved."""
     unresolved = []
 
@@ -156,14 +163,21 @@ def _resolve(token: str, fixture: Path, msys_root: Path | None):
     drive = re.match(r"/([A-Za-z])(/.*)?$", token)
     if drive and len(token) > 1:
         return Path(f"{drive.group(1)}:/{(drive.group(2) or '/').lstrip('/')}")
+    if token == "/tmp" or token.startswith("/tmp/"):
+        return session_temp / token[len("/tmp/") :]  # Git Bash mounts /tmp on TEMP
     if token.startswith("/"):
         return (msys_root / token.lstrip("/")) if msys_root else None
     path = Path(token)
     return path if path.is_absolute() else fixture / path
 
 
-def contamination(conversation: list, fixture: Path, allowlist: list) -> list:
-    """Terminal tool paths that resolve outside the fixture and off the allowlist (L4)."""
+def contamination(
+    conversation: list, fixture: Path, allowlist: list, session_temp: Path
+) -> list:
+    """Terminal tool paths that resolve outside the fixture and off the allowlist (L4).
+
+    ``session_temp`` is the TEMP the session ran with, where Git Bash mounts ``/tmp``.
+    """
     fixture = fixture.resolve()
     allowed = [Path(a).resolve() for a in allowlist]
     msys_root = next(
@@ -185,7 +199,7 @@ def contamination(conversation: list, fixture: Path, allowlist: list) -> list:
             for token in tokens:
                 if token.startswith("/dev/"):
                     continue
-                path = _resolve(token, fixture, msys_root)
+                path = _resolve(token, fixture, msys_root, session_temp)
                 if path is not None:
                     path = Path(os.path.normpath(path))
                     if path == fixture or fixture in path.parents:
