@@ -100,3 +100,67 @@ VRAM was sufficient (8.80 GiB free, 8.52 needed). The owner's applications
 had reopened since the 16.75 GiB reading. The attempt made no launch and was
 charged 26.7 s. The owner was asked to free memory. No owner process was
 touched.
+
+## Attempt 04 — calibration replay succeeds; C3 misses for lab reasons
+
+Manifest `calibration-f8e1dc85710a` was frozen at `f09d3863a0` and admitted
+at 16.84 GiB available RAM. The lab kernel cache started empty, so this
+attempt also tested the attempt-02 repair against a cold cache.
+
+- **Load:** 45.4 s. The driver compiled 46.8 MB of kernels during load. Cache
+  growth counted as progress, and the load-stall rule did not fire.
+- **Smoke 1:** exact `AMALGAM_OK` in 74.8 s. It compiled another 60.9 MB of
+  kernels and was marked `kernel_compiled`, so it was excluded from rate
+  samples. The stall rule did not fire.
+- **Smoke 2 (warm):** exact. 1167 tokens at 96.7 tok/s prefill and 3.48 tok/s
+  decode; 13.6 s.
+- **Decode sample:** exact 1–40. 111 tokens at 3.52 tok/s.
+- **Main-cancel (C4):** the lab cancelled at the first decoded token, which
+  recorded `response_cancelled`, not a wire failure. The slot was idle 0.84 s
+  later; owned cleanup took 0.88 s and the listener was closed. The maximum
+  supervisor lag was 0.38 s, against 14.9 s in attempt 02.
+
+**C2 — calibration record** (`<lab>/calibration.json`):
+
+| Field | Value |
+|---|---|
+| `P` (prefill) | 96.76 tok/s |
+| `D` (decode) | 3.55 tok/s |
+| `O` (first progress event) | 0.024 s |
+| `T_load` | 45.4 s, cold kernel cache (a warm load measured 18–22 s) |
+| `T_cli` | 3.05 s |
+| `hash` | 8.9 s |
+| Checkpoint size | 149.6 MiB (156,894,232 bytes) |
+| Frozen checkpoints | 5 |
+| Sprint budget | **81,365 s** |
+
+The sprint budget is the locked T-215 formula: margin × the planned
+attempts. It is cap-bound, because each planned request is priced at its
+full 768-token output cap at `D`. That makes it a worst-case
+stop-and-report backstop, not a forecast. Sprint 2's real agent steps
+decoded 7–69 tokens each.
+
+**Calibration defect, repaired without a launch.** `write_calibration` was
+called with the last post-load sample instead of the admission sample. RAM
+headroom therefore read negative, and 0 checkpoints were frozen. The repair
+(`32a1d3342b`) recomputed the record from attempt 04's own recorded evidence
+at `a5413bc376`. The headroom was 0.789 GiB, so 5 checkpoints were frozen.
+No measurement changed. The original record is kept as
+`calibration-attempt04-postload-sample.json`.
+
+**C3 — missed, for lab reasons.** The two smokes' rendered system prompts
+had equal length (1167 tokens) but were not byte-identical. They differed
+only in the lab's per-session paths (home, working directory and the
+scratch directory Hermes names). The slot was also erased before smoke 2, so
+`cache_n` was 0. Neither cause is Hermes behavior. Repair (`32a1d3342b`):
+
+- Every session runs at fixed `<attempt>/live` paths, then closes its
+  process tree and is archived.
+- Slot erase is a per-session plan field. The calibration plan's second
+  smoke keeps the slot.
+
+The replay is the first two sessions of the screen attempt (a smoke, then a
+smoke that keeps the slot), which spends no extra launch.
+
+**Envelope:** 6 of 12 launches used (attempts 02 and 04, plus 4
+diagnostics) and 9 of 400 requests.
