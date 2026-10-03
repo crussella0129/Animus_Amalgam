@@ -439,6 +439,6 @@ OpenAI-client-style reader that stops at `[DONE]`. On the pre-repair code it
 the sequential request is accepted, and a mid-stream concurrent request is
 still refused while the first completes.
 
-**Envelope:** 12 of 12 launches are used (8 lab and 4 diagnostic), and 162
-of 400 requests (158 lab and 4 diagnostic). Replaying R2 needs a 13th launch,
+**Envelope:** 12 of 12 launches are used (8 lab and 4 diagnostic), and 146
+of 400 requests (142 lab and 4 diagnostic). Replaying R2 needs a 13th launch,
 so the owner was asked to extend the envelope by one.
