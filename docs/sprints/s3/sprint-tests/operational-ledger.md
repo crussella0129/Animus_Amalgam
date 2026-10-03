@@ -393,3 +393,52 @@ was 161, which does not exceed the 2,000 threshold. The second condition,
 frozen checkpoints of at least 2, was met (5). Checkpoint density has
 nothing to recover here: the default end-of-prompt checkpoint already
 bounds each rollback to one turn.
+
+## Attempt 10 — R2 (R1 with reasoning echo): O2 answered, then a wire defect
+
+Manifest `R2-e7903d921f15`, with `on-greedy` and `model.reasoning_echo:
+true`. The load took 14.8 s and L3 passed. Charged time for this attempt was
+1,139.0 s. The maximum supervisor lag was 0.34 s.
+
+**O2 — echo keeps history append-only, except after a budget-truncated
+think block.** Hermes replayed every earlier assistant turn with its
+reasoning (12 of 12 turns by request 142). In 9 of 12 continued requests,
+llama.cpp rolled back exactly 1 token and processed only the new tool
+result: 25–58 uncached tokens, against a median of 161 in R1. The three large
+rollbacks (494, 484 and 412 tokens) came exactly after the three turns whose
+reasoning hit the 256-token budget. When the budget cuts a think block,
+the forced end of thinking renders differently from what was generated, so
+the template's re-render diverges at that turn. Otherwise the trimmed
+re-render matches the generated block. Uncapped thinking (T-218) is where
+the budget cut goes away.
+
+**Failure.** Request 142 hit the 768-token output cap in the middle of a
+tool call (`finish_reason: length`). Hermes detected the truncated tool call
+and retried within about 1.6 s. The wire answered with 409, "unexpected or
+concurrent inference request", and the session stopped at 13 requests with
+3/4 verified. This counts as a failure in R2's denominators.
+
+**Diagnosis.** This was a lab defect, not concurrency. The wire held its
+one-request lock through the post-response accounting: two `/tokenize`
+calls for the reasoning and visible split, plus the receipt. Hermes's client
+finishes a streamed response at `[DONE]` and sent its retry while that tail
+was still running. Earlier runs never exposed it, because tool execution
+always separated consecutive requests.
+
+**Repair.** The wire now tracks delivery separately from accounting:
+
+- *In flight* ends when `[DONE]` (or the reassembled payload) reaches the
+  client.
+- A request arriving while another is in flight is refused as concurrent,
+  through an atomic check-and-set.
+- A sequential request waits on the accounting lock instead.
+
+An offline repro uses a fake backend with a 0.8 s `/tokenize` and an
+OpenAI-client-style reader that stops at `[DONE]`. On the pre-repair code it
+**fails**: the sequential retry gets 409. On the repair it **passes 3 of 3**:
+the sequential request is accepted, and a mid-stream concurrent request is
+still refused while the first completes.
+
+**Envelope:** 12 of 12 launches are used (8 lab and 4 diagnostic), and 162
+of 400 requests (158 lab and 4 diagnostic). Replaying R2 needs a 13th launch,
+so the owner was asked to extend the envelope by one.
