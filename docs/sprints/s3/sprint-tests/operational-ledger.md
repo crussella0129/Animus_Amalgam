@@ -215,3 +215,84 @@ pinned llama.cpp's OpenAI-compatible stream carries no `id_slot`.
 
 **Envelope:** 7 of 12 launches (lab attempts 02, 04 and 05, plus 4
 diagnostics) and 14 of 400 requests (10 lab and 4 diagnostic).
+
+## Attempt 06 — the sampling screen completes (S1–S3)
+
+Manifest `screen-f55beeb3380c` was frozen at `c9bcb37a55` and admitted at
+16.96 GiB. The load took 18.5 s on the warm kernel cache. The attempt ran
+11 sessions and 78 requests with no stop. The maximum supervisor lag was
+0.56 s, and cleanup took 0.95 s. Charged time for this attempt was 4,179 s.
+
+**Replays.** C3 passed again: both smokes were exact, and the second
+reused the first's cached prefix. L3 passed on the first long request.
+
+**Screen.** Each configuration ran user turns 1–3 in a fresh home and
+fixture, with the slot erased first, at seed 42. These are **single seeded
+screening runs, not evidence of statistical superiority** (S3).
+
+| Configuration | Session | Verified | Machine time | Decoded | Requests | Note |
+|---|---|---|---|---|---|---|
+| off-greedy | 3 | 1/4 | 259 s | 690 | 7 | **off winner** |
+| off-model-default | 6 (7) | 1/4 | 319 s | 871 | 10 | 7 is a surplus replicate: identical tokens, 322 s |
+| off-vendor | 4, 5 | 1/4 each | 433 s, 393 s | 1,242, 1,117 | 10, 9 | contaminated twice, so a failure |
+| on-greedy | 8 | 1/4 | 515 s | 1,499 | 8 | **on winner** |
+| on-vendor (= model default) | 9 | 1/4 | 521 s | 1,638 | 7 | |
+| on-mid-probe | 10 (11) | 1/4 | 549 s | 1,621 | 7 | report only, not selectable |
+
+Every configuration fixed exactly what turn 3 asks for. The S2 ranking
+(verified, then machine time per verified item, then decoded tokens)
+selects `off-greedy` and `on-greedy`. These are recorded in `arms.json`
+`screen_winners`. Neither mode is inconclusive. The off-mode choice does not
+depend on the contamination rule: off-vendor ranked last on time per item
+even before the failure was counted.
+
+**Thinking on, echo off, cost little in cache.** The median uncached prompt
+tokens per continued request was 56–144 with thinking off, and 245–292 with
+thinking on and no echo. The pinned llama.cpp creates a context checkpoint
+just before each generation. So the stripped reasoning only re-renders the
+last assistant turn: about 200 extra tokens per turn, not a full
+reprocess. Thinking roughly doubled machine time for the same verified
+result (515 s against 259 s). The 256-token reasoning budget was enforced:
+reasoning capped at 255 tokens.
+
+**Determinism.** Sessions 6 and 7 used temperature 1.0 and decoded identical
+token counts. Seed 42 plus byte-identical prompts (the C3 repair) makes even
+stochastic sampling replay exactly, so same-seed replicates are not
+independent samples. The mid-probe pair (10 and 11) did diverge, decoding
+1,621 and 2,248 tokens.
+
+**Prediction accuracy (O5, partial).** Across 70 requests, predicted over
+actual seconds (after the rearm) had a median of 5.3, a minimum of 1.34 and
+a maximum of 57. The predictor never under-predicted. It prices each request
+at the full output cap, which makes it a safe bound but not a forecast.
+
+**Failures, diagnoses and repairs** (`1850994283`, plus the scanner fixes
+below, committed with the screen results):
+
+1. **Isolation breach.** Sessions inherited the owner's `TEMP`, and Git Bash
+   mounts `/tmp` there. off-vendor wrote a helper file into the shared temp
+   folder in both of its sessions, so a file from the first session was
+   visible to its re-run. The L4 scan caught both. Each session now gets a
+   private `TEMP` inside its fresh home. The two lab-made files were removed
+   from the owner's temp folder.
+2. **Scan false positives,** which forced two needless re-runs:
+   - the leading `.` was stripped from `./.git/*`, which turned it into
+     `/.git`;
+   - glob characters split `*/.git/*`;
+   - a shell loop variable (`for f in inventory/*`) was read as an
+     unresolvable path.
+
+   The scan now keeps `./`, keeps glob characters inside a token, and skips
+   variables the command binds itself. `/tmp` maps to the `TEMP` the session
+   actually had, and Git Bash's mount table was confirmed. A bare `/` is
+   deliberately not a candidate, because it is also division in inline
+   code. Git Bash's `/` is its own install tree, so reaching the drive needs
+   `/c/` or `C:\`, which are flagged.
+3. **Verdicts are recomputed from evidence.** `screen.py` re-scans each
+   session's recorded tool calls with the repaired scan, and reports the
+   verdict recorded live alongside it. The repaired scan flags only
+   off-vendor's two `/tmp` writes.
+
+**Envelope:** 8 of 12 launches used (lab attempts 02, 04, 05 and 06, plus 4
+diagnostics). Requests: 92 of 400 (88 lab and 4 diagnostic). 4 launches
+remain for R0, R1, R2 and the conditional R3.

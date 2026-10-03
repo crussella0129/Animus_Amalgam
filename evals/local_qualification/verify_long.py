@@ -112,7 +112,8 @@ def score(fixture: Path, python: Path) -> dict:
     }
 
 
-_CANDIDATE = re.compile(r"[\w.~$%{}:\\/+-]+")
+# Glob characters stay in the token: */.git/* is a relative pattern, not /.git.
+_CANDIDATE = re.compile(r"[\w.~$%{}:\\/+*?-]+")
 _VAR = re.compile(r"\$\{(\w+)\}|\$(\w+)|%(\w+)%")
 # Shell variables the command binds itself; their values are checked where they are bound.
 _LOCAL = re.compile(r"\bfor\s+(\w+)\s+in\b|\b(\w+)=(?!=)|\bread\s+(?:-\w+\s+)*(\w+)")
@@ -126,6 +127,8 @@ def _path_candidates(command: str):
         names = [g for m in _VAR.finditer(token) for g in m.groups() if g]
         if names and all(n in local for n in names):
             continue
+        # A bare "/" is not a candidate: it is also division in inline code, and Git
+        # Bash's / is its own install tree, so reaching the drive needs /c/ or C:\.
         if token in ("..", "~"):
             yield token
             continue
