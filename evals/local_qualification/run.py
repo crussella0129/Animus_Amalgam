@@ -155,6 +155,45 @@ def fresh_session(attempt: Path, index: int, workload: str) -> tuple[Path, Path,
     return root, home, fixture
 
 
+class KernelCache:
+    """The backend's CUDA JIT cache, kept per lab rather than per attempt.
+
+    On a cold cache the driver compiles kernels on first use: one CPU core busy, the GPU
+    idle and no progress event for tens of seconds at load and again in the first request
+    (measured 2026-10-03: load 48.6 s vs 18.2 s warm, prefill 15.6 vs 115 tok/s). The cache
+    growing is the only visible sign of that work, and a request that grew it is not a rate
+    sample. Driver state, not agent state, so a fresh attempt does not reset it.
+    """
+
+    def __init__(self, path: Path):
+        self.path = path
+        path.mkdir(exist_ok=True)
+        self.last = self.bytes()
+
+    def bytes(self) -> int:
+        total = 0
+        for item in self.path.rglob("*"):
+            try:
+                if item.is_file():
+                    total += item.stat().st_size
+            except OSError:
+                pass  # the driver renames entries while writing them
+        return total
+
+    def grew(self) -> bool:
+        now = self.bytes()
+        grew, self.last = now > self.last, now
+        return grew
+
+    def env(self, base: dict) -> dict:
+        # 4 GiB is the driver's maximum: never evict compiled kernels mid-sprint.
+        return {
+            **base,
+            "CUDA_CACHE_PATH": str(self.path),
+            "CUDA_CACHE_MAXSIZE": "4294967296",
+        }
+
+
 def tree_cpu(proc) -> float:
     try:
         procs = [psutil.Process(proc.pid)]
@@ -240,6 +279,7 @@ def main():
         return proc
 
     base_env = session_env(attempt / "owner-home", Path(paths["task_venv"]))
+    kernel = KernelCache(lab / "kernel-cache")
     sample_path = attempt / "sample.json"
     state = {"last_sample": None, "previous_tick": time.monotonic(), "max_lag": 0.0}
     paging = PagingGuard(limits)
@@ -365,7 +405,12 @@ def main():
             str(slot_dir),
             *manifest["launch"]["flags"],
         ]
-        record_event("launch", command=command, python=sys.version)
+        record_event(
+            "launch",
+            command=command,
+            python=sys.version,
+            kernel_cache_bytes=kernel.last,
+        )
         probe_timeout = (
             params.stall_multiple
             * max(
@@ -377,7 +422,7 @@ def main():
             else None
         )
         load_start = time.monotonic()
-        server = spawn(command, "backend", base_env, attempt)
+        server = spawn(command, "backend", kernel.env(base_env), attempt)
         backend_log = attempt / "backend.log"
         ready = threading.Event()
         load_error = []
@@ -413,7 +458,7 @@ def main():
             size = backend_log.stat().st_size if backend_log.exists() else 0
             if sample is not None and sample["at"] != seen_at:
                 seen_at = sample["at"]
-                if load_progressed(previous, sample, size > log_size):
+                if load_progressed(previous, sample, size > log_size or kernel.grew()):
                     load_clock.progress(now)
             log_size = size
             if load_clock.stalled(now):
@@ -426,7 +471,7 @@ def main():
         if load_error:
             raise RuntimeError(load_error[0])
         t_load = time.monotonic() - load_start
-        record_event("loaded", load_seconds=t_load)
+        record_event("loaded", load_seconds=t_load, kernel_cache_bytes=kernel.bytes())
         rates = RateTracker(params, cal)
         predictor = (
             (
@@ -445,6 +490,7 @@ def main():
             probe_timeout or params.stall_multiple * t_load,
             OBSERVATION_PERIOD,
             predictor,
+            kernel.bytes,
         )
         for index, spec in enumerate(manifest["sessions"], start=1):
             outcome = run_session(index, spec, locals())
@@ -561,8 +607,28 @@ def run_session(index, spec, ctx):
     )
     limits, context = manifest["limits"], manifest["launch"]["context"]
     arm, workload = spec["arm"], spec["workload"]
+    kernel = ctx["kernel"]
+
+    def wait_while(busy, seconds):
+        """Every supervisor wait keeps the guards running; True if busy() cleared in time."""
+        deadline = time.monotonic() + seconds
+        while busy():
+            if time.monotonic() > deadline:
+                return False
+            observe()
+            time.sleep(LOOP_PERIOD)
+        return True
+
+    # A slot is busy until its current batch ends, even after its client has left.
+    settle_window = (
+        stall_window("prefill", cal, params, OBSERVATION_PERIOD)
+        if cal
+        else uncalibrated_stall_window(t_load, params, OBSERVATION_PERIOD)
+    )
     root, home, fixture = fresh_session(attempt, index, workload)
     if index > 1:
+        if not wait_while(lambda: wire.slot_busy(OBSERVATION_PERIOD), settle_window):
+            return {"session": index, "attempt_stop": "backend slot did not settle"}
         record_event("slot_erase", session=index, result=wire.erase_slot())
     timer = (
         request_backstop(cal, params, context, arm["output_cap"])
@@ -627,6 +693,7 @@ def run_session(index, spec, ctx):
         ),
     )
     cli_log = attempt / f"cli-{index:02d}.log"
+    kernel_session_start = kernel.bytes()
     cpu = log_size = 0.0
     stop = None
     cancelled = False
@@ -639,6 +706,11 @@ def run_session(index, spec, ctx):
             break
         if ctx["server"].poll() is not None:
             return {"session": index, "attempt_stop": "backend exited during a session"}
+        if kernel.grew():
+            # Kernel compilation is the backend working with no stream or slot signal.
+            gap_clock.progress(now)
+            if active is not None:
+                active["last_progress"] = now
         if active is not None:
             gap_clock.progress(now)
             window = (
@@ -659,11 +731,10 @@ def run_session(index, spec, ctx):
                 and active["first_token"] is not None
                 and not cancelled
             ):
-                slots = wire.probe_slots()
                 record_event(
                     "cancel_trigger",
                     session=index,
-                    slots=slots,
+                    slots=wire.last_slots,
                     request_id=active["request_id"],
                 )
                 interrupt_file.touch()
@@ -686,18 +757,13 @@ def run_session(index, spec, ctx):
     if stop and driver.poll() is None:
         interrupt_file.touch()
         wire.cancel_active()
-        deadline = time.monotonic() + GRACE_S
-        while driver.poll() is None and time.monotonic() < deadline:
-            time.sleep(0.1)
+        wait_while(lambda: driver.poll() is None, GRACE_S)
     slot_idle = None
     if cancelled:
-        settle = time.monotonic() + CLEANUP_S
-        while time.monotonic() < settle:
-            slots = wire.probe_slots()
-            slot_idle = not any(s.get("is_processing") for s in slots)
-            if slot_idle:
-                break
-            time.sleep(OBSERVATION_PERIOD)
+        slot_idle = wait_while(
+            lambda: wire.slot_busy(OBSERVATION_PERIOD),
+            max(0.0, CLEANUP_S - (time.monotonic() - cancel_at)),
+        )
         record_event(
             "cancel_settled",
             session=index,
@@ -714,6 +780,7 @@ def run_session(index, spec, ctx):
             event["kind"] == "response_end"
             and event.get("session") == index
             and event.get("timings")
+            and not event.get("kernel_compiled")
         ):
             t = event["timings"]
             rates.observe_prefill(t.get("prompt_n", 0), t.get("prompt_ms", 0) / 1000)
@@ -735,6 +802,7 @@ def run_session(index, spec, ctx):
         "verification": verification,
         "cancelled": cancelled,
         "slot_idle_after_cancel": slot_idle,
+        "kernel_cache_growth_bytes": kernel.bytes() - kernel_session_start,
     }
     record_event("session_end", **outcome)
     return outcome
@@ -775,6 +843,8 @@ def write_calibration(
     ):
         if event["kind"] != "response_end" or not event.get("timings"):
             continue
+        if event.get("kernel_compiled"):
+            continue  # compile time is not throughput
         t = event["timings"]
         if t.get("prompt_n", 0) >= params.min_prefill_sample_tokens and t.get(
             "prompt_ms"

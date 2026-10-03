@@ -23,6 +23,11 @@ limits and task sequence.
   each session in a fresh home and fixture with an erased slot. The
   calibration plan writes `calibration.json`, and fails closed if any field
   is missing.
+
+  The one state that persists across attempts is the backend's CUDA kernel
+  cache, `<lab>/kernel-cache`. It is driver state: a cold cache made the
+  first prompt 30× slower. Its growth counts as progress, and a request that
+  grew it is excluded from rate samples.
 - **`wire.py`** — sits between Hermes and llama.cpp.
   - It applies each session's arm bounds and forwards every request once,
     upstream as streaming with `return_progress`.

@@ -10,6 +10,7 @@ import hashlib
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import socket
 import threading
 import time
 import urllib.request
@@ -93,17 +94,21 @@ class Wire:
         probe_timeout,
         observation_period,
         predictor=None,
+        kernel_cache_bytes=None,
     ):
         self.backend_url, self.token = backend_url, token
         self.record, self.consume_request = record, consume_request
         self.probe_timeout, self.observation_period = probe_timeout, observation_period
         # predictor(uncached_tokens, output_cap) -> seconds; None while calibrating.
         self.predictor = predictor
+        # kernel_cache_bytes() -> the backend's CUDA JIT cache size; growth marks compilation.
+        self.kernel_cache_bytes = kernel_cache_bytes or (lambda: None)
         self.active = None
+        self.last_slots = None
         self.failure = None
         self.session = None
         self.lock = threading.Lock()
-        self._upstream = None
+        self._upstream_sock = None
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -169,15 +174,31 @@ class Wire:
     def probe_slots(self):
         return self.backend("/slots")
 
+    def slot_busy(self, timeout):
+        """llama.cpp answers /slots only between batches, so a timeout means still busy."""
+        try:
+            slots = self.probe(
+                self.backend_url, self.token, "/slots", timeout, None, None
+            )
+        except OSError:
+            return True
+        return any(s.get("is_processing") for s in slots)
+
     def erase_slot(self):
         return self.backend("/slots/0?action=erase", {}, method="POST")
 
     def cancel_active(self):
-        """Close the upstream stream; llama.cpp stops the slot when its client disconnects."""
-        upstream = self._upstream
-        if upstream is not None:
+        """Shut the upstream socket down; llama.cpp stops the slot when its client leaves.
+
+        Never close() here: the response's buffered reader holds its lock while the handler
+        thread blocks in readline, so close() waits until the backend's current batch ends.
+        """
+        active, sock = self.active, self._upstream_sock
+        if active is not None:
+            active["cancelled"] = True
+        if sock is not None:
             try:
-                upstream.close()
+                sock.shutdown(socket.SHUT_RDWR)
             except OSError:
                 pass
 
@@ -194,6 +215,7 @@ class Wire:
         while self.active is not None and self.active["request_id"] == request_id:
             try:
                 slots = self.backend("/slots")
+                self.last_slots = slots
                 counters = [
                     (
                         s.get("n_prompt_tokens_processed"),
@@ -265,6 +287,7 @@ class Wire:
                 else None
             )
             started = time.monotonic()
+            kernel_start = self.kernel_cache_bytes()
             cap = session["arm"]["output_cap"]
             predicted = self.predictor(tokens, cap) if self.predictor else None
             self.active = {
@@ -278,6 +301,7 @@ class Wire:
                 "progress": None,
                 "predicted_initial": predicted,
                 "predicted_rearmed": None,
+                "cancelled": False,
             }
             event = {
                 "request_id": request_id,
@@ -313,7 +337,8 @@ class Wire:
             ).start()
             port = int(self.backend_url.rsplit(":", 1)[1])
             connection = http.client.HTTPConnection("127.0.0.1", port)
-            self._upstream = connection
+            connection.connect()
+            self._upstream_sock = connection.sock
             connection.request(
                 "POST",
                 handler.path,
@@ -376,6 +401,8 @@ class Wire:
                 if client_streams:
                     handler.wfile.write(line + b"\n")
                     handler.wfile.flush()
+            if self.active["cancelled"]:
+                raise ConnectionAbortedError("upstream shut down by the lab")
             if not client_streams:
                 payload = json.dumps(folded.response()).encode()
                 handler.send_response(response.status)
@@ -392,6 +419,7 @@ class Wire:
                     else 0
                 )
             session["last_finish"] = folded.finish_reason
+            kernel_end = self.kernel_cache_bytes()
             self.record(
                 "response_end",
                 request_id=request_id,
@@ -409,11 +437,26 @@ class Wire:
                 visible_tokens=split["content"],
                 tool_calls=len(folded.tool_calls),
                 progress=self.active.get("progress"),
+                kernel_compiled=None
+                if kernel_start is None
+                else kernel_end > kernel_start,
             )
         except Exception as exc:
-            self._reject(handler, f"{type(exc).__name__}: {exc}", request_id=request_id)
+            if self.active is not None and self.active["cancelled"]:
+                # A lab-initiated cancel is an outcome, not a wire failure.
+                self.record(
+                    "response_cancelled",
+                    request_id=request_id,
+                    seconds=time.monotonic() - self.active["started"],
+                    meaningful_first_token_seconds=self.active["first_token"],
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+            else:
+                self._reject(
+                    handler, f"{type(exc).__name__}: {exc}", request_id=request_id
+                )
         finally:
-            self._upstream = None
+            self._upstream_sock = None
             if connection is not None:
                 connection.close()
             self.active = None
