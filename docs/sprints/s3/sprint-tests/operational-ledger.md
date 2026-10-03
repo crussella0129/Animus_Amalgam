@@ -84,3 +84,19 @@ pays this compile cost on its first launch and after every driver update: a
 30× slower first prompt and a 2.5× slower load. Host-derived deadlines must
 not treat that first launch as the host's steady state. Kernel-cache growth
 is the observable that separates the two.
+
+**Diagnostic launches.** The bisection used 4 owned diagnostic launches
+outside the lab: a scratch script with the same binary and model, a Job
+Object, an admission check and a 4 GiB RAM kill-guard. One of the 4 ran with
+an unintended warm cache because of a quoting slip. They count against the
+approved envelope's 12 launches, so 5 of 12 are used (attempt 02 plus 4
+diagnostics). Each diagnostic sent 1 request (4 of 400).
+
+## Attempt 03 — calibration replay refused at admission (2026-10-03)
+
+Manifest `calibration-b722f9301e22` was frozen at repair `714f5afd4f`.
+Admission measured 14.76 GiB available RAM against the 16.06 GiB needed;
+VRAM was sufficient (8.80 GiB free, 8.52 needed). The owner's applications
+had reopened since the 16.75 GiB reading. The attempt made no launch and was
+charged 26.7 s. The owner was asked to free memory. No owner process was
+touched.
