@@ -333,3 +333,26 @@ conditional on O3: R1's median uncached tokens per continued request must
 exceed 2,000. The screen's thinking-on sessions measured 245–292, so R3 is
 unlikely to be needed. A further failed launch would need the owner's
 approval to extend the envelope.
+
+## Attempt 08 — R0 (thinking off, greedy) completes the long task
+
+Manifest `R0-310c9842e014` was frozen at `bead0e57aa`. Admitted; the load
+took 14.9 s and L3 passed. The single 8-turn session finished with no stop.
+The maximum supervisor lag was 0.36 s and cleanup took 0.83 s. Charged time
+for this attempt was 764.7 s.
+
+- **Verified: 4/4.** All 3 seeded defects were fixed and the feature was
+  added, scored by the hidden verifier from fixture state alone. There was
+  no contamination.
+- **Requests: 18.** INT-0007 AC1's 20-request coverage is **not met**, and
+  this is recorded separately from completion (L2). The model took fewer
+  steps than the 22-request reference path.
+- **Machine time:** 728 s. Decoded tokens: 2,138. That is **182 s and 535
+  decoded tokens per verified item** (O1).
+- **Cache:** append-only. After the cold 3,713-token opening prefill, the
+  median uncached prompt per continued request was 56 tokens. Rendered input
+  peaked at 7,738 tokens.
+- **Where time went:** decode took 90% of machine time, at about 3.5 tok/s.
+  On this host, decode speed is the bottleneck, as Sprint 2 found.
+- **Resources:** the minimum available RAM per request was 6.29 GiB, against
+  the 4 GiB reserve.
