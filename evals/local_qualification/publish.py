@@ -19,6 +19,8 @@ REPO = HERE.parents[1]
 
 # L1: the request fields every long-task receipt carries; a missing one is named, never dropped.
 REQUEST_FIELDS = (
+    "id_slot",
+    "finish_reason",
     "input_tokens",
     "cached_tokens",
     "uncached_prompt_tokens",

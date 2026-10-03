@@ -164,3 +164,54 @@ smoke that keeps the slot), which spends no extra launch.
 
 **Envelope:** 6 of 12 launches used (attempts 02 and 04, plus 4
 diagnostics) and 9 of 400 requests.
+
+## Attempt 05 — first screen: C3 and L3 pass, then a telemetry read race
+
+Manifest `screen-db734edd4a4a` (`2c07cc0689`), with 5 frozen checkpoints and
+784 MB of checkpoint RAM in admission. Admitted at 16.94 GiB. The load took
+**14.3 s** on the warm lab kernel cache, against 45.4 s cold in attempt 04.
+
+**C3 — passed (replay of attempt 04's miss).**
+
+- The two smokes' rendered prompt, system and tool hashes were
+  byte-identical (`cfc15bdd…`, `4a126f5b…`, `74234e98…`).
+- The second smoke kept the slot. It reused **1147 of 1151** prompt tokens
+  from cache, processed 4 and finished in 2.5 s, against 12.9 s cold.
+- Both answers were exact.
+
+**L3 — passed live**, measured with Hermes's real system prompt and
+terminal tool:
+
+| Check | Measured | Limit |
+|---|---|---|
+| Reference requests | 22 | at least 20 |
+| Largest reference edit | 179 tokens | the smallest cap, 512 |
+| Peak rendered prompt + worst-case echoed reasoning | 6,889 + 5,632 tokens | the input ceiling, 31,488 |
+
+**First long session (off-greedy).** The opening request prefilled 3,709
+tokens cold at 126 tok/s and emitted a valid terminal call in 47 tokens.
+The second request reused 3,755 cached tokens and processed only 243.
+History stayed append-only with thinking off.
+
+**Failure.** The third request was in flight when the supervisor stopped
+with `PermissionError: [Errno 13] Permission denied: …\sample.json`. The
+resulting cleanup aborted the in-flight request (`wire_failure`
+ConnectionAbortedError). Cleanup took 2.2 s, all 5 owned roots exited and the
+listener was closed. Totals: 3 lab requests and 616.998 s charged
+cumulatively.
+
+**Diagnosis.** `telemetry.py` publishes each sample with `os.replace`. On
+Windows, opening a file while it is being replaced fails with a sharing
+violation. The supervisor reads 4 times a second, the writer replaces once a
+second, and over about 10 minutes the race hit once. The reader has had this
+race since the lab's first commit (`1f6abe7eca`); Sprint 2's shorter attempts
+never hit it.
+
+**Repair.** A sharing violation on read means "no new sample this tick". The
+supervisor keeps the last sample, and the existing staleness rule (more than
+3 telemetry periods) still bounds how long telemetry may be unreadable.
+`publish.py` now also names `id_slot` and `finish_reason` when missing: the
+pinned llama.cpp's OpenAI-compatible stream carries no `id_slot`.
+
+**Envelope:** 7 of 12 launches (lab attempts 02, 04 and 05, plus 4
+diagnostics) and 14 of 400 requests (10 lab and 4 diagnostic).

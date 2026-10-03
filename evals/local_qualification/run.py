@@ -344,7 +344,14 @@ def main():
                 if telemetry_stale(collector_start, now, TELEMETRY_PERIOD):
                     raise RuntimeError("critical telemetry did not start")
                 return None, None
-            sample = json.loads(sample_path.read_text())
+            try:
+                sample = json.loads(sample_path.read_text())
+            except PermissionError:
+                # Windows refuses to open a file mid-os.replace; this tick keeps the last
+                # sample, and the staleness rule bounds how long that may last.
+                sample = state["last_sample"]
+                if sample is None:
+                    return None, None
             if telemetry_stale(sample["at"], now, TELEMETRY_PERIOD):
                 raise RuntimeError("critical telemetry stale")
             available = psutil.virtual_memory().available
