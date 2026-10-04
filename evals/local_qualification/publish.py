@@ -134,7 +134,12 @@ def placeholders(lab: Path, attempt: Path) -> list[tuple[str, str]]:
 def sanitize(text: str, pairs) -> str:
     for root, name in pairs:
         text = re.sub(re.escape(root), name, text, flags=re.IGNORECASE)
-    return text
+    # Any remaining spelling of the profile, e.g. a repr nested in JSON doubles every
+    # backslash again (attempt 05's PermissionError reason).
+    user = re.escape(Path.home().name)
+    return re.sub(
+        rf"[A-Za-z]:[\\/]+users[\\/]+{user}\b", "<home>", text, flags=re.IGNORECASE
+    )
 
 
 def privacy_screen(text: str, attempt: Path) -> list[str]:
