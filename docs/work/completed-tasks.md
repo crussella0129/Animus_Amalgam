@@ -147,4 +147,4 @@
 - **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-10-04T02:03:14Z
 - **Files modified:** evals/local_qualification/screen.py, evals/local_qualification/arms.json, evals/local_qualification/{verify_long,run}.py
-- **Commit:** PENDING
+- **Commit:** `735b723cfd0e7001b053b80f42642692dda10a71`
