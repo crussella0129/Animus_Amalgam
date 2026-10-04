@@ -509,3 +509,8 @@ resource stop for O5.
 Requests: 160 of 400 (156 lab and 4 diagnostic). R2 has not completed in
 three attempts: one lab defect (repaired) and two host resource stops. Its
 three partial runs (13, 3 and 10 requests) consistently answer O2.
+
+**Owner decision (2026-10-03, in chat):** one more launch, to 15, for a
+third R2 replay. The owner closes background applications and avoids
+opening new ones for the run. It starts after the concurrent test-runner
+hunt finishes, so the lab is the only heavy workload.
