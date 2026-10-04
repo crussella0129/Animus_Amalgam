@@ -479,3 +479,7 @@ owner controls. It was reported to the owner and not changed.
 **Envelope:** all 13 launches used (12 approved plus 1 extension).
 Requests: 149 of 400 (145 lab and 4 diagnostic). The owner is asked whether
 to spend another launch on R2.
+
+**Owner decision (2026-10-03, in chat):** one more launch, to 14, for a
+second R2 replay. The owner keeps the PC active during the run, so Windows
+idle maintenance does not start. The lab changes no system settings.
