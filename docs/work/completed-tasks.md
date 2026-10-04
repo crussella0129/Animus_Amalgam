@@ -161,4 +161,4 @@
 - **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-10-04T02:03:19Z
 - **Files modified:** docs/lineage/local-operating-policy.md, docs/SUMMARY.md
-- **Commit:** PENDING
+- **Commit:** `6158981c984675eb8276db149ae4d22756b24f3d`
