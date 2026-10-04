@@ -141,3 +141,10 @@
 - **Completed:** 2026-10-04T02:03:12Z
 - **Files modified:** evals/local_qualification/tasks/long/, evals/local_qualification/{verify_long,publish,run,wire}.py, evals/local_qualification/README.md
 - **Commit:** `a8af7d7959cbc47a115e1ab28ba63eb8fbcd1ef9`
+
+## T-212 (sprint 3)
+- **Description:** Screen sampling x thinking mode. S1: six configurations ran turns 1-3 in fresh homes and fixtures, with slots erased, at seed 42 (attempt 06). S2: ranking by verified items, then machine time per item, then decoded tokens, selected off-greedy (259 s per item) and on-greedy (515 s per item). off-vendor failed, contaminated twice. The mid probe was reported only. The winners are in arms.json. S3: the results are labeled single seeded screening runs. Repairs from the screen: a private session TEMP (a shared TEMP leaked files between sessions through Git Bash /tmp); fixes for contamination-scan false positives (the ./ prefix, globs, shell-local variables); and the telemetry read race. screen.py re-scans recorded tool calls with the current scan.
+- **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-10-04T02:03:14Z
+- **Files modified:** evals/local_qualification/screen.py, evals/local_qualification/arms.json, evals/local_qualification/{verify_long,run}.py
+- **Commit:** PENDING
