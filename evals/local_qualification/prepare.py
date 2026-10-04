@@ -67,6 +67,54 @@ def task_corpus_digest() -> str:
     })
 
 
+def launch_flags(profile: dict, checkpoints: int) -> list[str]:
+    """llama-server flags for a launch profile; the lab adds model, host, port, key and
+    --slot-save-path at launch, and never --predict (the arm caps each request)."""
+    flags = [
+        "--alias",
+        "amalgam-pilot",
+        "--offline",
+        "--ctx-size",
+        str(profile["context"]),
+        "--parallel",
+        "1",
+        "--fit",
+        "off",
+        "--load-mode",
+        "none",
+        "--no-context-shift",
+        "--no-warmup",
+        "--spec-type",
+        "none",
+        "-ngl",
+        "all",
+        "-ot",
+        CPU_PATTERN + "=CPU",
+        "-ctk",
+        "q8_0",
+        "-ctv",
+        "q8_0",
+        "-fa",
+        "on",
+        "-b",
+        "256",
+        "-ub",
+        "128",
+        "-t",
+        "6",
+        "--cache-ram",
+        "0",
+        "--ctx-checkpoints",
+        str(checkpoints),
+        "--metrics",
+    ]
+    if profile["checkpoint_min_step"] is not None:
+        flags += ["--checkpoint-min-step", str(profile["checkpoint_min_step"])]
+    if profile["trace"]:
+        flags += ["-lv", "4"]
+    return flags
+
+
 def resolve_sessions(arms: dict, plan: dict) -> list[dict]:
     sessions = []
     multiple = arms["session_request_limit_multiple"]
@@ -161,48 +209,7 @@ def main():
     if checkpoints == "calibrated":
         checkpoints = record["frozen_checkpoints"]
     checkpoint_ram = checkpoints * record["checkpoint_bytes"] if record else 0
-    flags = [
-        "--alias",
-        "amalgam-pilot",
-        "--offline",
-        "--ctx-size",
-        str(context),
-        "--parallel",
-        "1",
-        "--fit",
-        "off",
-        "--load-mode",
-        "none",
-        "--no-context-shift",
-        "--no-warmup",
-        "--spec-type",
-        "none",
-        "-ngl",
-        "all",
-        "-ot",
-        CPU_PATTERN + "=CPU",
-        "-ctk",
-        "q8_0",
-        "-ctv",
-        "q8_0",
-        "-fa",
-        "on",
-        "-b",
-        "256",
-        "-ub",
-        "128",
-        "-t",
-        "6",
-        "--cache-ram",
-        "0",
-        "--ctx-checkpoints",
-        str(checkpoints),
-        "--metrics",
-    ]
-    if profile["checkpoint_min_step"] is not None:
-        flags += ["--checkpoint-min-step", str(profile["checkpoint_min_step"])]
-    if profile["trace"]:
-        flags += ["-lv", "4"]
+    flags = launch_flags(profile, checkpoints)
     sessions = resolve_sessions(arms, plan)
     venv = task_venv(lab)
     cal = Calibration(**record["rates"]) if record else None

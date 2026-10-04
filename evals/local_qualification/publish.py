@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 import re
 
+from policy import manifest_digest
+
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 
@@ -158,6 +160,20 @@ def privacy_screen(text: str, attempt: Path) -> list[str]:
     return findings
 
 
+def published_manifest(attempt: Path, pairs) -> dict:
+    """The frozen manifest with local roots replaced.
+
+    It keeps ``id``, the digest the lab verified at launch over the private manifest.
+    Sanitizing changes the bytes, so ``published_digest`` covers this public copy instead.
+    """
+    manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
+    public = json.loads(sanitize(json.dumps(manifest), pairs))
+    public["published_digest"] = manifest_digest({
+        k: v for k, v in public.items() if k != "published_digest"
+    })
+    return public
+
+
 def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument("--lab", type=Path, required=True)
@@ -168,11 +184,17 @@ def main():
     attempt = lab / "attempts" / args.attempt
     text = sanitize(json.dumps(receipts(attempt), indent=1), placeholders(lab, attempt))
     findings = privacy_screen(text, attempt)
+    manifest = published_manifest(attempt, placeholders(lab, attempt))
+    manifest_text = json.dumps(manifest, indent=1, sort_keys=True)
+    findings += privacy_screen(manifest_text, attempt)
     if findings:
         raise SystemExit(f"privacy screen refused {args.attempt}: {findings}")
-    args.out.mkdir(parents=True, exist_ok=True)
+    (args.out / "manifests").mkdir(parents=True, exist_ok=True)
     target = args.out / f"{args.attempt}.json"
     target.write_bytes((text + "\n").encode("utf-8"))  # LF on every host
+    (args.out / "manifests" / f"{manifest['id']}.json").write_bytes(
+        (manifest_text + "\n").encode("utf-8")
+    )
     print(target)
 
 

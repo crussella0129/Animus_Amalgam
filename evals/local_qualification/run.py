@@ -100,7 +100,12 @@ def session_env(home: Path, venv: Path) -> dict:
     """No repository path reaches the CLI or its tools; the task venv comes first."""
     env = {k: v for k, v in os.environ.items() if k.upper() in ENV_ALLOWED}
     scripts = venv / ("Scripts" if os.name == "nt" else "bin")
-    env["PATH"] = str(scripts) + os.pathsep + env.get("PATH", "")
+    outside = [
+        entry
+        for entry in env.get("PATH", "").split(os.pathsep)
+        if entry and not inside_repo(Path(entry))
+    ]
+    env["PATH"] = os.pathsep.join([str(scripts), *outside])
     # A private TEMP: Git Bash mounts /tmp on it, and the owner's TEMP would carry files
     # from one session into the next.
     temp = home / "tmp"
@@ -206,6 +211,18 @@ class KernelCache:
             "CUDA_CACHE_PATH": str(self.path),
             "CUDA_CACHE_MAXSIZE": "4294967296",
         }
+
+
+def read_sample(path: Path, last: dict | None) -> dict | None:
+    """The latest telemetry sample, or ``last`` while Windows refuses the open.
+
+    Windows refuses to open a file mid-``os.replace``; the staleness rule bounds how long
+    a kept sample may last (attempt 05 stopped on this race).
+    """
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except PermissionError:
+        return last
 
 
 def tree_cpu(proc) -> float:
@@ -350,14 +367,9 @@ def main():
                 if telemetry_stale(collector_start, now, TELEMETRY_PERIOD):
                     raise RuntimeError("critical telemetry did not start")
                 return None, None
-            try:
-                sample = json.loads(sample_path.read_text())
-            except PermissionError:
-                # Windows refuses to open a file mid-os.replace; this tick keeps the last
-                # sample, and the staleness rule bounds how long that may last.
-                sample = state["last_sample"]
-                if sample is None:
-                    return None, None
+            sample = read_sample(sample_path, state["last_sample"])
+            if sample is None:
+                return None, None
             if telemetry_stale(sample["at"], now, TELEMETRY_PERIOD):
                 raise RuntimeError("critical telemetry stale")
             available = psutil.virtual_memory().available
@@ -394,7 +406,6 @@ def main():
             time.sleep(LOOP_PERIOD)
         placement = manifest["placement"]
         cpu_needed, gpu_needed = admission_requirements(placement, limits)
-        admission_sample = sample
         record_event(
             "admission", cpu_needed=cpu_needed, gpu_needed=gpu_needed, sample=sample
         )
@@ -531,15 +542,7 @@ def main():
         reason = "sessions complete"
         if manifest["plan"] == "calibration":
             write_calibration(
-                lab,
-                attempt,
-                hash_s,
-                t_load,
-                admission_sample,
-                cpu_needed,
-                session_outcomes,
-                params,
-                record_event,
+                lab, attempt, hash_s, t_load, session_outcomes, params, record_event
             )
     except (Exception, KeyboardInterrupt) as exc:
         reason = f"stopped: {type(exc).__name__}: {exc}"
@@ -927,22 +930,19 @@ def verify_session(workload, fixture, result, venv, allowlist):
     return None
 
 
-def write_calibration(
-    lab,
-    attempt,
-    hash_s,
-    t_load,
-    admission_sample,
-    cpu_needed,
-    outcomes,
-    params,
-    record_event,
-):
-    """Fail closed: every field must come from this host's measurements."""
+def write_calibration(lab, attempt, hash_s, t_load, outcomes, params, record_event):
+    """Fail closed: every field must come from this host's measurements.
+
+    Checkpoint headroom comes from the attempt's own admission receipt (attempt 04 was
+    handed a post-load sample instead, and froze 0 checkpoints).
+    """
     prefill, decode, first_events = [], [], []
+    admission = None
     for event in (
         json.loads(line) for line in (attempt / "events.jsonl").open(encoding="utf-8")
     ):
+        if event["kind"] == "admission":
+            admission = event
         if event["kind"] != "response_end" or not event.get("timings"):
             continue
         if event.get("kernel_compiled"):
@@ -975,6 +975,7 @@ def write_calibration(
             ("overhead", first_events),
             ("cli_start", cli_starts),
             ("checkpoint_size", sizes),
+            ("admission", [admission] if admission else []),
         )
         if not values
     ]
@@ -990,7 +991,7 @@ def write_calibration(
         "hash_s": hash_s,
     }
     checkpoint_bytes = int(max(sizes) * (1 << 20))
-    headroom = admission_sample["ram_available"] - cpu_needed
+    headroom = admission["sample"]["ram_available"] - admission["cpu_needed"]
     frozen = max(0, min(MAX_CHECKPOINTS, headroom // checkpoint_bytes))
     arms = json.loads((HERE / "arms.json").read_text(encoding="utf-8"))
     planned = []
