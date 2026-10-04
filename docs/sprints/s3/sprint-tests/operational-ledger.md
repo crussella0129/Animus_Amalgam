@@ -445,3 +445,37 @@ so the owner was asked to extend the envelope by one.
 
 **Owner decision (2026-10-03, in chat):** the envelope was extended by one
 launch, to 13, for the R2 replay. No spare was approved.
+
+## Attempt 11 — R2 replay stopped by the page-in resource guard (host maintenance)
+
+Manifest `R2-b6a0ef378ab2` was frozen at the wire repair and admitted at
+17.25 GiB; the load took 15.2 s and L3 passed. Charged time was 246.5 s.
+
+The first two requests behaved as in attempt 10. Echo was on, the second
+request reused 3,870 cached tokens and processed 238. During request 145,
+three consecutive samples exceeded the 64 MiB/s page-in limit under RAM
+pressure: 324, 70 and 83 MiB/s. Available RAM fell from 6.04 to 5.23 GiB in
+about 3 s. The Sprint 2 paging guard stopped the attempt ("hard page-in rate
+breached"). Cleanup aborted the in-flight request, and the listener closed.
+
+**Cause: host maintenance, not the lab.** The backend's memory is fixed,
+and the request was decoding. The Windows System log shows:
+
+| Time (local) | Event |
+|---|---|
+| 20:28:06 | The console session went idle (Kernel-Power 566, session 528 → 530). |
+| 20:33:30 | A secure trustlet started (IsolatedUserMode 5). |
+| 20:33:31–33 | The page-in burst and the RAM draw that stopped the attempt. |
+| 20:33:34 | The Background Intelligent Transfer Service was switched from demand start to auto start (SCM 7040). |
+| 20:34:25 | Volsnap 24: shadow-copy storage could not grow, and the volume's shadow copies are at risk. |
+
+Taken together, this is Windows idle maintenance starting once the machine
+went idle. The guard did what it is for: it protected the owner's machine.
+This is not a lab defect, so there is no repair. It is counted as a resource
+stop for O5. C: had 180.8 GiB free and the lab tree is 0.65 GiB, so the
+Volsnap warning points to the shadow-storage quota, a Windows setting the
+owner controls. It was reported to the owner and not changed.
+
+**Envelope:** all 13 launches used (12 approved plus 1 extension).
+Requests: 149 of 400 (145 lab and 4 diagnostic). The owner is asked whether
+to spend another launch on R2.
