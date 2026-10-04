@@ -514,3 +514,92 @@ three partial runs (13, 3 and 10 requests) consistently answer O2.
 third R2 replay. The owner closes background applications and avoids
 opening new ones for the run. It starts after the concurrent test-runner
 hunt finishes, so the lab is the only heavy workload.
+
+## Attempt 13 — R2 completes
+
+Manifest `R2-03542237487a`, frozen at `4532740520`. The owner had closed
+background applications. Admitted at 16.92 GiB; the load took 21.8 s and L3
+passed. The single session finished with no stop. The maximum supervisor lag
+was 0.44 s and cleanup took 0.81 s. Charged time was 1,461.4 s. The minimum
+available RAM per request was 5.59 GiB, and the peak page-in was 94.7 MiB/s
+in a single sample, which did not trip the guard.
+
+- **Verified: 4/4.** There was no contamination.
+- **Requests: 18.** INT-0007 AC1's coverage is **not met** (recorded
+  separately).
+- **Machine time:** 1,418 s. Decoded tokens: 4,603, of which 2,181 were
+  reasoning. That is **354 s and 1,151 decoded tokens per verified item**,
+  within a few percent of R1's 347 s and 1,058 tokens. On this host, echo is
+  throughput-neutral.
+- **O2:** the median uncached prompt per continued request was **60 tokens**,
+  against R1's 161. 12 of 17 continued requests rolled back at most 1
+  token, so history stays append-only. **All 5 large rollbacks (412–678
+  tokens) followed exactly the turns whose reasoning hit the 256-token
+  budget.** None followed any other turn. When the budget cuts the think
+  block, the forced end of thinking re-renders differently from what was
+  generated. Otherwise the template's trimmed re-render matches the
+  generated block.
+
+## Operational confidence record
+
+Recorded at **2026-10-04T01:39Z**. It precedes every Sprint 3 formal test
+run (T-214, V1).
+
+**Criteria met:**
+
+- All planned full runs completed: R0 (attempt 08), R1 (attempt 09) and R2
+  (attempt 13). R3's O3 condition was not met, and the reason is recorded
+  under attempt 09.
+- The screen completed (attempt 06), C1–C4 passed, and the calibration
+  record exists.
+- Every in-scope failure is linked to a diagnosis, a repair and a replay,
+  listed below.
+- **Time:** 10,788.8 s (3.0 h) charged across 13 lab attempts, against the
+  host-derived 81,365 s backstop budget.
+- **Envelope:** 15 launches (11 lab and 4 diagnostic), including the owner's
+  three one-launch extensions. Requests: 178 of 400 (174 lab and 4
+  diagnostic).
+
+**Repair provenance (O4):**
+
+| Failure (attempt) | Diagnosis | Repair | Replay |
+|---|---|---|---|
+| Prefill collapsed to 4.27 tok/s (02) | Fresh per-attempt `APPDATA` gave the driver a cold kernel JIT cache | `714f5afd4f`: lab-level kernel cache; growth counts as progress; compiled requests are not rate samples | 04 (cold cache, no false stall); 05 onward loaded in 14–22 s |
+| Supervisor lag stop (02) | `cancel_active()` close waited on the reader lock; waits skipped `observe()` | `714f5afd4f`: socket shutdown; every supervisor wait keeps observing | 04: main-cancel settled in 0.84 s; maximum lag 0.38 s |
+| 0 checkpoints frozen (04) | `write_calibration` got the post-load sample | `32a1d3342b`: admission sample | Recomputed from attempt 04's evidence at `a5413bc376` |
+| C3 missed (04) | Per-session paths in the system prompt; slot erased | `32a1d3342b`: fixed live paths, archive, per-session `erase` | 05 and 06: byte-identical prompts, 1147/1151 reused |
+| Telemetry read race (05) | Windows refuses to open a file mid-replace | `c9bcb37a55`: the reader keeps the last sample | 06 (78 requests, no recurrence) |
+| Isolation breach via `/tmp` (06) | Sessions shared the owner's `TEMP` | `1850994283`: private session `TEMP` | 08–13: no shared-temp writes |
+| Scan false positives (06) | `./` stripped; globs split; local variables | `1850994283`, `d33c1e4371` | Screen re-scanned from recorded tool calls |
+| Telemetry writer race (07) | Windows refuses to replace an open file | `bead0e57aa`: the writer retries, then skips | 08–13 (offline stress run: 0 failures) |
+| Sequential retry refused as concurrent (10) | The lock was held through post-response accounting | `c783199787`: delivery separated from accounting | Offline repro red to green. 11–13 had no truncated-tool-call retry, so the live path was not re-triggered. The formal integration test covers it. |
+| Page-in stop (11) and reserve stop (12) | Host maintenance; owner applications | None: resource guards working as designed | 13 completed with apps closed |
+
+**Prediction accuracy (O5)**, over all 165 requests with a prediction (all
+after calibration):
+
+| Prediction | Median predicted/actual | p10 | p90 | Range |
+|---|---|---|---|---|
+| Rearmed | 4.34 | 1.56 | 11.5 | 0.92–57 |
+| Initial | 5.9 | 1.96 | 13.95 | 1.26–62 |
+
+The predictor prices the full output cap at the smoothed decode rate. That
+makes it a conservative bound, not a forecast, but not a strict one: one
+request (attempt 10, request 142) ran 9% over its rearmed prediction. It
+decoded the full 768-token cap at 3.27 tok/s with about 8K tokens of
+context. Calibration measured 3.55 tok/s at about 1K. Decode slows as
+context grows, and the T-215 prediction ignores that. No deadline was
+affected, because enforcement uses the stall rule and the floor-priced
+backstop. Noted for T-219.
+
+**Every stall, backstop and resource stop (O5):**
+
+- **Stall:** 1, in prefill (02), from cold kernel compilation.
+- **Resource and lab stops:**
+  - lag (02, a lab defect);
+  - admission refused (03, the owner's apps);
+  - telemetry race on read (05) and on write (07), both lab defects;
+  - the wire concurrency refusal (10, a lab defect);
+  - page-in during host maintenance (11);
+  - the RAM reserve during owner app use (12).
+- **Backstop:** none reached.
