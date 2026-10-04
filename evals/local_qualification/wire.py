@@ -107,12 +107,15 @@ class Wire:
         self.last_slots = None
         self.failure = None
         self.session = None
-        # One request in flight: _gate makes the check-and-set atomic, and _in_flight ends
-        # once the client has the whole response. lock then serializes the accounting
-        # tail, which a sequential client never waits for: it sends its next request at
-        # [DONE] (attempt 10's truncated-tool-call retry was refused as concurrent).
+        # One request in flight: _in_flight holds the owning handler's token from
+        # acceptance until the client has the whole response, and _gate makes every
+        # check-and-set atomic. lock then serializes the accounting tail, which a
+        # sequential client never waits for: it sends its next request at [DONE]
+        # (attempt 10's truncated-tool-call retry was refused as concurrent). Only the
+        # owner may release the token, so a finishing handler cannot clear the claim of
+        # the request already waiting behind it.
         self._gate = threading.Lock()
-        self._in_flight = False
+        self._in_flight = None
         self.lock = threading.Lock()
         self._upstream_sock = None
         owner = self
@@ -259,13 +262,22 @@ class Wire:
         except OSError:
             pass
 
-    def _handle(self, handler):
+    def _release_in_flight(self, token):
         with self._gate:
-            refused = handler.path != "/v1/chat/completions" or self._in_flight
-            self._in_flight = self._in_flight or not refused
+            if self._in_flight is token:
+                self._in_flight = None
+
+    def _handle(self, handler):
+        token = object()
+        with self._gate:
+            refused = (
+                handler.path != "/v1/chat/completions" or self._in_flight is not None
+            )
+            if not refused:
+                self._in_flight = token
         if refused or not self.lock.acquire(timeout=self.probe_timeout):
             if not refused:
-                self._in_flight = False
+                self._release_in_flight(token)
             handler.send_error(409, "Unexpected endpoint or concurrent request")
             self.failure = "unexpected or concurrent inference request"
             return
@@ -390,7 +402,7 @@ class Wire:
                     if client_streams and line.strip() == b"data: [DONE]":
                         handler.wfile.write(line + b"\n")
                         handler.wfile.flush()
-                        self._in_flight = False  # the client is done with this request
+                        self._release_in_flight(token)  # the client is done
                     continue
                 data = json.loads(line[6:])
                 if "prompt_progress" in data:
@@ -437,7 +449,7 @@ class Wire:
                 handler.send_header("Content-Length", str(len(payload)))
                 handler.end_headers()
                 handler.wfile.write(payload)
-            self._in_flight = False  # delivered; accounting follows
+            self._release_in_flight(token)  # delivered; accounting follows
             split = {}
             for kind, parts in texts.items():
                 text = "".join(parts)
@@ -488,7 +500,7 @@ class Wire:
             if connection is not None:
                 connection.close()
             self.active = None
-            self._in_flight = False
+            self._release_in_flight(token)
             self.lock.release()
 
     def close(self):
