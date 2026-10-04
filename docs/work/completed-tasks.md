@@ -154,4 +154,4 @@
 - **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-10-04T02:03:17Z
 - **Files modified:** docs/sprints/s3/sprint-tests/operational-ledger.md, docs/sprints/s3/sprint-tests/qualification/, evals/local_qualification/{telemetry,wire,publish}.py
-- **Commit:** PENDING
+- **Commit:** `08a17f20471e808bd7d98be71aba3a0f4a2cc99b`
