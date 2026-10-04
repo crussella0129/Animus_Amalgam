@@ -172,7 +172,7 @@ def main():
         raise SystemExit(f"privacy screen refused {args.attempt}: {findings}")
     args.out.mkdir(parents=True, exist_ok=True)
     target = args.out / f"{args.attempt}.json"
-    target.write_text(text + "\n", encoding="utf-8")
+    target.write_bytes((text + "\n").encode("utf-8"))  # LF on every host
     print(target)
 
 
