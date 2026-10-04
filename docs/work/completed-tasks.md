@@ -168,4 +168,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md), [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-10-04T02:23:58Z
 - **Files modified:** tests/hermes_cli/test_local_runtime_throughput.py, tests/evals/test_local_qualification_{lab,wire,windows,receipts}.py, evals/local_qualification/{run,prepare,publish,wire}.py, docs/sprints/s3/sprint-tests/{unit-tests,integration-tests,e2e-tests,test-report}.md, docs/sprints/s3/sprint-tests/qualification/manifests/
-- **Commit:** PENDING
+- **Commit:** `61d809a660855a138c12d937f3eb9ad9db6ef00f`
