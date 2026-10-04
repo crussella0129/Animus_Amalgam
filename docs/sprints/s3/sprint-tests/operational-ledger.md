@@ -483,3 +483,29 @@ to spend another launch on R2.
 **Owner decision (2026-10-03, in chat):** one more launch, to 14, for a
 second R2 replay. The owner keeps the PC active during the run, so Windows
 idle maintenance does not start. The lab changes no system settings.
+
+## Attempt 12 — second R2 replay stopped by the RAM reserve (owner applications)
+
+Manifest `R2-8b1bcbff010f`, admitted at 17.33 GiB; the load took 15.4 s and
+L3 passed. Ten requests completed, and they repeated attempt 10's echo
+pattern: a large uncached re-render (491–523 tokens) followed each turn
+whose reasoning hit the 256-token budget. Otherwise only the new tool result
+was uncached (25–58 tokens). Charged time was 805.3 s.
+
+**Stop.** Available RAM fell from 5.90 to 3.99 GiB in about 7 s, with
+page-in bursts of 289 and 242 MiB/s. That crossed the 4 GiB reserve, and the
+supervisor stopped the attempt ("RAM or VRAM reserve breached"). Cleanup
+aborted the in-flight request. VRAM was not involved (2.4 GiB free).
+
+**Cause: owner applications, not the lab.** The process table showed new
+Chrome processes started at 20:50:05–08, alongside many resident
+applications (game launchers, a cloud-sync client, an office assistant and
+others). While the model runs it leaves about 6 GiB of headroom, so ordinary
+desktop use can cross the 4 GiB reserve. The guard protected the machine as
+designed. This is not a lab defect: no repair, and it is counted as a
+resource stop for O5.
+
+**Envelope:** all 14 launches used (12 approved plus 2 extensions).
+Requests: 160 of 400 (156 lab and 4 diagnostic). R2 has not completed in
+three attempts: one lab defect (repaired) and two host resource stops. Its
+three partial runs (13, 3 and 10 requests) consistently answer O2.
