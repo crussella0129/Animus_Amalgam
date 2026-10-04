@@ -155,3 +155,10 @@
 - **Completed:** 2026-10-04T02:03:17Z
 - **Files modified:** docs/sprints/s3/sprint-tests/operational-ledger.md, docs/sprints/s3/sprint-tests/qualification/, evals/local_qualification/{telemetry,wire,publish}.py
 - **Commit:** `08a17f20471e808bd7d98be71aba3a0f4a2cc99b`
+
+## T-213 (sprint 3)
+- **Description:** Default local operating policy for the measured settings. P1: the policy ranks thinking mode, sampling, echo and checkpoint density by machine time per verified item, with receipt links. It states the fixed choices with their rationale: 32K context, the environment probe off, the host-calibrated time model, the terminal toolset and calibrated checkpoints. It marks MTP, uncapped thinking and compression as pending Sprint 4, labels every result a single seeded run, and adds a persistent kernel-cache rule for client machines. P2: the live config.yaml and presets.ini fingerprints are unchanged (a48b4add..., bb35c72d...). The live-profile snippet is a proposal only.
+- **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-10-04T02:03:19Z
+- **Files modified:** docs/lineage/local-operating-policy.md, docs/SUMMARY.md
+- **Commit:** PENDING
