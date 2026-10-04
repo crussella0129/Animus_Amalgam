@@ -133,4 +133,4 @@
 - **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md), [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-10-04T02:03:10Z
 - **Files modified:** evals/local_qualification/{run,wire,prepare}.py, evals/local_qualification/arms.json, evals/local_qualification/README.md, docs/sprints/s3/sprint-tests/operational-ledger.md (repair commits are listed in the ledger)
-- **Commit:** PENDING
+- **Commit:** `d0fe0faec8fb1662589c3c0e0ef28072388b380e`
