@@ -162,3 +162,10 @@
 - **Completed:** 2026-10-04T02:03:19Z
 - **Files modified:** docs/lineage/local-operating-policy.md, docs/SUMMARY.md
 - **Commit:** `6158981c984675eb8276db149ae4d22756b24f3d`
+
+## T-214 (sprint 3)
+- **Description:** Formal checks after operational confidence and evidence handoff. V1: every formal test was written and first run after the confidence record (2026-10-04T01:58Z). The suite covers throughput (H1-H3); the lab (M1, M2, kernel cache, calibration, L2, L4, S2); the wire (bounds, streaming, slots progress, receipts, request limits, cancel, sequential vs concurrent); Windows file behaviour; and the published receipts and manifests (V3, M4). 112 passed and 0 failed on 0cd28ab8cc. V2: all 11 regressions failed on their repair's parent revision. The affected-suite diff against base 5f6a0c7b60 shows 0 new failures, 6 fixed and 1 inherited. The formal phase found and fixed the wire's in-flight ownership race and a repository path leaking into the session PATH. The Sprint 2 wire tests were ported to the Sprint 3 API, and the Sprint 3 test docs were written.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md), [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-10-04T02:23:58Z
+- **Files modified:** tests/hermes_cli/test_local_runtime_throughput.py, tests/evals/test_local_qualification_{lab,wire,windows,receipts}.py, evals/local_qualification/{run,prepare,publish,wire}.py, docs/sprints/s3/sprint-tests/{unit-tests,integration-tests,e2e-tests,test-report}.md, docs/sprints/s3/sprint-tests/qualification/manifests/
+- **Commit:** PENDING
