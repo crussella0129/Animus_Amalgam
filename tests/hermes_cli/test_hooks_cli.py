@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import shlex
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
@@ -89,7 +90,7 @@ class TestHooksTest:
         capture = tmp_path / "captured.json"
         script = _hook_script(
             tmp_path,
-            f"#!/usr/bin/env bash\ncat - > {capture}\nprintf '{{}}\\n'\n",
+            f"#!/usr/bin/env bash\ncat - > {shlex.quote(capture.as_posix())}\nprintf '{{}}\\n'\n",
         )
         cfg = {"hooks": {"subagent_stop": [{"command": str(script)}]}}
         with patch("hermes_cli.config.load_config", return_value=cfg):
@@ -191,7 +192,7 @@ class TestHooksDoctor:
         # Script would touch the sentinel if executed; we assert it wasn't.
         script = _hook_script(
             tmp_path,
-            f"#!/usr/bin/env bash\ntouch {sentinel}\nprintf '{{}}\\n'\n",
+            f"#!/usr/bin/env bash\ntouch {shlex.quote(sentinel.as_posix())}\nprintf '{{}}\\n'\n",
         )
         cfg = {"hooks": {"on_session_start": [{"command": str(script)}]}}
         with patch("hermes_cli.config.load_config", return_value=cfg):

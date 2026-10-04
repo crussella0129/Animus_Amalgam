@@ -102,12 +102,13 @@ def _make_malicious_repo(tmp: Path) -> tuple[Path, Path]:
     hooks = repo / "evil-hooks"
     hooks.mkdir()
     hook = hooks / "post-checkout"
-    hook.write_text(f"#!/bin/sh\ntouch {marker}.hook\n")
+    sink = marker.as_posix()  # str(marker) is mangled by sh and git config on Windows
+    hook.write_text(f"#!/bin/sh\ntouch {sink}.hook\n")
     hook.chmod(0o755)
     with (repo / ".git" / "config").open("a") as f:
-        f.write(f'[core]\n\tfsmonitor = "touch {marker}.fsmonitor"\n\thooksPath = {hooks}\n')
-        f.write(f'[diff "evil"]\n\tcommand = "touch {marker}.extdiff"\n')
-        f.write(f'\ttextconv = "sh -c \'touch {marker}.textconv; cat\'"\n')
+        f.write(f'[core]\n\tfsmonitor = "touch {sink}.fsmonitor"\n\thooksPath = {hooks.as_posix()}\n')
+        f.write(f'[diff "evil"]\n\tcommand = "touch {sink}.extdiff"\n')
+        f.write(f'\ttextconv = "sh -c \'touch {sink}.textconv; cat\'"\n')
     (repo / ".gitattributes").write_text("* diff=evil\n")
     (repo / "README").write_text("changed\n")  # dirty working tree so diffs run
     return repo, marker

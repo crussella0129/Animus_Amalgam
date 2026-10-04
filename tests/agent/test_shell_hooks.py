@@ -9,6 +9,7 @@ covered in ``test_shell_hooks_consent.py``.
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,12 @@ from agent import shell_hooks
 
 
 # ── helpers ───────────────────────────────────────────────────────────────
+
+
+def _sh_path(path: Path) -> str:
+    """A path a bash body can use on every host: on Windows the backslashes of
+    ``str(path)`` are escapes to bash and the file lands in the cwd."""
+    return shlex.quote(path.as_posix())
 
 
 def _write_script(tmp_path: Path, name: str, body: str) -> Path:
@@ -244,7 +251,7 @@ class TestCallbackSubprocess:
         script = _write_script(
             tmp_path, "log.sh",
             f"#!/usr/bin/env bash\n"
-            f"echo \"$(cat -)\" >> {calls}\n"
+            f"echo \"$(cat -)\" >> {_sh_path(calls)}\n"
             f"printf '{{}}\\n'\n",
         )
         spec = shell_hooks.ShellHookSpec(
@@ -264,7 +271,7 @@ class TestCallbackSubprocess:
         capture = tmp_path / "payload.json"
         script = _write_script(
             tmp_path, "capture.sh",
-            f"#!/usr/bin/env bash\ncat - > {capture}\nprintf '{{}}\\n'\n",
+            f"#!/usr/bin/env bash\ncat - > {_sh_path(capture)}\nprintf '{{}}\\n'\n",
         )
         spec = shell_hooks.ShellHookSpec(
             event="pre_tool_call", command=str(script),
