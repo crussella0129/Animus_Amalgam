@@ -542,7 +542,7 @@ in a single sample, which did not trip the guard.
 
 ## Operational confidence record
 
-Recorded at **2026-10-04T01:39Z**. It precedes every Sprint 3 formal test
+Recorded at **2026-10-04T01:58Z** (commit `210d043a2a`). It precedes every Sprint 3 formal test
 run (T-214, V1).
 
 **Criteria met:**
