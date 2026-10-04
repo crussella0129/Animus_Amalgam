@@ -67,7 +67,10 @@ values that remain are all observation cadences or OS-level kill safety, not
 token work:
 
 - the telemetry, supervisor-loop and `/slots` periods;
-- the 2 s grace and 5 s cleanup.
+- the 2 s grace and 5 s cleanup;
+- the telemetry writer's retry bound: half a sample period, so the cadence holds
+  while the supervisor has the sample open;
+- the hidden verifier's process bound (120 s, OS safety).
 
 ## Usage
 

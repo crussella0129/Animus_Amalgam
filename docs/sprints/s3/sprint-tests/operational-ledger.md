@@ -603,3 +603,74 @@ backstop. Noted for T-219.
   - page-in during host maintenance (11);
   - the RAM reserve during owner app use (12).
 - **Backstop:** none reached.
+
+## Test-phase corrections and post-confidence lab changes (critique round 1)
+
+These are recorded after the confidence record, in response to
+[critique-01](critique-01.md).
+
+**O5 accuracy claim corrected.** There were 169 post-calibration requests,
+not 165:
+
+- **165 completed requests** carry both predictions. Their rearmed
+  predicted/actual statistics stand as recorded.
+- **4 requests were stopped by an attempt stop** (attempts 05, 07, 11 and
+  12). The pre-repair wire computed their predictions but never recorded
+  them, and the stop surfaced only as a `wire_failure`.
+
+The wire now records the initial prediction at send, and keeps elapsed time
+and both predictions on every stop path. The supervisor writes a
+`request_stopped` receipt with the attempt's stop reason. The republished
+receipts mark those 4 requests `stopped`, with the real cause and an elapsed
+time derived from receipt timestamps. Their predictions stay named missing.
+
+**O1 machine time and denominators.**
+
+- *Machine time* follows the screen's locked definition: first request to
+  last response, excluding load. The full runs therefore read 721, 1,382 and
+  1,410 s, not the session wall times (728, 1,389 and 1,418 s) used
+  earlier.
+- *"Failures and stops in the denominators"* (O1) means each run's cost
+  includes every attempt of that run, failed or stopped, divided by the
+  items it verified.
+
+| Run | Completed run only | All attempts (O1) | Attempts included |
+|---|---|---|---|
+| R0 | 180 s, 535 tokens per item | **205 s, 558 tokens** | 07 (telemetry race), 08 |
+| R1 | 346 s, 1,058 tokens per item | **345 s, 1,058 tokens** | 09 |
+| R2 | 352 s, 1,151 tokens per item | **865 s, 2,636 tokens** | 10 (wire defect), 11 (host maintenance), 12 (owner apps), 13 |
+
+The ranking is the same under both readings. R2's all-attempts cost is
+dominated by one repaired lab defect and two host stops, not by echo; on the
+completed run, echo was throughput-neutral.
+
+**Lab changes after confidence (not replayed live; the launch envelope is
+spent).** Each change is covered by the formal tests at `efeb4ef4c4`:
+
+- *Behavior-preserving seams:*
+  - `throughput.step_stop` replaces the inline stall and backstop checks;
+  - `run.session_windows` collects every window a session uses;
+  - `run.wait_while` is now module level;
+  - `prepare.launch_flags` reproduces the published R2 argv;
+  - `run.read_sample`;
+  - `write_calibration` reads its admission receipt.
+- *Receipt completeness:*
+  - predictions are recorded at send and on every stop path;
+  - the `request_stopped` receipt;
+  - `id_slot` comes from `/slots`, because b10964 streams none, with
+    `id_slot_source` recorded;
+  - `publish.py` maps stopped and failed requests, and publishes attempts 01
+    and 03.
+- *Fixes:*
+  - the wire's in-flight ownership race;
+  - a repository path in the session `PATH`;
+  - the telemetry writer's retry bound is now half its sample period, not a
+    free 0.5 s.
+
+**T5 bring-up replayed at `efeb4ef4c4`** (2026-10-04T02:52Z), with no model
+loaded. The stall rule now watches each child's output:
+
+- the chatty child survived 3 windows (6.0 s);
+- the silent child was stopped at 2.109 s against a 2.0 s window;
+- its 5-process tree was gone in 0.047 s;
+- the sentinel survived.
