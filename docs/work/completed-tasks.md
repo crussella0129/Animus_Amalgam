@@ -148,3 +148,10 @@
 - **Completed:** 2026-10-04T02:03:14Z
 - **Files modified:** evals/local_qualification/screen.py, evals/local_qualification/arms.json, evals/local_qualification/{verify_long,run}.py
 - **Commit:** `735b723cfd0e7001b053b80f42642692dda10a71`
+
+## T-216 (sprint 3)
+- **Description:** Full runs, reasoning echo, sprint-wide repair provenance and accuracy. O1: R0 (thinking off, greedy) verified 4/4 in 728 s: 182 s and 535 decoded tokens per verified item. R1 (thinking on, budget 256, echo off) verified 4/4 at 347 s and 1,058 tokens per item. R2 (echo on) verified 4/4 at 354 s and 1,151 tokens per item. O2: with echo off, every continued request rolls back the previous turn (median 161 uncached tokens). With echo on, history is append-only (median 60), except after budget-truncated think blocks, which caused all 5 large rollbacks. O3: R3 was not run, because R1's median of 161 uncached tokens is below 2,000. O4: the ledger links each failure, diagnosis, repair commit and replay: the telemetry writer race, the wire's sequential-retry refusal and two host resource stops. O5: the rearmed prediction was a median 4.34x actual over 165 requests, with one 9% under-prediction (decode slows with context). Every stall and resource stop is listed with its cause.
+- **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-10-04T02:03:17Z
+- **Files modified:** docs/sprints/s3/sprint-tests/operational-ledger.md, docs/sprints/s3/sprint-tests/qualification/, evals/local_qualification/{telemetry,wire,publish}.py
+- **Commit:** PENDING
