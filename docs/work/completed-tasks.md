@@ -140,4 +140,4 @@
 - **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
 - **Completed:** 2026-10-04T02:03:12Z
 - **Files modified:** evals/local_qualification/tasks/long/, evals/local_qualification/{verify_long,publish,run,wire}.py, evals/local_qualification/README.md
-- **Commit:** PENDING
+- **Commit:** `a8af7d7959cbc47a115e1ab28ba63eb8fbcd1ef9`
