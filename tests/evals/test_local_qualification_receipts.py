@@ -1,4 +1,4 @@
-"""Published Sprint 3 receipts are correlated, complete and private (T-214 V3, M4).
+"""Published Sprint 3 receipts are correlated, complete and private (T-214 V3, M3, M4, L1).
 
 Every attempt receipt resolves to its published manifest. A manifest keeps the ``id`` the
 lab verified over the private original at launch; sanitizing local paths changes the
@@ -23,10 +23,40 @@ QUALIFICATION = (
 )
 RECEIPTS = sorted(QUALIFICATION.glob("attempt-*.json"))
 PRIVATE = re.compile(r"[A-Za-z]:[\\/]+Users|/Users/|/home/|Bearer\s|\b[0-9a-f]{48}\b")
+# L1/M3: every request carries these, or names them missing; never silently absent.
+REQUEST_FIELDS = (
+    "id_slot",
+    "finish_reason",
+    "input_tokens",
+    "cached_tokens",
+    "uncached_prompt_tokens",
+    "reasoning_tokens",
+    "visible_tokens",
+    "prompt_ms",
+    "decode_ms",
+    "decode_tps",
+    "seconds",
+    "predicted_initial_seconds",
+    "predicted_rearmed_seconds",
+    "resources",
+)
+RATES = {"prefill_tps", "decode_tps", "overhead_s", "load_s", "cli_start_s"}
 
 
-def test_sprint3_receipts_are_published():
+def _load(path):
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _manifest(record):
+    return _load(QUALIFICATION / "manifests" / f"{record['manifest_id']}.json")
+
+
+def test_every_attempt_is_published():
+    """V3 is about every attempt, not whichever files happen to exist."""
     assert RECEIPTS, "the Sprint 3 receipts are part of the evidence handoff"
+    attempts = max(_load(p)["outcome"]["budget"]["attempts"] for p in RECEIPTS)
+    published = sorted(int(p.stem.split("-")[1]) for p in RECEIPTS)
+    assert published == list(range(1, attempts + 1))
 
 
 @pytest.mark.parametrize(
@@ -39,20 +69,22 @@ def test_published_evidence_excludes_private_paths_and_credentials(path):
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
 def test_every_published_attempt_resolves_to_its_manifest(receipt):
-    record = json.loads(receipt.read_text(encoding="utf-8"))
-    manifest = json.loads(
-        (QUALIFICATION / "manifests" / f"{record['manifest_id']}.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    record = _load(receipt)
+    manifest = _manifest(record)
     assert manifest["id"] == record["manifest_id"] == record["outcome"]["manifest_id"]
     public = {k: v for k, v in manifest.items() if k != "published_digest"}
     assert manifest_digest(public) == manifest["published_digest"]
     assert manifest["owner_choice"]["time_model"]
     assert manifest["hermes_timeouts"]["terminal_timeout"]
     assert manifest["allowlist"] and manifest["time_params"]
+    prefix = manifest["rendered_prefix"]  # measured, or not-measured with a reason
+    assert prefix.get("tokens") is not None or prefix.get("reason")
     if manifest["plan"] != "calibration":
-        assert manifest["calibration_record"]["rates"]
+        calibration = manifest["calibration_record"]
+        assert RATES <= set(calibration["rates"])
+        assert calibration["checkpoint_bytes"] > 0
+        assert calibration["frozen_checkpoints"] >= 0
+        assert calibration["sprint_budget_s"] > 0
     assert all(session["arm"] for session in manifest["sessions"])
     outcome = record["outcome"]
     assert outcome["reason"], "every attempt keeps its stop cause"
@@ -60,19 +92,35 @@ def test_every_published_attempt_resolves_to_its_manifest(receipt):
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
-def test_request_receipts_name_every_missing_field(receipt):
-    record = json.loads(receipt.read_text(encoding="utf-8"))
-    for request in record["requests"]:
-        if request.get("outcome") != "response_end":
+def test_launched_attempts_record_the_launch_and_admission(receipt):
+    record = _load(receipt)
+    launches = [e for e in record["events"] if e["kind"] == "launch"]
+    if not launches:  # refused before launch: no launch to record
+        return
+    command = launches[0]["command"]
+    assert "--slot-save-path" in command and "--predict" not in command
+    admission = next(e for e in record["events"] if e["kind"] == "admission")
+    assert admission["sample"]["ram_available"] and admission["cpu_needed"]
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_sessions_record_their_first_rendered_prefix(receipt):
+    for session in _load(receipt)["sessions"]:
+        first = session.get("first_request")
+        if first is None:  # stopped before any request reached the wire
             continue
-        present = [
-            k
-            for k in ("input_tokens", "uncached_prompt_tokens", "decode_ms")
-            if request.get(k) is not None
-        ]
-        # A field is either present or named missing, never silently absent.
-        assert set(present) | set(request["missing"]) >= {
-            "input_tokens",
-            "uncached_prompt_tokens",
-            "decode_ms",
-        }
+        assert first["input_tokens"] > 0 and len(first["prompt_sha256"]) == 64
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_every_request_names_its_missing_fields(receipt):
+    for request in _load(receipt)["requests"]:
+        absent = [f for f in REQUEST_FIELDS if request.get(f) is None]
+        assert set(absent) <= set(request["missing"]), (request["request_id"], absent)
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_stopped_requests_keep_their_cause_and_elapsed_time(receipt):
+    for request in _load(receipt)["requests"]:
+        if request.get("outcome") == "stopped":
+            assert request["stop_reason"] and request["seconds"] is not None

@@ -1,0 +1,63 @@
+{
+ "attempt": "attempt-03-calibration",
+ "manifest_id": "b722f9301e22557db83d96d43468fb967033cfc5e329d20718a5cb961af6ec86",
+ "plan": "calibration",
+ "source_commit": "714f5afd4f3672d01b698bc19d6a8801070f755b",
+ "outcome": {
+  "reason": "not-run: resource gate",
+  "manifest_id": "b722f9301e22557db83d96d43468fb967033cfc5e329d20718a5cb961af6ec86",
+  "plan": "calibration",
+  "budget": {
+   "launches": 1,
+   "requests": 1,
+   "attempts": 3,
+   "charged_seconds": 190.26500000001397
+  },
+  "cleanup_seconds": 0.0,
+  "backend_listener_closed": true,
+  "load_seconds": null,
+  "max_supervisor_lag_seconds": 0.2660000000614673
+ },
+ "sessions": [],
+ "requests": [],
+ "events": [
+  {
+   "at": 903517.218,
+   "kind": "identity_verified",
+   "hash_seconds": 14.71799999999348
+  },
+  {
+   "at": 903529.078,
+   "kind": "admission",
+   "cpu_needed": 17238933504,
+   "gpu_needed": 9150816256,
+   "sample": {
+    "at": 903528.609,
+    "ram_available": 15847563264,
+    "vram_free": 9446621184,
+    "vram_used": 2117074944,
+    "gpu_utilization": 18,
+    "gpu_temperature": 50,
+    "hard_page_in_bytes_per_second": 116167.12031843103,
+    "page_out_bytes_per_second": 0.0
+   }
+  },
+  {
+   "at": 903529.078,
+   "kind": "cleanup",
+   "seconds": 0.0,
+   "processes": [
+    {
+     "pid": 29836,
+     "role": "telemetry",
+     "exit": 0
+    }
+   ]
+  },
+  {
+   "at": 903529.078,
+   "kind": "listener_cleanup",
+   "backend_listener_closed": true
+  }
+ ]
+}

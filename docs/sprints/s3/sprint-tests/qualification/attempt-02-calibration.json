@@ -53,6 +53,12 @@
    "system_sha256": "ad07ab589acab19ebce0ce0e3de9719126ebf4fb376651585710c06f6904173b",
    "tools_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
    "continuation_of_length_finish": false,
+   "predicted_initial_seconds": null,
+   "outcome": "stopped",
+   "error": "AttributeError: 'NoneType' object has no attribute 'peek'",
+   "stop_reason": "stopped: RuntimeError: supervisor scheduler lag exceeded two telemetry periods",
+   "seconds": 59.985,
+   "seconds_source": "receipt timestamps",
    "missing": [
     "id_slot",
     "finish_reason",
@@ -63,7 +69,6 @@
     "prompt_ms",
     "decode_ms",
     "decode_tps",
-    "seconds",
     "predicted_initial_seconds",
     "predicted_rearmed_seconds",
     "resources"

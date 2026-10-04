@@ -6,6 +6,7 @@ Two invariants the harness relies on (and that a future refactor could silently 
   2. a name defined in the facade itself resolves to the facade.
 Both are checked against real modules on the current tree, so they also pin the layout the eval documents.
 """
+
 from pathlib import Path
 
 import pytest
@@ -35,14 +36,21 @@ def test_resolver_follows_reexport_to_defining_sibling(mods):
 def test_resolver_keeps_facade_defined_names_on_facade(mods):
     cache: dict = {}
     src = (ROOT / "hermes_state.py").read_text(encoding="utf-8")
-    own = [n for n, (_, _, node) in bench.top_level_defs(src).items() if not bench._is_alias(node)]
+    own = [
+        n
+        for n, (_, _, node) in bench.top_level_defs(src).items()
+        if not bench._is_alias(node)
+    ]
     assert own, "hermes_state.py should still define something at top level"
     for name in own[:20]:
-        assert bench.resolve_definer(mods, name, "hermes_state", cache) == "hermes_state", name
+        assert (
+            bench.resolve_definer(mods, name, "hermes_state", cache) == "hermes_state"
+        ), name
 
 
 def test_tokenizer_falls_back_without_crashing(monkeypatch):
     import builtins
+
     real_import = builtins.__import__
 
     def no_tiktoken(name, *a, **k):

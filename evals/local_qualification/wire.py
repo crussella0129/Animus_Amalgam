@@ -234,6 +234,9 @@ class Wire:
             try:
                 slots = self.backend("/slots")
                 self.last_slots = slots
+                working = [s for s in slots if s.get("is_processing")]
+                if working and self.active is not None:
+                    self.active.setdefault("slot_seen", working[0].get("id"))
                 counters = [
                     (
                         s.get("n_prompt_tokens_processed"),
@@ -358,6 +361,7 @@ class Wire:
                 ).hexdigest(),
                 "client_streams": client_streams,
                 "continuation_of_length_finish": session["last_finish"] == "length",
+                "predicted_initial_seconds": predicted,
             }
             if session["first_request"] is None:
                 session["first_request"] = {
@@ -470,7 +474,12 @@ class Wire:
                 first_event_seconds=self.active.get("first_event"),
                 predicted_initial_seconds=self.active["predicted_initial"],
                 predicted_rearmed_seconds=self.active["predicted_rearmed"],
-                id_slot=id_slot,
+                id_slot=id_slot
+                if id_slot is not None
+                else self.active.get("slot_seen"),
+                id_slot_source="stream"
+                if id_slot is not None
+                else ("slots" if self.active.get("slot_seen") is not None else None),
                 finish_reason=folded.finish_reason,
                 timings=timings,
                 reasoning_tokens=split["reasoning"],
@@ -482,18 +491,31 @@ class Wire:
                 else kernel_end > kernel_start,
             )
         except Exception as exc:
+            # A request that never completes still keeps its timing (INT-0007 AC7).
+            timing = (
+                {
+                    "seconds": time.monotonic() - self.active["started"],
+                    "meaningful_first_token_seconds": self.active["first_token"],
+                    "predicted_initial_seconds": self.active["predicted_initial"],
+                    "predicted_rearmed_seconds": self.active["predicted_rearmed"],
+                }
+                if self.active is not None
+                else {}
+            )
             if self.active is not None and self.active["cancelled"]:
                 # A lab-initiated cancel is an outcome, not a wire failure.
                 self.record(
                     "response_cancelled",
                     request_id=request_id,
-                    seconds=time.monotonic() - self.active["started"],
-                    meaningful_first_token_seconds=self.active["first_token"],
                     error=f"{type(exc).__name__}: {exc}",
+                    **timing,
                 )
             else:
                 self._reject(
-                    handler, f"{type(exc).__name__}: {exc}", request_id=request_id
+                    handler,
+                    f"{type(exc).__name__}: {exc}",
+                    request_id=request_id,
+                    **timing,
                 )
         finally:
             self._upstream_sock = None

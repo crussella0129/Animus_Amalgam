@@ -17,6 +17,8 @@ import pytest
 LAB_DIR = Path(__file__).resolve().parents[2] / "evals" / "local_qualification"
 sys.path.insert(0, str(LAB_DIR))
 
+import driver  # noqa: E402
+import policy  # noqa: E402
 import prepare  # noqa: E402
 import run  # noqa: E402
 import screen  # noqa: E402
@@ -359,3 +361,221 @@ def test_contaminated_twice_is_a_failure_and_once_is_excluded():
     assert screen.pick([flagged, clean]) is clean
     failed = screen.pick([flagged, {**flagged, "session": 2}])
     assert failed["verified"] == 0 and failed["failed_by_contamination"]
+
+
+# M1 against the published evidence -----------------------------------------------------
+
+QUALIFICATION = (
+    LAB_DIR.parents[1] / "docs" / "sprints" / "s3" / "sprint-tests" / "qualification"
+)
+
+
+def test_launch_flags_reproduce_the_published_full_run_argv():
+    receipt = json.loads(
+        (QUALIFICATION / "attempt-13-R2.json").read_text(encoding="utf-8")
+    )
+    manifest = json.loads(
+        (QUALIFICATION / "manifests" / f"{receipt['manifest_id']}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    profile = json.loads((LAB_DIR / "arms.json").read_text(encoding="utf-8"))[
+        "launch_profiles"
+    ]["sprint"]
+    checkpoints = manifest["calibration_record"]["frozen_checkpoints"]
+    assert prepare.launch_flags(profile, checkpoints) == manifest["launch"]["flags"]
+
+
+def test_changing_a_launch_flag_changes_the_manifest_identity():
+    receipt = json.loads(
+        (QUALIFICATION / "attempt-13-R2.json").read_text(encoding="utf-8")
+    )
+    manifest = json.loads(
+        (QUALIFICATION / "manifests" / f"{receipt['manifest_id']}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    changed = json.loads(json.dumps(manifest))
+    changed["launch"]["flags"][
+        changed["launch"]["flags"].index("--ctx-checkpoints") + 1
+    ] = "6"
+    assert policy.manifest_digest(changed) != policy.manifest_digest(manifest)
+
+
+# T1, T3: every session window comes from the throughput model ----------------------------
+
+
+def test_session_windows_scale_with_the_host_rates():
+    base = run.Calibration(
+        prefill_tps=96.8, decode_tps=3.55, overhead_s=0.0, load_s=15.0, cli_start_s=3.0
+    )
+    fast = run.Calibration(
+        prefill_tps=193.6, decode_tps=7.1, overhead_s=0.0, load_s=15.0, cli_start_s=3.0
+    )
+    slow_w = run.session_windows(base, run.TimeParams(), 15.0, 32768, 768, 0.0)
+    fast_w = run.session_windows(fast, run.TimeParams(), 15.0, 32768, 768, 0.0)
+    for phase in ("pre_first_event", "prefill", "decode"):
+        assert fast_w["stall"][phase] == pytest.approx(slow_w["stall"][phase] / 2)
+    for key in ("request_backstop", "hermes_timer", "settle"):
+        assert fast_w[key] == pytest.approx(slow_w[key] / 2)
+    # The gap window is CLI start-up work, measured on the host, not token work.
+    assert fast_w["gap"] == slow_w["gap"]
+
+
+def test_uncalibrated_windows_come_from_the_measured_load():
+    params = run.TimeParams()
+    short = run.session_windows(None, params, 10.0, 32768, 512, 0.5)
+    long = run.session_windows(None, params, 20.0, 32768, 512, 0.5)
+    assert long["stall"]["prefill"] == 2 * short["stall"]["prefill"] == 20.0
+    assert long["hermes_timer"] == 2 * short["hermes_timer"]
+    assert short["request_backstop"] is None  # no backstop before calibration
+    tiny = run.session_windows(None, params, 0.0, 32768, 512, 0.5)
+    assert tiny["stall"]["decode"] == params.min_observation_periods * 0.5
+
+
+# T2: stop predicates fire exactly at their boundary --------------------------------------
+
+
+def test_stop_predicates_fire_at_boundary():
+    assert not policy.telemetry_stale(10.0, 13.0, 1.0)
+    assert policy.telemetry_stale(10.0, 13.001, 1.0)
+    assert not policy.supervisor_lagged(10.0, 12.0, 1.0)
+    assert policy.supervisor_lagged(10.0, 12.001, 1.0)
+    limits = {"max_launches": 12, "max_requests": 400}
+    assert policy.launch_allowed(11, limits) and not policy.launch_allowed(12, limits)
+    assert policy.request_allowed(399, limits) and not policy.request_allowed(
+        400, limits
+    )
+    assert not policy.budget_exceeded(100.0, 100.0) and policy.budget_exceeded(
+        100.001, 100.0
+    )
+    assert not policy.budget_exceeded(1e9, None)  # calibration has no budget yet
+    quiet = {"vram_used": 5, "ram_available": 9}
+    assert not policy.load_progressed(quiet, dict(quiet), log_grew=False)
+    assert policy.load_progressed(
+        quiet, {"vram_used": 6, "ram_available": 9}, log_grew=False
+    )
+    assert policy.load_progressed(
+        quiet, {"vram_used": 5, "ram_available": 8}, log_grew=False
+    )
+    assert policy.load_progressed(quiet, dict(quiet), log_grew=True)
+
+
+# Supervisor waits and the per-session erase (C-008) ---------------------------------------
+
+
+def test_every_supervisor_wait_keeps_observing():
+    """Attempt 02: waits that skipped observe() froze the guards and tripped the lag stop."""
+    ticks, ready_after = [], 3
+    assert run.wait_while(
+        lambda: len(ticks) < ready_after, 5.0, lambda: ticks.append(1), 0.01
+    )
+    assert len(ticks) == ready_after
+    observed = []
+    assert not run.wait_while(lambda: True, 0.05, lambda: observed.append(1), 0.01)
+    assert observed  # the guards kept running until the timeout
+
+
+def test_only_the_planned_session_keeps_its_slot():
+    """Attempt 04: a blanket erase before every session made C3 unmeasurable."""
+    arms = json.loads((LAB_DIR / "arms.json").read_text(encoding="utf-8"))
+    for plan_name, kept in (("calibration", [2]), ("screen", [2])):
+        sessions = prepare.resolve_sessions(arms, arms["attempt_plans"][plan_name])
+        assert [
+            i for i, s in enumerate(sessions, start=1) if not s["erase_slot"]
+        ] == kept
+
+
+# C2 fails closed (C-009) ------------------------------------------------------------------
+
+
+def test_calibration_fails_closed_on_a_missing_field(tmp_path):
+    attempt = tmp_path / "attempt"
+    attempt.mkdir()
+    (attempt / "events.jsonl").write_text(
+        json.dumps({
+            "kind": "response_end",
+            "first_event_seconds": 0.02,
+            "timings": {
+                "prompt_n": 1167,
+                "prompt_ms": 12_000.0,
+                "predicted_n": 6,
+                "predicted_ms": 1700.0,
+            },
+        })
+        + "\n"
+    )
+    (attempt / "backend.log").write_text("no checkpoint was created\n")
+    failures = []
+    with pytest.raises(RuntimeError, match="fail closed"):
+        run.write_calibration(
+            tmp_path,
+            attempt,
+            9.0,
+            45.0,
+            [{"cli_start_seconds": 3.0}],
+            run.TimeParams(),
+            lambda kind, **data: failures.append((kind, data)),
+        )
+    assert failures[0][0] == "calibration_failed"
+    assert {"decode", "checkpoint_size", "admission"} <= set(failures[0][1]["missing"])
+    assert not (tmp_path / "calibration.json").exists()
+
+
+def test_later_plans_refuse_to_freeze_without_a_calibration_record(
+    tmp_path, monkeypatch
+):
+    lab = tmp_path / "lab"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "prepare.py",
+            "--model",
+            str(tmp_path / "m.gguf"),
+            "--server",
+            str(tmp_path / "s.exe"),
+            "--lab",
+            str(lab),
+            "--plan",
+            "R0",
+        ],
+    )
+    with pytest.raises(SystemExit, match="calibration plan first"):
+        prepare.main()
+    assert not (lab / "manifests").exists()
+
+
+# L4 allowlist and M3 tool-call validity (C-012, C-004) ------------------------------------
+
+
+def test_contamination_spares_the_allowlist(session, tmp_path):
+    fixture, allow, temp = session
+    venv_python = Path(allow[0]) / "Scripts" / "python.exe"
+    git_env = Path(allow[1]) / "env"
+    spared = _conversation(
+        f"{venv_python} check.py", f"{git_env.as_posix()} python check.py"
+    )
+    assert verify_long.contamination(spared, fixture, allow, temp) == []
+
+
+def test_tool_call_validity_names_bad_arguments_and_unknown_tools():
+    conversation = [
+        {
+            "tool_calls": [
+                {
+                    "function": {
+                        "name": "terminal",
+                        "arguments": json.dumps({"command": "ls"}),
+                    }
+                },
+                {"function": {"name": "terminal", "arguments": "{not json"}},
+                {"function": {"name": "browser", "arguments": "{}"}},
+            ]
+        }
+    ]
+    assert driver.tool_call_validity(conversation, {"terminal"}) == [
+        {"name": "terminal", "arguments_valid": True, "known_tool": True},
+        {"name": "terminal", "arguments_valid": False, "known_tool": True},
+        {"name": "browser", "arguments_valid": True, "known_tool": False},
+    ]

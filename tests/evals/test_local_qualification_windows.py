@@ -54,13 +54,14 @@ def test_telemetry_publish_survives_a_held_destination(tmp_path):
     pending.write_text(json.dumps({"at": 1.0}), encoding="utf-8")
     held = destination.open(encoding="utf-8")  # the supervisor mid-read
     threading.Timer(0.2, held.close).start()
-    assert telemetry.publish(pending, destination)  # retried until the read ended
+    # A generous injected bound: the reader lets go after 0.2 s.
+    assert telemetry.publish(pending, destination, retry_s=5.0)
     assert json.loads(destination.read_text(encoding="utf-8")) == {"at": 1.0}
 
     pending.write_text(json.dumps({"at": 2.0}), encoding="utf-8")
     with destination.open(encoding="utf-8"):
         started = time.monotonic()
-        assert not telemetry.publish(pending, destination)  # skipped, not raised
+        assert not telemetry.publish(pending, destination, retry_s=0.3)  # skipped
         assert time.monotonic() - started < 2.0
 
 

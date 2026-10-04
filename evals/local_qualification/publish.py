@@ -38,6 +38,14 @@ REQUEST_FIELDS = (
 )
 
 
+TIMING_FIELDS = (
+    "seconds",
+    "meaningful_first_token_seconds",
+    "predicted_initial_seconds",
+    "predicted_rearmed_seconds",
+)
+
+
 def _events(attempt: Path):
     with (attempt / "events.jsonl").open(encoding="utf-8") as stream:
         for line in stream:
@@ -60,6 +68,8 @@ def receipts(attempt: Path) -> dict:
                 "system_sha256": event["system_sha256"],
                 "tools_sha256": event["tools_sha256"],
                 "continuation_of_length_finish": event["continuation_of_length_finish"],
+                "predicted_initial_seconds": event.get("predicted_initial_seconds"),
+                "_at": event["at"],
             }
         elif kind in ("response_end", "response_cancelled") and rid in requests:
             r = requests[rid]
@@ -86,6 +96,23 @@ def receipts(attempt: Path) -> dict:
                 decode_ms=t.get("predicted_ms"),
                 decode_tps=t.get("predicted_per_second"),
             )
+        elif kind == "request_stopped" and rid in requests:
+            requests[rid].update(
+                outcome="stopped",
+                stop_reason=event.get("reason"),
+                seconds=event.get("seconds"),
+                predicted_initial_seconds=event.get("predicted_initial_seconds"),
+                predicted_rearmed_seconds=event.get("predicted_rearmed_seconds"),
+            )
+        elif kind == "wire_failure" and rid in requests:
+            r = requests[rid]
+            r.setdefault("outcome", "wire_failure")
+            r["error"] = event.get("error")
+            r["_failed_at"] = event["at"]
+            for key in TIMING_FIELDS:
+                if r.get(key) is None and event.get(key) is not None:
+                    r[key] = event[key]
+            other.append({k: v for k, v in event.items() if k != "manifest_id"})
         elif kind == "request_resources" and rid in requests:
             requests[rid]["resources"] = {
                 k: v
@@ -98,9 +125,20 @@ def receipts(attempt: Path) -> dict:
             })
         elif kind not in ("progress", "owned_process"):
             other.append({k: v for k, v in event.items() if k != "manifest_id"})
-    for r in requests.values():
-        r["missing"] = [f for f in REQUEST_FIELDS if r.get(f) is None]
     outcome = json.loads((attempt / "outcome.json").read_text(encoding="utf-8"))
+    for r in requests.values():
+        if r.get("outcome") == "wire_failure" and outcome["reason"].startswith(
+            "stopped:"
+        ):
+            # Before the request_stopped receipt existed, an attempt stop surfaced as the
+            # aborted request's wire failure; the attempt's reason is the real cause.
+            r["outcome"], r["stop_reason"] = "stopped", outcome["reason"]
+            if r.get("seconds") is None:
+                r["seconds"] = round(r["_failed_at"] - r["_at"], 3)
+                r["seconds_source"] = "receipt timestamps"
+        r.pop("_at", None)
+        r.pop("_failed_at", None)
+        r["missing"] = [f for f in REQUEST_FIELDS if r.get(f) is None]
     outcome.pop("sessions", None)
     manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
     return {

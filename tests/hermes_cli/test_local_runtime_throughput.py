@@ -12,7 +12,6 @@ import pytest
 from hermes_cli.local_runtime.throughput import (
     Calibration,
     RateTracker,
-    StallClock,
     TimeParams,
     floors,
     gap_window,
@@ -21,6 +20,7 @@ from hermes_cli.local_runtime.throughput import (
     request_backstop,
     sprint_budget,
     stall_window,
+    step_stop,
     uncalibrated_stall_window,
 )
 
@@ -64,19 +64,21 @@ def test_prediction_is_monotonic_in_work(uncached, output):
 
 
 def test_stall_and_backstop_semantics():
+    """H2: progress keeps a step alive until its backstop, which then stops it as a
+    failure; a silent step is stopped by the stall rule just past its window."""
     window = stall_window("decode", CAL, PARAMS, PERIOD)
     backstop = request_backstop(CAL, PARAMS, 32768, 768)
-    # Events arriving inside the window keep the step alive until the backstop.
-    clock, now = StallClock(0.0, window), 0.0
-    while now < backstop:
+    now, last_progress = 0.0, 0.0
+    while now + window * 0.9 <= backstop:
         now += window * 0.9
-        assert not clock.stalled(now)
-        clock.progress(now)
-    assert now >= backstop  # only the backstop can end a progressing step
-    # A silent step is stopped by the stall rule, just past its window.
-    silent = StallClock(0.0, window)
-    assert not silent.stalled(window)
-    assert silent.stalled(window + 0.001)
+        last_progress = now  # an event inside every window
+        assert step_stop(0.0, last_progress, now, window, backstop) is None
+    past = backstop + 0.001
+    assert step_stop(0.0, past, past, window, backstop) == "backstop"
+    assert step_stop(0.0, 0.0, window, window, backstop) is None
+    assert step_stop(0.0, 0.0, window + 0.001, window, backstop) == "stall"
+    # Uncalibrated (no backstop): only the stall rule can stop a step.
+    assert step_stop(0.0, 1e9, 1e9, window, None) is None
 
 
 def test_window_shapes_follow_the_floors():

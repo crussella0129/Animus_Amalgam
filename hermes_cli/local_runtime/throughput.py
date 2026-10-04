@@ -166,6 +166,26 @@ def sprint_budget(
     return params.margin * sum(per_attempt)
 
 
+def step_stop(
+    started: float,
+    last_progress: float,
+    now: float,
+    window: float,
+    backstop: float | None,
+) -> str | None:
+    """Why a step must stop at ``now``, or None while it may continue.
+
+    ``"backstop"`` once the step has run past its worst-case backstop, progressing or
+    not; ``"stall"`` once no progress arrived within ``window``. Either is a recorded
+    failure, never a silent retry (INT-0007 AC7).
+    """
+    if backstop is not None and now - started > backstop:
+        return "backstop"
+    if now - last_progress > window:
+        return "stall"
+    return None
+
+
 class StallClock:
     """Tracks the last progress signal for one step; the caller supplies monotonic time."""
 

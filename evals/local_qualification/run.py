@@ -37,6 +37,7 @@ from hermes_cli.local_runtime.throughput import (
     request_backstop,
     sprint_budget,
     stall_window,
+    step_stop,
     uncalibrated_stall_window,
 )
 from policy import (
@@ -494,9 +495,16 @@ def main():
                 if load_progressed(previous, sample, size > log_size or kernel.grew()):
                     load_clock.progress(now)
             log_size = size
-            if load_clock.stalled(now):
+            verdict = step_stop(
+                load_start,
+                load_clock.last_progress,
+                now,
+                load_clock.window,
+                load_backstop(cal, params) if cal else None,
+            )
+            if verdict == "stall":
                 raise RuntimeError("load stalled: no memory growth or log output")
-            if cal and now - load_start > load_backstop(cal, params):
+            if verdict == "backstop":
                 raise RuntimeError("host-derived load backstop exceeded")
             if server.poll() is not None:
                 raise RuntimeError(f"backend exited during load: {server.returncode}")
@@ -548,6 +556,16 @@ def main():
         reason = f"stopped: {type(exc).__name__}: {exc}"
     finally:
         stop_start = time.monotonic()
+        active = wire.active if wire is not None else None
+        if active is not None:
+            record_event(
+                "request_stopped",
+                request_id=active["request_id"],
+                reason=reason,
+                seconds=stop_start - active["started"],
+                predicted_initial_seconds=active["predicted_initial"],
+                predicted_rearmed_seconds=active["predicted_rearmed"],
+            )
         live_driver = next(
             (p for p, _j, n in owned if n.startswith("cli") and p.poll() is None), None
         )
@@ -624,6 +642,51 @@ def main():
 interrupt_file_holder: dict = {}
 
 
+def session_windows(cal, params, t_load, context, output_cap, period) -> dict:
+    """Every time window a session uses, from the throughput model alone (T1, T3).
+
+    Calibrated: the host's floor rates set the stall windows and the request backstop,
+    and its measured CLI start-up sets the gap window. During calibration itself, the
+    attempt's own load time stands in for the unknown rates.
+    """
+    phases = ("pre_first_event", "prefill", "decode")
+    if cal:
+        backstop = request_backstop(cal, params, context, output_cap)
+        stall = {phase: stall_window(phase, cal, params, period) for phase in phases}
+        return {
+            "stall": stall,
+            "request_backstop": backstop,
+            "gap": gap_window(cal, params, period),
+            "settle": stall["prefill"],
+            "hermes_timer": backstop,
+        }
+    window = uncalibrated_stall_window(t_load, params, period)
+    return {
+        "stall": dict.fromkeys(phases, window),
+        "request_backstop": None,
+        "gap": uncalibrated_stall_window(
+            params.stall_multiple * t_load, params, period
+        ),
+        "settle": window,
+        "hermes_timer": params.stall_multiple * t_load,
+    }
+
+
+def wait_while(busy, seconds, observe, period) -> bool:
+    """Every supervisor wait keeps the guards running; True if busy() cleared in time.
+
+    A wait that skipped ``observe()`` froze the guards and tripped the lag stop
+    (attempt 02).
+    """
+    deadline = time.monotonic() + seconds
+    while busy():
+        if time.monotonic() > deadline:
+            return False
+        observe()
+        time.sleep(period)
+    return True
+
+
 def run_session(index, spec, ctx):
     """One fresh session on the attempt's backend; returns its outcome record."""
     attempt, manifest, params, cal = (
@@ -643,32 +706,19 @@ def run_session(index, spec, ctx):
     arm, workload = spec["arm"], spec["workload"]
     kernel, task_state = ctx["kernel"], ctx["task_state"]
 
-    def wait_while(busy, seconds):
-        """Every supervisor wait keeps the guards running; True if busy() cleared in time."""
-        deadline = time.monotonic() + seconds
-        while busy():
-            if time.monotonic() > deadline:
-                return False
-            observe()
-            time.sleep(LOOP_PERIOD)
-        return True
+    def waiting(busy, seconds):
+        return wait_while(busy, seconds, observe, LOOP_PERIOD)
 
-    # A slot is busy until its current batch ends, even after its client has left.
-    settle_window = (
-        stall_window("prefill", cal, params, OBSERVATION_PERIOD)
-        if cal
-        else uncalibrated_stall_window(t_load, params, OBSERVATION_PERIOD)
+    windows = session_windows(
+        cal, params, t_load, context, arm["output_cap"], OBSERVATION_PERIOD
     )
     root, home, fixture = fresh_session(attempt, workload)
     if index > 1 and spec.get("erase_slot", True):
-        if not wait_while(lambda: wire.slot_busy(OBSERVATION_PERIOD), settle_window):
+        # A slot is busy until its current batch ends, even after its client has left.
+        if not waiting(lambda: wire.slot_busy(OBSERVATION_PERIOD), windows["settle"]):
             return {"session": index, "attempt_stop": "backend slot did not settle"}
         record_event("slot_erase", session=index, result=wire.erase_slot())
-    timer = (
-        request_backstop(cal, params, context, arm["output_cap"])
-        if cal
-        else params.stall_multiple * t_load
-    )
+    timer = windows["hermes_timer"]
     write_json(
         home / "config.yaml",
         session_config(wire.url, context, spec["reasoning_echo"], timer, fixture),
@@ -730,14 +780,7 @@ def run_session(index, spec, ctx):
         fixture,
     )
     session_start = time.monotonic()
-    gap_clock = StallClock(
-        session_start,
-        gap_window(cal, params, OBSERVATION_PERIOD)
-        if cal
-        else uncalibrated_stall_window(
-            params.stall_multiple * t_load, params, OBSERVATION_PERIOD
-        ),
-    )
+    gap_clock = StallClock(session_start, windows["gap"])
     cli_log = attempt / f"cli-{index:02d}.log"
     kernel_session_start = kernel.bytes()
     cpu = log_size = 0.0
@@ -780,17 +823,18 @@ def run_session(index, spec, ctx):
                 active["last_progress"] = now
         if active is not None:
             gap_clock.progress(now)
-            window = (
-                stall_window(active["phase"], cal, params, OBSERVATION_PERIOD)
-                if cal
-                else uncalibrated_stall_window(t_load, params, OBSERVATION_PERIOD)
+            window = windows["stall"][active["phase"]]
+            verdict = step_stop(
+                active["started"],
+                active["last_progress"],
+                now,
+                window,
+                windows["request_backstop"],
             )
-            if now - active["last_progress"] > window:
+            if verdict == "stall":
                 stop = f"stall in {active['phase']} (window {window:.1f}s)"
                 break
-            if cal and now - active["started"] > request_backstop(
-                cal, params, context, arm["output_cap"]
-            ):
+            if verdict == "backstop":
                 stop = "host-derived request backstop reached"
                 break
             if (
@@ -825,10 +869,10 @@ def run_session(index, spec, ctx):
     if stop and driver.poll() is None:
         interrupt_file.touch()
         wire.cancel_active()
-        wait_while(lambda: driver.poll() is None, GRACE_S)
+        waiting(lambda: driver.poll() is None, GRACE_S)
     slot_idle = None
     if cancelled:
-        slot_idle = wait_while(
+        slot_idle = waiting(
             lambda: wire.slot_busy(OBSERVATION_PERIOD),
             max(0.0, CLEANUP_S - (time.monotonic() - cancel_at)),
         )
@@ -854,7 +898,7 @@ def run_session(index, spec, ctx):
         daemon=True,
     )
     verifier.start()
-    wait_while(verifier.is_alive, VERIFY_S)
+    waiting(verifier.is_alive, VERIFY_S)
     verification = verified.get("value", {"error": "verifier did not finish"})
     for event in (
         json.loads(line) for line in (attempt / "events.jsonl").open(encoding="utf-8")
@@ -898,7 +942,7 @@ def run_session(index, spec, ctx):
         if proc is driver:
             job.close()
     archive = attempt / f"session-{index:02d}"
-    if not wait_while(lambda: not renamed(root, archive), CLEANUP_S):
+    if not waiting(lambda: not renamed(root, archive), CLEANUP_S):
         return {**outcome, "attempt_stop": "session state could not be archived"}
     return outcome
 
