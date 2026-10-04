@@ -442,3 +442,6 @@ still refused while the first completes.
 **Envelope:** 12 of 12 launches are used (8 lab and 4 diagnostic), and 146
 of 400 requests (142 lab and 4 diagnostic). Replaying R2 needs a 13th launch,
 so the owner was asked to extend the envelope by one.
+
+**Owner decision (2026-10-03, in chat):** the envelope was extended by one
+launch, to 13, for the R2 replay. No spare was approved.
