@@ -127,3 +127,10 @@
 - **Completed:** 2026-09-25T02:16:17Z
 - **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/bringup.py (run.py and wire.py timing in the T-211 commit)
 - **Commit:** `9086be2dae74636d3acf0b620678d418c5f015e5`
+
+## T-222 (sprint 3)
+- **Description:** Live replay, calibration, main-cancel and cross-session prefix. C1: a deliberate untracked file refused launch with 0 launches consumed (attempt 01). C2: the calibration record from attempt 04 holds P 96.76 tok/s, D 3.55 tok/s, O 0.024 s, T_load 45.4 s (cold kernel cache), T_cli 3.05 s, a 149.6 MiB checkpoint and 5 frozen checkpoints. The checkpoint count was recomputed from attempt 04's evidence after the admission-sample repair. The 81,365 s sprint budget was in the ledger before the screen. C3: once the per-session paths and the blanket slot erase were repaired, two smokes' rendered system prompts were byte-identical and the second reused 1147 of 1151 prompt tokens (attempts 05 and 06). C4: a main-cancel at the first decoded token left the slot idle in 0.84 s, with owned cleanup in 0.88 s. Repairs: a lab-level CUDA kernel cache (a cold cache made prefill 30x slower), socket-shutdown cancel, observing supervisor waits, admission-sample calibration, fixed live session paths with archiving, and a per-session erase.
+- **Intent:** [INT-0004](../intents/INT-0004-bounded-local-model-qualification.md), [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-10-04T02:03:10Z
+- **Files modified:** evals/local_qualification/{run,wire,prepare}.py, evals/local_qualification/arms.json, evals/local_qualification/README.md, docs/sprints/s3/sprint-tests/operational-ledger.md (repair commits are listed in the ledger)
+- **Commit:** PENDING
