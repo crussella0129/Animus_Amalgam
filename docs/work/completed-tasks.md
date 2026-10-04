@@ -134,3 +134,10 @@
 - **Completed:** 2026-10-04T02:03:10Z
 - **Files modified:** evals/local_qualification/{run,wire,prepare}.py, evals/local_qualification/arms.json, evals/local_qualification/README.md, docs/sprints/s3/sprint-tests/operational-ledger.md (repair commits are listed in the ledger)
 - **Commit:** `d0fe0faec8fb1662589c3c0e0ef28072388b380e`
+
+## T-210 (sprint 3)
+- **Description:** Long multi-file task, hidden verifier, pre-check and contamination detection. The fixture is a small package with 3 seeded defects across files, a visible check runner and 8 scripted user turns. Its 22-request reference path scores 0, then 1 after turn 3, then 4/4 (verify_long.py build-reference). L1: every long-task receipt carries input, cached and uncached tokens; reasoning and visible tokens; prompt and decode ms; the decode rate; wall and predicted time; and per-request resource extrema. Missing fields are named by publish.py. L2: the hidden verifier scores 4 items from fixture state in a separate interpreter, and request counts and AC1 coverage are recorded (R0 18, R1 20, R2 18). L3, measured live with Hermes's real prompt and terminal tool: 22 reference requests; the largest edit was 179 tokens against a 512 cap; a peak of 6,889 tokens plus a 5,632-token echo reserve fits the 31,488 ceiling. L4: terminal paths outside the fixture and the allowlist are flagged, and a flagged session reruns once. The screen caught off-vendor writing to the shared /tmp twice. publish.py writes receipts through a fail-closed privacy screen.
+- **Intent:** [INT-0007](../intents/INT-0007-decode-budget-long-session.md)
+- **Completed:** 2026-10-04T02:03:12Z
+- **Files modified:** evals/local_qualification/tasks/long/, evals/local_qualification/{verify_long,publish,run,wire}.py, evals/local_qualification/README.md
+- **Commit:** PENDING
