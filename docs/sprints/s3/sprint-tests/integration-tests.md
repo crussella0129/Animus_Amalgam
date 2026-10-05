@@ -1,8 +1,8 @@
 # Sprint 3 Integration Test Results (after operational confidence)
 
-- **Tested head:** `4f323770ee` (after critique round 3). These results are
-  part of the final formal run recorded in [unit-tests](unit-tests.md) (223
-  passed, 0 failed; runner log sha256 `bc3e1d5f…`).
+- **Tested head:** `663bac6a2a` (after critique round 4). These results are
+  part of the final formal run recorded in [unit-tests](unit-tests.md) (238
+  passed, 0 failed; runner log sha256 `b6d63e54…`).
 - **Runner:** `scripts/run_tests.sh` on the owner's Windows 11 host.
 - **Ordering:** written and first run after the confidence record
   (2026-10-04T01:58Z).
@@ -34,6 +34,8 @@ record the working slot (`slot_seen`). Wall-clock bounds are at least 2 s.
 | `test_sequential_request_after_done_is_accepted_and_concurrent_is_refused` | M1 | pass | **Regressions (attempt 10 and T-214).** A retry sent at `[DONE]` during the previous request's accounting is accepted. A request arriving mid-stream is refused as concurrent, including after a finishing handler's cleanup. |
 | `test_a_failing_request_keeps_its_timing_and_predictions` | AC7, M3 | pass | **Regression (round 1).** A malformed stream fails the request, and its `wire_failure` keeps the elapsed time and both predictions. |
 | `test_an_attempt_stop_receipts_the_live_in_flight_request` | AC7, L4 | pass | **Regression (round 3).** `run.stopped_request` on the live `Wire.active` mid-stream gives the request id, the cause, an elapsed time within the observed window and both predictions. The wire session keeps the conversation it forwarded. |
+| `test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not` | AC7, H2, M3 | pass | **Regression (round 4).** From the live wire's own receipts: a request stopped mid-stream through `run.stop_active_request` is published as `stopped` with the stall cause and its prediction, and its first token is present or named missing. A deliberate cancel stays `response_cancelled`, with no cause. |
+| `test_a_stop_during_verification_still_screens_the_ended_session` | L4, L2 | pass | **Regression (round 4).** After the wire has ended the session, the stop path still finds it by id. It screens the forwarded history plus the delivered response, flags `../../secret`, and records the request count and both calls' validity. |
 | `test_the_screened_conversation_includes_tool_calls_already_delivered` | L4 | pass | **Regression (round 3).** After a delivered tool-call response, the screened conversation is the forwarded history plus that response's tool calls, which Hermes may run before another request. |
 
 **Found by these tests:** a race in the attempt-10 repair. A finishing
@@ -50,11 +52,12 @@ that owner releases it (`0cd28ab8cc`).
 | `test_every_published_attempt_resolves_to_its_manifest` (13) | V3, M4 | pass | Each receipt resolves to its manifest by id. The public copy's digest is valid. The owner's time-model decision, Hermes timeouts (including the terminal timeout), the allowlist and the time parameters are present. The rendered prefix is measured, or not-measured with a reason. Post-calibration plans carry the full calibration record (rates, checkpoint size, frozen count, budget). Every session has an arm, a stop cause is kept, and cleanup took at most 5 s with the listener closed. |
 | `test_launched_attempts_record_the_launch_and_admission` (13) | M1, M4 | pass | Every launched attempt's command has `--slot-save-path` and no `--predict`, and records its admission host condition. |
 | `test_sessions_record_their_first_rendered_prefix` (13) | M4 | pass | Each session records its first rendered prefix (tokens and hash). |
-| `test_every_request_names_its_missing_fields` (13) | L1, M3 | pass | Every request, completed or stopped, carries each of the 14 L1/M3 fields or names it missing. |
+| `test_every_request_names_its_missing_fields` (13) | L1, M3 | pass | **Regression (round 4).** Every request, completed, cancelled or stopped, carries each of the 16 L1/M3 request fields or names it missing; meaningful first token and the tool-call count were silently absent before. |
 | `test_stopped_requests_keep_their_own_cause_and_elapsed_time` (13) | AC7 | pass | **Regression (round 3).** Each stopped request's cause equals its own session's recorded stop, or the attempt's reason when its session was still running, and it keeps its elapsed time. |
-| `test_completed_calibrated_requests_carry_every_l1_field` (13) | AC7, L1 | pass | Every request completed after calibration carries every L1 field, present and not merely named. The one exception is `id_slot`, which b10964's stream does not return; those receipts predate the `/slots` correlation, so it must be named missing. |
+| `test_completed_calibrated_requests_carry_every_l1_and_m3_field` (13) | AC7, L1, M3 | pass | Every request completed after calibration carries every L1 and M3 request field, present and not merely named. The one exception is `id_slot`, which b10964's stream does not return; those receipts predate the `/slots` correlation, so it must be named missing. |
 | `test_machine_time_is_recomputable_from_the_receipt` (13) | O1 | pass | Each session's published machine time equals the span of its requests' published start and end times. |
-| `test_attempt_stopped_long_sessions_are_scored` (13) | L2, L4 | pass | A long session cut short by an attempt stop has a score and an empty L4 screen: attempts 05, 07, 11 and 12. A session screened at publish ends in a stopped request, so its last forwarded conversation holds every tool call Hermes ran. |
+| `test_attempt_stopped_long_sessions_are_scored` (13) | L2, L4 | pass | A long session cut short by an attempt stop has a score and an L4 screen that flagged nothing: attempts 05, 07, 11 and 12. **Round 4:** the screen must have seen the session (messages and tool calls non-zero for a session with requests), and the published validity covers every screened call. A session screened at publish ends in a stopped request, so its last forwarded conversation holds every tool call Hermes ran. |
+| `test_long_sessions_carry_tool_call_validity` (13) | M3 | pass | **Regression (round 4).** Every long session, finished or cut short, records each tool call's parse and argument validity. |
 
 ## Windows file behaviour (`windows_only`)
 
@@ -75,6 +78,7 @@ Sprint 2 checkpoint merge) and on head: `tests/hermes_cli/test_local_*.py`,
 | Base `5f6a0c7b60` | 30 | 345 | 7 | 2 | — |
 | Head `1fca1a3095` | 34 | 548 | 1 | 2 | `f8b8b33e…` |
 | Head `4f323770ee` | 34 | 554 | 1 | 2 | `c883ad77…` |
+| Head `663bac6a2a` | 34 | 569 | 1 | 2 | `7848fb9f…` |
 
 - **New failures on head:** none.
 - **Fixed on head (6):** the shell-hook, hooks-CLI, cron catch-up and

@@ -774,3 +774,26 @@ stop between requests screens the tool calls Hermes may already have run.
 R0 < R1 < R2 under every reading. Attempt 12's two items now pass L4, so
 O1 counts them; the other columns show what excluding them, or
 reading the round-1 denominator, would give.
+
+## Test-phase corrections (critique round 4)
+
+These are recorded in response to [critique-04](critique-04.md). The code
+changes are at `663bac6a2a`. Like round 3, they were not replayed live, and
+all 13 receipts were republished.
+
+- **Stall and backstop stops name their cause going forward.** A session's
+  stop now records the in-flight request's `request_stopped` before the
+  wire cancels it. No published attempt hit this path: attempt 02's stall
+  predates the wire cancel, and its cause was corrected in round 3.
+- **Fields named missing.** The stopped requests of attempts 02, 05, 07, 11
+  and 12 now name their meaningful first token and tool-call count missing,
+  and so does attempt 04's deliberately cancelled request. The pre-repair
+  wire never recorded them.
+- **Cut-short tool-call validity.** Attempts 05, 07, 11 and 12 made 2, 2, 2
+  and 6 tool calls in the conversations screened at publish. All were
+  valid and known.
+- **Screens publish what they saw.** The published counts, 6, 6, 6 and 22
+  messages with those tool calls, match the round-3 table.
+- **P2 at test time.** At 2026-10-05T21:38:24Z, head `663bac6a2a`, the live
+  `config.yaml` and `presets.ini` equal the plan baseline. They are
+  re-checked at close.

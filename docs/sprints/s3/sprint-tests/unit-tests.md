@@ -1,14 +1,15 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `4f323770ee` (after critique round 3).
+- **Tested head:** `663bac6a2a` (after critique round 4).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-05T21:09:07Z, covering the six
-  Sprint 3 formal files: **223 passed, 0 failed**. Runner log sha256
-  `bc3e1d5fa1263e53a188fced8fcd10976ec8f94b06a72969bb662daaffee07a0`. The
-  earlier runs at `1fca1a3095` and `efeb4ef4c4` passed 217 (log
-  `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
+- **Final formal run (V1):** started 2026-10-05T21:35:06Z, covering the six
+  Sprint 3 formal files: **238 passed, 0 failed**. Runner log sha256
+  `b6d63e54602045f4aca74f855afb3b237c74b1eedb102237c261d5503fa7f35c`. The
+  earlier runs at `4f323770ee`, `1fca1a3095` and `efeb4ef4c4` passed 223
+  (log `bc3e1d5f…`), 217 (log `72fefa45…`) and 171 (log `13bd883f…`). The
+  logs are kept
   with the lab (`<lab>/formal/`) and are not published, because tracebacks
   can contain local paths. The same set passed twice in a row with file
   retries off.
@@ -29,7 +30,7 @@
 | `test_no_window_is_shorter_than_the_observation_floor` | H2 | pass | On a near-infinitely fast host, every window equals 4 observation periods. |
 | `test_windows_scale_inversely_with_host_rate` (3) | H3 | pass | Scaling the rates by s scales the stall windows, backstop and sprint budget by 1/s (overhead terms zeroed). |
 | `test_session_windows_scale_with_the_host_rates` | T1, T3 | pass | Every session window comes from `run.session_windows`. Doubling the rates halves the stall windows, request backstop, settle window, Hermes timer and backend probe timeout (`probe_window`). The gap window follows the measured CLI start-up instead. |
-| `test_uncalibrated_windows_come_from_the_measured_load` | T1, T3 | pass | **Regression (round 3).** Before calibration, the windows, the backend probe timeout included, are proportional to the attempt's own load time, with no backstop. None falls below 4 observation periods (the retained cadence). During the load itself, the probe timeout is that floor. |
+| `test_uncalibrated_windows_come_from_the_measured_load` | T1, T3 | pass | **Regression (round 3).** Before calibration, the windows, the backend probe timeout included, are proportional to the attempt's own load time, with no backstop. None falls below 4 observation periods (the retained cadence). During the load itself, the probe timeout is that floor. The gap window is k × the load time, a recorded plan deviation (the plan's per-session T_cli reaches the supervisor only after the session). |
 | `test_stop_predicates_fire_at_boundary` | T2 | pass | Stale telemetry (3 periods), supervisor lag (2 periods), the launch cap, the request cap, the sprint budget (none during calibration) and load progress each flip exactly at their boundary. |
 | `test_arm_manifest_drives_server_flags` | M1 | pass | Context, checkpoints, min-step and trace verbosity come from the profile; spec is none; there is no `--predict`. |
 | `test_launch_flags_reproduce_the_published_full_run_argv` | M1 | pass | `launch_flags` reproduces the published R2 manifest's flags exactly. |
@@ -52,13 +53,13 @@
 | `test_tool_call_validity_names_bad_arguments_and_unknown_tools` | M3 | pass | Unparseable arguments and unknown tools are named per call. |
 | `test_screen_ranking_rule` | S2 | pass | Verified, then time per item, then decoded tokens. The all-zero case is inconclusive and ranked by machine time. The mid probe is never selected. |
 | `test_contaminated_twice_is_a_failure_and_once_is_excluded` | L4, S2 | pass | One flag excludes the session (the re-run counts); two flags make the arm a failure with 0 verified items. |
-| `test_stopped_request_keeps_its_cause_timing_and_predictions` | AC7, M3 | pass | The `request_stopped` receipt carries the stop cause, elapsed time and both predictions. |
+| `test_stopped_request_keeps_its_cause_timing_and_predictions` | AC7, M3 | pass | **Regression (round 4).** The `request_stopped` receipt carries the stop cause, elapsed time, meaningful first token and both predictions. |
 | `test_request_extrema_are_recorded_when_a_guard_stops_the_loop` | L1 | pass | **Regression (round 2).** When a guard raises inside the loop, the in-flight request's resource extrema are still recorded, with the running minimum and maximum. |
 | `test_a_cut_short_session_is_scored_from_its_fixture` | L2 | pass | A session an attempt stop cut short is scored from its fixture: 1 verified after turn 3, with its request count and an empty L4 screen. |
-| `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. |
+| `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. The screen publishes what it saw (1 message, 1 tool call), and the session records the call's validity. |
 | `test_scoring_a_cut_short_session_never_raises_into_the_stop_path` | L2, AC7 | pass | **Regression (round 3).** When scoring raises, `stopped_session` returns the session with the error as its verification. `run.bounded` returns `None` past its bound and the result within it. |
 | `test_a_stopped_request_stays_stopped_whatever_lands_after` (2) | AC7, M3 | pass | **Regression (round 2).** After `request_stopped`, a later `wire_failure` or `response_cancelled` keeps the stopped outcome, its cause, its own timing, both predictions and the resources. Machine time is computed. |
-| `test_publish_scores_and_screens_a_cut_short_session` (2) | L2, L4 | pass | **Regression (round 3).** Publishing scores a cut-short session from its preserved fixture and screens its last request's conversation: clean when it runs the check, flagged when it reads outside the fixture. |
+| `test_publish_scores_and_screens_a_cut_short_session` (2) | L2, L4 | pass | **Regression (round 3).** Publishing scores a cut-short session from its preserved fixture and screens its last request's conversation: clean when it runs the check, flagged when it reads outside the fixture. The screen's message and tool-call counts, and each call's validity, are published. |
 | `test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause` | AC7, M3 | pass | **Regression (round 3, attempt 02).** An aborted request takes its own session's recorded stop as its cause. A failure in a session that ended without a stop stays a wire failure, and only a request in flight at the attempt stop takes the attempt's reason, timed from its receipts. |
 
 ## Regressions proven red on the pre-repair revision (V2)
@@ -96,14 +97,22 @@ earliest bases could be collected; the committed tests are unchanged.
 | published stopped sessions screened | `4f323770ee` | `4a039353ac` | **API:** the published receipts of attempts 05, 07, 11 and 12 had no `contamination`. |
 | live in-flight stop receipt | `4f323770ee` | `4a039353ac` | **API:** the wire session had no `last_messages`; the stop receipt itself read the live `Wire.active` correctly at base. |
 | delivered tool calls in the screened conversation | `4f323770ee` | `4a039353ac` | **API:** the wire session had no `last_messages`. |
+| stopped request keeps its first token | `663bac6a2a` | `3396f33a8e` | **Behavior:** the `request_stopped` receipt had no meaningful first token. |
+| stop during verification screens the ended session | `663bac6a2a` | `3396f33a8e` | **Behavior:** the ended session was gone, so the screen saw nothing and `requests` was `None`. |
+| published requests name missing first token and tool-call count | `663bac6a2a` | `3396f33a8e` | **Behavior:** the stopped requests of attempts 02, 05, 07, 11 and 12, and attempt 04's cancelled request, left them silently absent. |
+| cut-short sessions carry tool-call validity | `663bac6a2a` | `3396f33a8e` | **Behavior:** attempts 05, 07, 11 and 12 published none. |
+| stall stop published with its cause | `663bac6a2a` | `3396f33a8e` | **API:** no `run.stop_active_request`. At base, `run_session` cancelled through the wire with no stop receipt. |
+| stop-path screen publishes what it saw | `663bac6a2a` | `3396f33a8e` | **API:** no `screened` in the verification. |
+| publish screen publishes what it saw | `663bac6a2a` | `3396f33a8e` | **API:** no `screened` in the at-publish verification. |
+| published cut-short screens are non-empty | `663bac6a2a` | `3396f33a8e` | **API:** the receipts of attempts 05, 07, 11 and 12 had no `screened`. |
 
-V2 covers 27 regressions: 16 red on the behavior assertion and 11 on an
+V2 covers 35 regressions: 20 red on the behavior assertion and 15 on an
 API the repair introduced. For the API reds of rounds 1 and 2, the defect
 itself is evidenced live by the attempt that found it (02, 04, 07, 11 and
-12); the test pins the repaired contract. The round-3 API reds are the new
-L4 fields that the round-3 behavior reds depend on.
+12); the test pins the repaired contract. The API reds of rounds 3 and 4 are
+the new fields and the stop seam that those rounds' behavior reds depend on.
 
-In the round-3 worktree, the base copy of
+In the round-3 and round-4 worktrees, the base copy of
 `test_session_env_is_private_and_repository_free` also failed. The worktree
 sat inside the owner's `TEMP`, which breaks the test's premise that the
 repository is outside it. The failure is an artifact of where the worktree

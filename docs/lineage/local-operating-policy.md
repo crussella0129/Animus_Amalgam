@@ -75,13 +75,16 @@ on this workload.
    decode-bound host. It verified the same items as bounded thinking in
    about half the machine time. Decode was 90% of R0's machine time, so
    every reasoning token costs throughput directly.
-2. **If thinking is on:** greedy, a bounded budget, and
-   `model.reasoning_echo: true`. It is throughput-neutral here, but it keeps
-   history append-only, so prefill stops growing with each turn's
-   reasoning. That matters more on longer sessions and slower-prefill
-   hosts, which were not measured. Expect a one-turn rollback after each
-   budget-truncated think block, until uncapped thinking (T-218) removes the
-   cut.
+2. **If thinking is on:** greedy and a bounded budget (ranked second). Also
+   set `model.reasoning_echo: true`. This choice sits **outside the time
+   ranking**: echo on ranks third, 2% slower than echo off on the completed
+   runs, and further behind across all attempts because of host stops
+   unrelated to echo. It is chosen for INT-0007 AC3. It keeps history
+   append-only, so prefill stops growing with each turn's reasoning, and it
+   removed about 60% of the prefill work here. Its throughput benefit on
+   longer sessions and slower-prefill hosts was not measured. Expect a
+   one-turn rollback after each budget-truncated think block, until
+   uncapped thinking (T-218) removes the cut.
 3. **Keep the NVIDIA kernel cache persistent.** A cold driver JIT cache
    made the first prompt 30× slower (15.6 against 115 tok/s) and the load
    2.5× slower. Never run llama-server with a sandboxed or fresh `APPDATA`
