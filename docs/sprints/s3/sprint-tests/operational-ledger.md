@@ -674,3 +674,60 @@ loaded. The stall rule now watches each child's output:
 - the silent child was stopped at 2.109 s against a 2.0 s window;
 - its 5-process tree was gone in 0.047 s;
 - the sentinel survived.
+
+## Test-phase corrections (critique round 2)
+
+These are recorded in response to [critique-02](critique-02.md).
+
+**O1 figures, recomputed from the published receipts.** Receipts now carry
+each request's start and end, relative to the attempt start, and each
+session's machine time (first request to last response). Cost per verified
+item under O1 is the total machine time of every attempt of a run divided
+by the total items those attempts verified. Partial items verified by a
+stopped attempt count, because they were really produced.
+
+| Run | Attempts: machine time, items verified | Completed run only | All attempts (O1) |
+|---|---|---|---|
+| R0 | 07: 100.5 s, 0 · 08: 720.8 s, 4 | 180.2 s, 534.5 tokens per item | **205.3 s, 557.5 tokens** |
+| R1 | 09: 1,381.7 s, 4 | 345.4 s, 1,058.3 tokens per item | **345.4 s, 1,058.3 tokens** |
+| R2 | 10: 1,094.2 s, 3 · 11: 192.1 s, 0 · 12: 761.8 s, 2 · 13: 1,410.2 s, 4 | 352.6 s, 1,150.8 tokens per item | **384.3 s, 1,171.6 tokens** |
+
+This supersedes the round-1 table above. Round 1 divided by 4, ignoring
+the partial items in stopped attempts, and rounded R1 two ways. The ranking
+(R0 < R1 < R2) is unchanged.
+
+**Stopped sessions scored (L2).** Sessions that an attempt stop cut short
+are now scored from their fixture state. Going forward, `run.py` does this
+in its stop path (`session_stopped`). For earlier attempts, `publish.py`
+scores the fixture that the stop preserved in `<attempt>/live`:
+
+| Attempt | Session | Requests | Verified |
+|---|---|---|---|
+| 05 | screen session 3 | — | 0 |
+| 07 | R0 | 3 | 0 |
+| 11 | R2 | 3 | 0 |
+| 12 | R2 | 10 | **2** |
+
+**Further lab changes after confidence** (not replayed live, covered by the
+formal tests at `1fca1a3095`):
+
+- the stopped-request and stopped-session seams;
+- `RequestExtrema`, which records resources on every loop exit;
+- `erases_slot`;
+- `probe_window`, which derives the backend probe timeout.
+
+Requests stopped in attempts 11 and 12, before `RequestExtrema` existed,
+name their resource extrema as missing.
+
+**Plan deviation: the retained fixed values.** The locked plan retained
+only the cadences and the 2 s grace and 5 s cleanup. The Test phase listed
+every other fixed bound with its reason in the lab README:
+
+- the telemetry writer retry;
+- the `nvidia-smi` query;
+- the verifier process and thread bounds;
+- the `git` identity probes;
+- one-time venv creation;
+- the wire-close settle.
+
+None of these bounds token work.

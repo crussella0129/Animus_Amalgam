@@ -127,6 +127,7 @@
 - **Completed:** 2026-09-25T02:16:17Z
 - **Files modified:** evals/local_qualification/policy.py, evals/local_qualification/bringup.py (run.py and wire.py timing in the T-211 commit)
 - **Commit:** `9086be2dae74636d3acf0b620678d418c5f015e5`
+- **Correction (Test phase, critiques 01–02):** the retained fixed values grew beyond the T3 list during the Test phase. They are listed with reasons in the lab README (a recorded plan deviation). T5's stall was a bare timer; bringup.py now watches each child's output, so a chatty child survives and a silent one is stopped (replayed at `1fca1a3095`). The inline backstop checks became `throughput.step_stop`, and the session windows `run.session_windows` and `run.probe_window`.
 
 ## T-222 (sprint 3)
 - **Description:** Live replay, calibration, main-cancel and cross-session prefix. C1: a deliberate untracked file refused launch with 0 launches consumed (attempt 01). C2: the calibration record from attempt 04 holds P 96.76 tok/s, D 3.55 tok/s, O 0.024 s, T_load 45.4 s (cold kernel cache), T_cli 3.05 s, a 149.6 MiB checkpoint and 5 frozen checkpoints. The checkpoint count was recomputed from attempt 04's evidence after the admission-sample repair. The 81,365 s sprint budget was in the ledger before the screen. C3: once the per-session paths and the blanket slot erase were repaired, two smokes' rendered system prompts were byte-identical and the second reused 1147 of 1151 prompt tokens (attempts 05 and 06). C4: a main-cancel at the first decoded token left the slot idle in 0.84 s, with owned cleanup in 0.88 s. Repairs: a lab-level CUDA kernel cache (a cold cache made prefill 30x slower), socket-shutdown cancel, observing supervisor waits, admission-sample calibration, fixed live session paths with archiving, and a per-session erase.
@@ -155,6 +156,7 @@
 - **Completed:** 2026-10-04T02:03:17Z
 - **Files modified:** docs/sprints/s3/sprint-tests/operational-ledger.md, docs/sprints/s3/sprint-tests/qualification/, evals/local_qualification/{telemetry,wire,publish}.py
 - **Commit:** `08a17f20471e808bd7d98be71aba3a0f4a2cc99b`
+- **Correction (Test phase, critiques 01–02):** machine time follows S2's definition (first request to last response), and O1 counts every attempt of a run. Per verified item, across all attempts: R0 205.3 s, R1 345.4 s, R2 384.3 s. Completed runs only: 180.2 s, 345.4 s and 352.6 s, replacing 182, 347 and 354 s. O5 covers 169 post-calibration requests: 165 completed and 4 stopped, whose predictions the pre-repair wire did not record.
 
 ## T-213 (sprint 3)
 - **Description:** Default local operating policy for the measured settings. P1: the policy ranks thinking mode, sampling, echo and checkpoint density by machine time per verified item, with receipt links. It states the fixed choices with their rationale: 32K context, the environment probe off, the host-calibrated time model, the terminal toolset and calibrated checkpoints. It marks MTP, uncapped thinking and compression as pending Sprint 4, labels every result a single seeded run, and adds a persistent kernel-cache rule for client machines. P2: the live config.yaml and presets.ini fingerprints are unchanged (a48b4add..., bb35c72d...). The live-profile snippet is a proposal only.
@@ -169,3 +171,4 @@
 - **Completed:** 2026-10-04T02:23:58Z
 - **Files modified:** tests/hermes_cli/test_local_runtime_throughput.py, tests/evals/test_local_qualification_{lab,wire,windows,receipts}.py, evals/local_qualification/{run,prepare,publish,wire}.py, docs/sprints/s3/sprint-tests/{unit-tests,integration-tests,e2e-tests,test-report}.md, docs/sprints/s3/sprint-tests/qualification/manifests/
 - **Commit:** `61d809a660855a138c12d937f3eb9ad9db6ef00f`
+- **Correction (Test phase, critiques 01–02):** after two critique rounds, the final formal run at `1fca1a3095` passed 217 of 217 (runner log `72fefa45…`). V2 covers 18 regressions, each red on its repair's parent: 11 on the behavior assertion, 1 on a schema field and 6 on an API the repair introduced. The affected-suite diff is base 7 failing against head 1 inherited, with 0 new failures.

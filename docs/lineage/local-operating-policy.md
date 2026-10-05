@@ -24,20 +24,21 @@ defaults; they are not evidence of statistical superiority.
 ## Ranked settings (varied in Sprint 3)
 
 Ranked by machine time per verified item. Machine time runs from the first
-request to the last response, excluding load. Under the plan's rule
-(build-plan O1), failures and stops count: a run's cost includes every
-attempt of that run, failed or stopped, divided by the items it verified.
-The completed run's own figure is shown beside it.
+request to the last response, excluding load, as published per session in
+the receipts. Under the plan's rule (build-plan O1), failures and stops count:
+a run's figure is the total machine time of every attempt of that run, divided
+by the total items those attempts verified. The completed run's own figure is
+shown beside it.
 
-| Rank | Setting | Verified | Requests | Per verified item, all attempts (O1) | Completed run only | Receipts |
+| Rank | Setting | Verified (completed run) | Requests | Per verified item, all attempts (O1) | Completed run only | Receipts |
 |---|---|---|---|---|---|---|
-| 1 | Thinking **off**, greedy (R0) | 4/4 | 18 | **205 s**, 558 tokens | 180 s, 535 tokens | attempts 07 (telemetry race), 08 |
-| 2 | Thinking on, budget 256, greedy, echo off (R1) | 4/4 | 20 | **345 s**, 1,058 tokens | 346 s, 1,058 tokens | attempt 09 |
-| 3 | Thinking on, budget 256, greedy, **echo on** (R2) | 4/4 | 18 | **865 s**, 2,636 tokens | 352 s, 1,151 tokens | attempts 10 (wire defect), 11 (host maintenance), 12 (owner apps), 13 |
+| 1 | Thinking **off**, greedy (R0) | 4/4 | 18 | **205.3 s**, 557.5 tokens | 180.2 s, 534.5 tokens | attempts 07 (telemetry race, 0 verified), 08 |
+| 2 | Thinking on, budget 256, greedy, echo off (R1) | 4/4 | 20 | **345.4 s**, 1,058.3 tokens | 345.4 s, 1,058.3 tokens | attempt 09 |
+| 3 | Thinking on, budget 256, greedy, **echo on** (R2) | 4/4 | 18 | **384.3 s**, 1,171.6 tokens | 352.6 s, 1,150.8 tokens | attempts 10 (wire defect, 3 verified), 11 (host maintenance, 0), 12 (owner apps, 2), 13 |
 
-The order is the same under both readings. R2's all-attempts cost comes
-mostly from one repaired lab defect and two host resource stops, not from
-echo. Its completed run was within 2% of R1.
+The order is the same under both readings. R2's all-attempts figure is
+raised by one repaired lab defect and two host resource stops, not by echo.
+On the completed runs, echo was within 2% of R1.
 
 **Sampling** (screen, turns 1–3 only, attempt 06). Greedy ranked first in
 both thinking modes:
@@ -56,7 +57,7 @@ turn whose reasoning hit the 256-token budget: all 5 large rollbacks
 (412–678 tokens) followed exactly those turns, because the forced end of
 thinking renders differently from what was generated. Echo removed about
 60% of the prefill work, but throughput on the completed runs was unchanged
-(352 s against 346 s per verified item), because decode dominates on this host.
+(352.6 s against 345.4 s per verified item), because decode dominates on this host.
 
 **Checkpoint density** (O3). R3 was not run. R1's median uncached tokens per
 continued request (161) never approached the 2,000 threshold. llama.cpp's

@@ -1,8 +1,8 @@
 # Sprint 3 Integration Test Results (after operational confidence)
 
-- **Tested head:** `efeb4ef4c4` (after critique round 1). These results are
-  part of the final formal run recorded in [unit-tests](unit-tests.md) (171
-  passed, 0 failed; runner log sha256 `13bd883f…`).
+- **Tested head:** `1fca1a3095` (after critique round 2). These results are
+  part of the final formal run recorded in [unit-tests](unit-tests.md) (217
+  passed, 0 failed; runner log sha256 `72fefa45…`).
 - **Runner:** `scripts/run_tests.sh` on the owner's Windows 11 host.
 - **Ordering:** written and first run after the confidence record
   (2026-10-04T01:58Z).
@@ -13,10 +13,11 @@ The real `Wire` runs over loopback HTTP against a capture backend shaped
 like the pinned b10964. It renders, tokenizes and streams a progress chunk,
 reasoning and content or tool-call deltas, and a final timings chunk with
 **no `id_slot`**. Its `/slots` names the working slot, as the real server
-does. The Sprint 2 wire tests were ported to the Sprint 3 Wire API (T-211
-changed its constructor), keeping their invariants. Waits are event-based
-(the backend signals its first chunk), and wall-clock bounds are at least
-2 s.
+does: a slot is processing only during a request. The Sprint 2 wire tests
+were ported to the Sprint 3 Wire API (T-211 changed its constructor),
+keeping their invariants. Waits are event-based: the backend signals its
+first chunk, and holds its final chunk until a `/slots` poll is served.
+Wall-clock bounds are at least 2 s.
 
 | Test | EARS | Result | Assertion |
 |---|---|---|---|
@@ -31,6 +32,7 @@ changed its constructor), keeping their invariants. Waits are event-based
 | `test_receipt_fields_complete_or_named_missing` | M3, L1 | pass | The prediction is recorded at send. The response receipt carries timings, finish reason, the reasoning/visible split, first token and both predictions. The slot comes from `/slots` (`id_slot_source: "slots"`), because the stream carries none. `kernel_compiled` is present even when no cache is wired. |
 | `test_cancel_returns_promptly_and_is_recorded_as_a_cancel` | C4, INT-0004 AC2 | pass | **Regression (attempt 02).** The cancel returns in under 2 s against a 6 s batch. It is recorded as `response_cancelled`, not as a wire failure, and keeps its elapsed time and prediction (AC7). |
 | `test_sequential_request_after_done_is_accepted_and_concurrent_is_refused` | M1 | pass | **Regressions (attempt 10 and T-214).** A retry sent at `[DONE]` during the previous request's accounting is accepted. A request arriving mid-stream is refused as concurrent, including after a finishing handler's cleanup. |
+| `test_a_failing_request_keeps_its_timing_and_predictions` | AC7, M3 | pass | **Regression (round 1).** A malformed stream fails the request, and its `wire_failure` keeps the elapsed time and both predictions. |
 
 **Found by these tests:** a race in the attempt-10 repair. A finishing
 handler's `finally` cleared the in-flight flag the next request had
@@ -48,6 +50,9 @@ that owner releases it (`0cd28ab8cc`).
 | `test_sessions_record_their_first_rendered_prefix` (13) | M4 | pass | Each session records its first rendered prefix (tokens and hash). |
 | `test_every_request_names_its_missing_fields` (13) | L1, M3 | pass | Every request, completed or stopped, carries each of the 14 L1/M3 fields or names it missing. |
 | `test_stopped_requests_keep_their_cause_and_elapsed_time` (13) | AC7 | pass | Each attempt-stopped request keeps its stop cause and elapsed time. |
+| `test_completed_calibrated_requests_carry_timing_predictions_and_resources` (13) | AC7, L1 | pass | Every request completed after calibration has its actual and predicted time and its resource extrema present, not merely named. |
+| `test_machine_time_is_recomputable_from_the_receipt` (13) | O1 | pass | Each session's published machine time equals the span of its requests' published start and end times. |
+| `test_attempt_stopped_long_sessions_are_scored` (13) | L2 | pass | A long session cut short by an attempt stop has a score: attempts 05, 07, 11 and 12. |
 
 ## Windows file behaviour (`windows_only`)
 
@@ -66,7 +71,7 @@ Sprint 2 checkpoint merge) and on head: `tests/hermes_cli/test_local_*.py`,
 | Tree | Files | Passed | Failed | Skipped | Runner log sha256 |
 |---|---|---|---|---|---|
 | Base `5f6a0c7b60` | 30 | 345 | 7 | 2 | — |
-| Head `efeb4ef4c4` | 34 | 502 | 1 | 2 | `13d709c5…` |
+| Head `1fca1a3095` | 34 | 548 | 1 | 2 | `f8b8b33e…` |
 
 - **New failures on head:** none.
 - **Fixed on head (6):** the shell-hook, hooks-CLI, cron catch-up and

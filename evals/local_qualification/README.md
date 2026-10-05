@@ -60,17 +60,26 @@ limits and task sequence.
 
 ## Time model
 
-Every deadline, stall window and backstop comes from
+Every deadline, stall window, backstop and backend probe timeout comes from
 `hermes_cli/local_runtime/throughput.py` and the calibration record measured
-on the running host, so the same lab serves hosts of any speed. The fixed
-values that remain are all observation cadences or OS-level kill safety, not
-token work:
+on the running host (`run.session_windows`, `run.probe_window`), so the same
+lab serves hosts of any speed. The fixed values that remain bound process
+start-up, I/O or polling, never token work.
 
-- the telemetry, supervisor-loop and `/slots` periods;
-- the 2 s grace and 5 s cleanup;
-- the telemetry writer's retry bound: half a sample period, so the cadence holds
-  while the supervisor has the sample open;
-- the hidden verifier's process bound (120 s, OS safety).
+The locked plan retained the telemetry, supervisor-loop and `/slots`
+periods and the 2 s grace and 5 s cleanup. Sprint 3 added the rest of this
+list during the Test phase (a recorded plan deviation):
+
+| Value | Bounds | Why it is fixed |
+|---|---|---|
+| Telemetry 1 s, loop 0.25 s, `/slots` 0.5 s | observation cadence | retained by the plan |
+| Grace 2 s, cleanup 5 s | OS kill safety (INT-0004 AC2) | retained by the plan |
+| Telemetry writer retry: half a sample period | `os.replace` against an open reader | keeps the sample cadence |
+| `nvidia-smi` query 2 s | one GPU telemetry probe | a hung driver query must not stall sampling |
+| Hidden verifier: 60 s process, 120 s thread | running the fixture's own quick checks | the checks run in milliseconds; this only catches a hung interpreter |
+| `git rev-parse` and `git status` 10 s | the identity check | local repository metadata |
+| Task venv creation 600 s | one-time lab setup in `prepare.py` | not part of any attempt |
+| Wire close 1 s | the receipt stream at shutdown | settles a handler that already finished |
 
 ## Usage
 
