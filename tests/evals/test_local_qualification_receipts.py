@@ -120,27 +120,35 @@ def test_every_request_names_its_missing_fields(receipt):
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
-def test_stopped_requests_keep_their_cause_and_elapsed_time(receipt):
-    for request in _load(receipt)["requests"]:
+def test_stopped_requests_keep_their_own_cause_and_elapsed_time(receipt):
+    """A stopped request's cause is its own session's recorded stop, or the attempt's
+    stop when its session was still running at the attempt stop."""
+    record = _load(receipt)
+    session_stop = {
+        s["session"]: s.get("stop") for s in record["sessions"] if not s["stopped"]
+    }
+    for request in record["requests"]:
         if request.get("outcome") == "stopped":
-            assert request["stop_reason"] and request["seconds"] is not None
+            cause = session_stop.get(request["session"]) or record["outcome"]["reason"]
+            assert request["stop_reason"] == cause, request["request_id"]
+            assert request["seconds"] is not None
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
-def test_completed_calibrated_requests_carry_timing_predictions_and_resources(receipt):
+def test_completed_calibrated_requests_carry_every_l1_field(receipt):
     """AC7 and L1 by presence, not by being named: every request completed after
-    calibration has its actual and predicted time and its resource extrema."""
+    calibration carries every L1 field. The one exception is ``id_slot``: b10964's
+    stream does not return it. The wire reads it from ``/slots`` since the round-2
+    repair, after these attempts ran, so here it must be named missing."""
     record = _load(receipt)
     if not _manifest(record)["calibration_record"]:
         return  # the calibration attempt predicts nothing yet
     for request in record["requests"]:
         if request.get("outcome") == "response_end":
-            for field in (
-                "seconds",
-                "predicted_initial_seconds",
-                "predicted_rearmed_seconds",
-                "resources",
-            ):
+            for field in REQUEST_FIELDS:
+                if field == "id_slot" and request.get(field) is None:
+                    assert field in request["missing"], request["request_id"]
+                    continue
                 assert request.get(field) is not None, (request["request_id"], field)
 
 
@@ -173,3 +181,10 @@ def test_attempt_stopped_long_sessions_are_scored(receipt):
     scored = {s["session"]: s for s in record["sessions"]}
     session = scored[started[-1]["session"]]
     assert session["verification"]["score"]["of"] == 4
+    assert session["verification"]["contamination"] == []
+    if session.get("scored", "").startswith("at publish"):
+        # Screened from the last request's conversation: complete only if that
+        # request was still in flight, so no executed tool call came after it.
+        own = [r for r in record["requests"] if r["session"] == session["session"]]
+        last = max(own, key=lambda r: r["request_id"])
+        assert last["outcome"] == "stopped", last["request_id"]

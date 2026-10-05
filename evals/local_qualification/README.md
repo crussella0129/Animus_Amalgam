@@ -66,9 +66,11 @@ on the running host (`run.session_windows`, `run.probe_window`), so the same
 lab serves hosts of any speed. The fixed values that remain bound process
 start-up, I/O or polling, never token work.
 
-The locked plan retained the telemetry, supervisor-loop and `/slots`
-periods and the 2 s grace and 5 s cleanup. Sprint 3 added the rest of this
-list during the Test phase (a recorded plan deviation):
+The locked plan retained the observation cadences (telemetry, supervisor
+loop, `/slots`) and the guards counted in them, the 2 s grace and 5 s
+cleanup, the wire's 1 s lock handoff and the `git` tool timeouts. Sprint 3
+added the rest of this list during the Test phase (a recorded plan
+deviation):
 
 | Value | Bounds | Why it is fixed |
 |---|---|---|
@@ -77,9 +79,10 @@ list during the Test phase (a recorded plan deviation):
 | Telemetry writer retry: half a sample period | `os.replace` against an open reader | keeps the sample cadence |
 | `nvidia-smi` query 2 s | one GPU telemetry probe | a hung driver query must not stall sampling |
 | Hidden verifier: 60 s process, 120 s thread | running the fixture's own quick checks | the checks run in milliseconds; this only catches a hung interpreter |
-| `git rev-parse` and `git status` 10 s | the identity check | local repository metadata |
+| `git rev-parse` and `git status` 10 s | the identity check | retained by the plan (`git` tool timeouts) |
+| Wire close 1 s | the lock handoff from a finished handler at shutdown | retained by the plan |
 | Task venv creation 600 s | one-time lab setup in `prepare.py` | not part of any attempt |
-| Wire close 1 s | the receipt stream at shutdown | settles a handler that already finished |
+| Listener check 0.2 s | one loopback connect after cleanup | a closed local port refuses at once; it only records whether the backend's port closed |
 
 ## Usage
 

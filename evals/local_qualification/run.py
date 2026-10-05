@@ -576,14 +576,22 @@ def main():
                 )
         cleanup_seconds = time.monotonic() - stop_start
         # The tree is gone, so the cut-short session's fixture is final (L2).
-        stopped = stopped_session(
-            interrupt_file_holder.get("session"),
-            wire,
-            Path(paths["task_venv"]),
-            manifest["allowlist"],
+        current = interrupt_file_holder.get("session")
+        stopped = bounded(
+            lambda: stopped_session(
+                current, wire, Path(paths["task_venv"]), manifest["allowlist"]
+            ),
+            VERIFY_S,
         )
         if stopped:
             record_event("session_stopped", **stopped)
+        elif current is not None:
+            record_event(
+                "session_stopped",
+                session=current["index"],
+                workload=current["workload"],
+                verification={"error": "verifier did not finish"},
+            )
         record_event(
             "cleanup",
             seconds=cleanup_seconds,
@@ -640,13 +648,14 @@ def probe_window(cal, params, t_load, period) -> float:
     """Timeout for a backend metadata probe (template, tokenize, slots, props).
 
     Calibrated: the pre-first-event stall window. Before calibration it is the attempt's
-    own load time × k, and during the load itself the observation floor.
+    own load time × k, and during the load itself the observation floor; like every
+    other window, never under that floor.
     """
     if cal:
         return stall_window("pre_first_event", cal, params, period)
-    if t_load is None:
-        return params.min_observation_periods * period
-    return params.stall_multiple * t_load
+    return uncalibrated_stall_window(
+        params.stall_multiple * (t_load or 0.0), params, period
+    )
 
 
 def stopped_request(active: dict, reason: str, now: float) -> dict:
@@ -663,18 +672,41 @@ def stopped_request(active: dict, reason: str, now: float) -> dict:
 
 def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
     """L2's "being stopped" branch: score a session an attempt stop cut short, from
-    its fixture state alone, once its process tree is gone."""
+    its fixture state alone, once its process tree is gone.
+
+    L4 screens the conversation the wire last forwarded, the session's history up to
+    the stop. A scoring failure is recorded, never raised: the stop path must still
+    charge the ledger and write the outcome.
+    """
     if current is None:
         return None
     session = wire.session if wire is not None else None
+    conversation = (session or {}).get("last_messages") or []
+    try:
+        verification = verify_session(
+            current["workload"],
+            current["fixture"],
+            {"conversation": conversation},
+            venv,
+            allowlist,
+        )
+    except Exception as exc:
+        verification = {"error": f"{type(exc).__name__}: {exc}"}
     return {
         "session": current["index"],
         "workload": current["workload"],
         "requests": session["requests"] if session else None,
-        "verification": verify_session(
-            current["workload"], current["fixture"], None, venv, allowlist
-        ),
+        "verification": verification,
     }
+
+
+def bounded(fn, seconds):
+    """``fn()``'s result, or None if it is still running after ``seconds``."""
+    box = {}
+    worker = threading.Thread(target=lambda: box.update(value=fn()), daemon=True)
+    worker.start()
+    worker.join(seconds)
+    return box.get("value")
 
 
 def erases_slot(index: int, spec: dict) -> bool:

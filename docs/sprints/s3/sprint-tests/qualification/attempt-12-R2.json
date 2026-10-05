@@ -43,9 +43,10 @@
      },
      "passed": 2,
      "of": 4
-    }
+    },
+    "contamination": []
    },
-   "scored": "at publish, from the session's preserved fixture"
+   "scored": "at publish, from the session's preserved fixture and the conversation the wire last forwarded"
   }
  ],
  "machine_time": [

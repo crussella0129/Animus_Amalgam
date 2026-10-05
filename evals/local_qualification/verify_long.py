@@ -103,7 +103,7 @@ def score(fixture: Path, python: Path) -> dict:
             env={"SYSTEMROOT": os.environ.get("SYSTEMROOT", ""), "PATH": ""},
         )
         items = json.loads(done.stdout.strip().splitlines()[-1])
-    except (subprocess.TimeoutExpired, ValueError, IndexError) as exc:
+    except (OSError, subprocess.TimeoutExpired, ValueError, IndexError) as exc:
         items = {name: {"pass": False, "error": f"probe: {exc}"} for name in ITEMS}
     return {
         "items": items,

@@ -59,7 +59,7 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
     ``task_python`` scores a long session an attempt stop cut short before the lab
     recorded ``session_stopped`` itself, from its preserved fixture (L2).
     """
-    requests, sessions, started, other = {}, [], {}, []
+    requests, sessions, started, other, last_messages = {}, [], {}, [], {}
     t0 = None
     for event in _events(attempt):
         kind = event["kind"]
@@ -68,6 +68,9 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             continue
         rid = event.get("request_id")
         if kind == "request":
+            last_messages[event["session"]] = (event.get("original_body") or {}).get(
+                "messages"
+            ) or []
             requests[rid] = {
                 "request_id": rid,
                 "session": event["session"],
@@ -139,16 +142,22 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 started[event["session"]] = event["workload"]
             other.append({k: v for k, v in event.items() if k != "manifest_id"})
     outcome = json.loads((attempt / "outcome.json").read_text(encoding="utf-8"))
+    session_stop = {s["session"]: s.get("stop") for s in sessions if not s["stopped"]}
     for r in requests.values():
-        if r.get("outcome") == "wire_failure" and outcome["reason"].startswith(
-            "stopped:"
-        ):
-            # Before the request_stopped receipt existed, an attempt stop surfaced as the
-            # aborted request's wire failure; the attempt's reason is the real cause.
-            r["outcome"], r["stop_reason"] = "stopped", outcome["reason"]
-            if r.get("seconds") is None:
-                r["seconds"] = round(r["_failed_at"] - r["_at"], 3)
-                r["seconds_source"] = "receipt timestamps"
+        if r.get("outcome") == "wire_failure" and "stop_reason" not in r:
+            # Before the request_stopped receipt existed, a stop surfaced only as the
+            # aborted request's wire failure. Its cause is its own session's recorded
+            # stop; only a request still in flight at the attempt stop takes the
+            # attempt's reason.
+            cause = session_stop.get(r["session"])
+            if cause is None and r["session"] not in session_stop:
+                if outcome["reason"].startswith("stopped:"):
+                    cause = outcome["reason"]
+            if cause:
+                r["outcome"], r["stop_reason"] = "stopped", cause
+                if r.get("seconds") is None:
+                    r["seconds"] = round(r["_failed_at"] - r["_at"], 3)
+                    r["seconds_source"] = "receipt timestamps"
         # Times relative to the attempt's first receipt: machine time is recomputable.
         r["started_s"] = round(r.pop("_at") - t0, 3)
         ended = r.pop("_ended_at", None)
@@ -170,8 +179,14 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "workload": workload,
                 "stopped": True,
                 "requests": sum(1 for r in requests.values() if r["session"] == index),
-                "verification": {"score": verify_long.score(fixture, task_python)},
-                "scored": "at publish, from the session's preserved fixture",
+                "verification": {
+                    "score": verify_long.score(fixture, task_python),
+                    "contamination": _screen(
+                        attempt, fixture, last_messages.get(index) or []
+                    ),
+                },
+                "scored": "at publish, from the session's preserved fixture and the "
+                "conversation the wire last forwarded",
             })
     outcome.pop("sessions", None)
     manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
@@ -186,6 +201,22 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
         "requests": list(requests.values()),
         "events": other,
     }
+
+
+def _screen(attempt: Path, fixture: Path, conversation: list) -> list:
+    """L4 on a cut-short session's last forwarded conversation, as the lab screens a
+    finished one: the session's own home is in scope, and /tmp is the TEMP it had.
+
+    Each attempt scored here was stopped with a request in flight, so the conversation
+    that request forwarded holds every tool call Hermes ran (a receipt test checks it).
+    """
+    manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
+    home = attempt / "live" / "home"
+    private = home / "tmp"
+    temp = private if private.is_dir() else Path(os.environ["TEMP"])
+    return verify_long.contamination(
+        conversation, fixture, [*manifest["allowlist"], str(home)], temp
+    )
 
 
 def _fill(record: dict, fields: dict) -> None:

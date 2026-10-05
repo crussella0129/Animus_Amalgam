@@ -65,7 +65,7 @@
    "predicted_initial_seconds": null,
    "outcome": "stopped",
    "error": "AttributeError: 'NoneType' object has no attribute 'peek'",
-   "stop_reason": "stopped: RuntimeError: supervisor scheduler lag exceeded two telemetry periods",
+   "stop_reason": "stall in prefill (window 47.0s)",
    "seconds": 59.985,
    "seconds_source": "receipt timestamps",
    "started_s": 80.125,

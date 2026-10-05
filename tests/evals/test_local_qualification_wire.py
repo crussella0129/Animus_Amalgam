@@ -5,11 +5,14 @@ backend standing in for llama.cpp's template, tokenize, slots and streaming comp
 endpoints, shaped like the pinned b10964 (no ``id_slot`` in the stream; ``/slots`` names
 the working slot). Regressions: attempt 02 (a cancel blocked the supervisor until the
 backend's batch ended) and attempt 10 (an immediate sequential retry was refused as
-concurrent).
+concurrent). The attempt-stop receipt is read from the live wire's in-flight record; the
+runner imports its siblings top-level, so the lab directory goes first on ``sys.path``.
 """
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+import sys
 import threading
 import time
 import urllib.error
@@ -18,6 +21,11 @@ import urllib.request
 import pytest
 
 from evals.local_qualification.wire import Wire
+
+sys.path.insert(
+    0, str(Path(__file__).resolve().parents[2] / "evals" / "local_qualification")
+)
+import run  # noqa: E402
 
 INPUT_LIMIT = 50
 ARM_THINKING = {"output_cap": 768, "thinking": True, "reasoning_budget": 256}
@@ -54,9 +62,9 @@ class CaptureBackend:
         self.tool_call = False
         self.finish_reason = "stop"
         self.malformed = False  # break the stream after the first answer delta
-        self.hold_final_until_polled = False
+        self.hold_final = False  # the final chunk waits for release_final
+        self.release_final = threading.Event()
         self.request_active = False
-        self.polled_during_request = threading.Event()
         self.first_chunk_sent = threading.Event()
         owner = self
 
@@ -73,8 +81,6 @@ class CaptureBackend:
 
             def do_GET(self):
                 # Like the real server: a slot is processing only during a request.
-                if owner.request_active:
-                    owner.polled_during_request.set()
                 self._json([
                     {**slot, "is_processing": owner.request_active}
                     for slot in owner.slots
@@ -101,8 +107,8 @@ class CaptureBackend:
                 try:
                     chunks = owner.chunks()
                     for number, chunk in enumerate(chunks, start=1):
-                        if number == len(chunks) and owner.hold_final_until_polled:
-                            owner.polled_during_request.wait(10)
+                        if number == len(chunks) and owner.hold_final:
+                            owner.release_final.wait(10)
                         self.wfile.write(
                             b"data: " + json.dumps(chunk).encode() + b"\n\n"
                         )
@@ -342,6 +348,20 @@ def test_streamed_tool_call_is_reassembled_and_counted(make_lab):
     assert _record(records, "response_end")["tool_calls"] == 1
 
 
+def test_the_screened_conversation_includes_tool_calls_already_delivered(make_lab):
+    """C-002: Hermes can run a delivered response's tool calls before any further
+    request, so a stop between requests must still screen them (L4)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    body = _body(10, stream=False)
+    _status, folded = _post(wire, body)
+    _record(records, "response_end")  # accounting follows delivery
+    call = json.loads(folded)["choices"][0]["message"]["tool_calls"][0]
+    *history, delivered = wire.session["last_messages"]
+    assert history == body["messages"]
+    assert delivered["tool_calls"] == [call]
+
+
 def test_length_finish_marks_the_next_request_a_continuation(make_lab):
     backend, wire, records, _consumed = make_lab()
     backend.finish_reason = "length"
@@ -381,11 +401,18 @@ def test_receipt_fields_complete_or_named_missing(make_lab):
     backend, wire, records, _consumed = make_lab(
         arm=ARM_THINKING, predictor=lambda uncached, cap: 1.0 + uncached + cap
     )
-    backend.hold_final_until_polled = True  # the /slots poll sees the working slot
-    _post(wire, _body(10))
+    backend.hold_final = True
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    deadline = time.monotonic() + 10
+    while (wire.active or {}).get("slot_seen") is None:
+        assert time.monotonic() < deadline, "the wire never recorded the working slot"
+        time.sleep(0.01)
+    backend.release_final.set()  # the stream ends only after the wire saw the slot
+    sender.join()
     request = next(r for r in records if r["kind"] == "request")
     assert request["predicted_initial_seconds"] == 1.0 + 10 + 768  # known at send
-    end = next(r for r in records if r["kind"] == "response_end")
+    end = _record(records, "response_end")
     assert end["timings"]["prompt_n"] == 3 and end["timings"]["predicted_n"] == 5
     assert end["finish_reason"] == "stop"
     # b10964's stream carries no id_slot; the working slot comes from /slots instead.
@@ -396,6 +423,28 @@ def test_receipt_fields_complete_or_named_missing(make_lab):
     assert (
         "kernel_compiled" in end
     )  # None when no kernel cache is wired: named, not dropped
+
+
+def test_an_attempt_stop_receipts_the_live_in_flight_request(make_lab):
+    """C-003: the attempt stop reads the wire's own in-flight record; the cut-short
+    session keeps the conversation it last forwarded, for L4."""
+    backend, wire, _records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.chunk_delay = 2.0
+    body = _body(10)
+    sender = threading.Thread(target=lambda: _post(wire, body))
+    before = time.monotonic()
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    now = time.monotonic()
+    stopped = run.stopped_request(wire.active, "stopped: RAM", now)
+    wire.cancel_active()
+    sender.join(timeout=30)
+    assert stopped["request_id"] == 1 and stopped["reason"] == "stopped: RAM"
+    # Timed from the wire's own send; Windows' clock tick can make it 0.0.
+    assert 0 <= stopped["seconds"] <= now - before
+    assert stopped["predicted_initial_seconds"] == 100.0
+    assert "predicted_rearmed_seconds" in stopped
+    assert wire.session["last_messages"] == body["messages"]
 
 
 def test_cancel_returns_promptly_and_is_recorded_as_a_cancel(make_lab):

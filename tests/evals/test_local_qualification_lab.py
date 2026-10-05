@@ -11,6 +11,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -430,8 +431,12 @@ def test_uncalibrated_windows_come_from_the_measured_load():
     assert long["stall"]["prefill"] == 2 * short["stall"]["prefill"] == 20.0
     assert long["hermes_timer"] == 2 * short["hermes_timer"]
     assert short["request_backstop"] is None  # no backstop before calibration
+    assert long["probe"] == 2 * short["probe"]
+    floor = params.min_observation_periods * 0.5
     tiny = run.session_windows(None, params, 0.0, 32768, 512, 0.5)
-    assert tiny["stall"]["decode"] == params.min_observation_periods * 0.5
+    assert tiny["stall"]["decode"] == tiny["probe"] == floor
+    # During the load itself there is no load time yet: the floor alone.
+    assert run.probe_window(None, params, None, 0.5) == floor
 
 
 # T2: stop predicates fire exactly at their boundary --------------------------------------
@@ -648,9 +653,51 @@ def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
     )
     assert stopped["session"] == 2 and stopped["requests"] == 6
     assert stopped["verification"]["score"]["passed"] == 1
+    assert stopped["verification"]["contamination"] == []
     assert (
         run.stopped_session(None, Wire(), TASK_PYTHON.parent.parent, session[1]) is None
     )
+
+
+def test_a_cut_short_session_is_screened_from_its_last_conversation(tmp_path, session):
+    """C-002: a stopped session's items count only after L4 has seen its history."""
+    fixture = tmp_path / "live" / "fixture"
+    shutil.copytree(verify_long.TASK / "fixture", fixture)
+
+    class Wire:
+        session = {
+            "requests": 2,
+            "last_messages": _conversation("cat ../../secret"),
+        }
+
+    current = {"index": 1, "workload": "long:all", "fixture": fixture}
+    stopped = run.stopped_session(
+        current, Wire(), TASK_PYTHON.parent.parent, session[1]
+    )
+    assert stopped["verification"]["contamination"]
+
+
+def test_scoring_a_cut_short_session_never_raises_into_the_stop_path(
+    tmp_path, session, monkeypatch
+):
+    """C-003: the stop path must still charge the ledger and write the outcome."""
+
+    def broken(*_args):
+        raise OSError("fixture locked")
+
+    monkeypatch.setattr(run, "verify_session", broken)
+
+    class Wire:
+        session = {"requests": 1}
+
+    current = {"index": 1, "workload": "long:all", "fixture": tmp_path / "fixture"}
+    stopped = run.stopped_session(
+        current, Wire(), TASK_PYTHON.parent.parent, session[1]
+    )
+    assert stopped["session"] == 1
+    assert stopped["verification"] == {"error": "OSError: fixture locked"}
+    assert run.bounded(lambda: time.sleep(5), 0.05) is None
+    assert run.bounded(lambda: 7, 5.0) == 7
 
 
 def _attempt(
@@ -662,7 +709,9 @@ def _attempt(
         "\n".join(json.dumps(e) for e in events) + "\n"
     )
     (attempt / "outcome.json").write_text(json.dumps({"reason": reason}))
-    (attempt / "manifest.json").write_text(json.dumps({"id": "abc", "plan": "R2"}))
+    (attempt / "manifest.json").write_text(
+        json.dumps({"id": "abc", "plan": "R2", "allowlist": []})
+    )
     return attempt
 
 
@@ -725,11 +774,40 @@ def test_a_stopped_request_stays_stopped_whatever_lands_after(tmp_path, after):
     ]
 
 
-def test_publish_scores_a_cut_short_session_from_its_fixture(tmp_path):
+@pytest.mark.parametrize(
+    "commands,flagged", [(("python check.py",), False), (("cat ../../secret",), True)]
+)
+def test_publish_scores_and_screens_a_cut_short_session(tmp_path, commands, flagged):
     started = {"kind": "session_start", "at": 5.0, "session": 1, "workload": "long:all"}
-    attempt = _attempt(tmp_path, [started, REQUEST, STOPPED])
+    request = {**REQUEST, "original_body": {"messages": _conversation(*commands)}}
+    attempt = _attempt(tmp_path, [started, request, STOPPED])
     shutil.copytree(verify_long.TASK / "fixture", attempt / "live" / "fixture")
+    (attempt / "live" / "home" / "tmp").mkdir(parents=True)
     record = publish.receipts(attempt, TASK_PYTHON)
     (session,) = record["sessions"]
     assert session["stopped"] and session["requests"] == 1
     assert session["verification"]["score"]["passed"] == 0
+    assert bool(session["verification"]["contamination"]) is flagged
+
+
+def test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause(tmp_path):
+    """C-001: attempt 02's stall-stopped request was published with the attempt's later,
+    unrelated stop cause. Only a request in flight at the attempt stop takes that."""
+    stall = "stall in prefill (window 47.0s)"
+    attempt_reason = "stopped: RuntimeError: supervisor scheduler lag"
+    events = [
+        {**REQUEST, "request_id": 1, "session": 1},
+        {"kind": "wire_failure", "at": 20.0, "request_id": 1, "error": "aborted"},
+        {"kind": "session_end", "at": 21.0, "session": 1, "stop": stall},
+        {**REQUEST, "at": 30.0, "request_id": 2, "session": 2},
+        {"kind": "wire_failure", "at": 35.0, "request_id": 2, "error": "reset"},
+        {"kind": "session_end", "at": 36.0, "session": 2, "stop": None},
+        {**REQUEST, "at": 40.0, "request_id": 3, "session": 3},
+        {"kind": "wire_failure", "at": 45.0, "request_id": 3, "error": "aborted"},
+    ]
+    record = publish.receipts(_attempt(tmp_path, events, attempt_reason))
+    first, second, third = record["requests"]
+    assert (first["outcome"], first["stop_reason"]) == ("stopped", stall)
+    assert second["outcome"] == "wire_failure" and "stop_reason" not in second
+    assert (third["outcome"], third["stop_reason"]) == ("stopped", attempt_reason)
+    assert third["seconds"] == 5.0

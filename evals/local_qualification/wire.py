@@ -64,7 +64,7 @@ class Reassembler:
                 slot["function"]["arguments"] += fn.get("arguments") or ""
             self.finish_reason = choice.get("finish_reason") or self.finish_reason
 
-    def response(self):
+    def message(self):
         message = {"role": "assistant", "content": "".join(self.content) or None}
         if any(self.reasoning):
             message["reasoning_content"] = "".join(self.reasoning)
@@ -72,6 +72,10 @@ class Reassembler:
             message["tool_calls"] = [
                 self.tool_calls[i] for i in sorted(self.tool_calls)
             ]
+        return message
+
+    def response(self):
+        message = self.message()
         return {
             "id": self.last.get("id"),
             "object": "chat.completion",
@@ -322,6 +326,7 @@ class Wire:
             request_id = self.consume_request()
             session["requests"] += 1
             messages = original.get("messages") or []
+            session["last_messages"] = messages
             system = (
                 messages[0]
                 if messages and messages[0].get("role") == "system"
@@ -454,6 +459,8 @@ class Wire:
                 handler.end_headers()
                 handler.wfile.write(payload)
             self._release_in_flight(token)  # delivered; accounting follows
+            # Hermes may run this response's tool calls before any further request.
+            session["last_messages"] = [*messages, folded.message()]
             split = {}
             for kind, parts in texts.items():
                 text = "".join(parts)
