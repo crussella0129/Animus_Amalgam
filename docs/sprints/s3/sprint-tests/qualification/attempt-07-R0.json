@@ -18,7 +18,44 @@
   "load_seconds": 18.81299999996554,
   "max_supervisor_lag_seconds": 0.625
  },
- "sessions": [],
+ "sessions": [
+  {
+   "session": 1,
+   "workload": "long:all",
+   "stopped": true,
+   "requests": 3,
+   "verification": {
+    "score": {
+     "items": {
+      "remove_guard": {
+       "pass": false
+      },
+      "discount": {
+       "pass": false
+      },
+      "total": {
+       "pass": false
+      },
+      "low_stock": {
+       "pass": false,
+       "error": "AttributeError: 'Inventory' object has no attribute 'low_stock'"
+      }
+     },
+     "passed": 0,
+     "of": 4
+    }
+   },
+   "scored": "at publish, from the session's preserved fixture"
+  }
+ ],
+ "machine_time": [
+  {
+   "session": 1,
+   "first_request_s": 37.219,
+   "last_response_s": 137.687,
+   "machine_time_s": 100.468
+  }
+ ],
  "requests": [
   {
    "request_id": 89,
@@ -35,6 +72,7 @@
    "first_event_seconds": 0.015999999945051968,
    "predicted_rearmed_seconds": 182.6181536199447,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 0,
@@ -53,6 +91,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 56
    },
+   "started_s": 37.219,
+   "ended_s": 80.469,
    "missing": [
     "id_slot"
    ]
@@ -72,6 +112,7 @@
    "first_event_seconds": 0.015000000013969839,
    "predicted_rearmed_seconds": 146.75606279180275,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 0,
@@ -90,6 +131,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 55
    },
+   "started_s": 81.625,
+   "ended_s": 97.047,
    "missing": [
     "id_slot"
    ]
@@ -108,6 +151,8 @@
    "stop_reason": "stopped: RuntimeError: critical telemetry process exited",
    "seconds": 40.265,
    "seconds_source": "receipt timestamps",
+   "started_s": 97.422,
+   "ended_s": 137.687,
    "missing": [
     "id_slot",
     "finish_reason",

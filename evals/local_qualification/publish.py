@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 
 from policy import manifest_digest
+import verify_long
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -52,10 +53,17 @@ def _events(attempt: Path):
             yield json.loads(line)
 
 
-def receipts(attempt: Path) -> dict:
-    requests, sessions, other = {}, [], []
+def receipts(attempt: Path, task_python: Path | None = None) -> dict:
+    """Correlated receipts for one attempt.
+
+    ``task_python`` scores a long session an attempt stop cut short before the lab
+    recorded ``session_stopped`` itself, from its preserved fixture (L2).
+    """
+    requests, sessions, started, other = {}, [], {}, []
+    t0 = None
     for event in _events(attempt):
         kind = event["kind"]
+        t0 = event["at"] if t0 is None else t0
         if kind == "sample":
             continue
         rid = event.get("request_id")
@@ -74,44 +82,46 @@ def receipts(attempt: Path) -> dict:
         elif kind in ("response_end", "response_cancelled") and rid in requests:
             r = requests[rid]
             t = event.get("timings") or {}
-            r.update(
-                outcome=kind,
-                seconds=event.get("seconds"),
-                meaningful_first_token_seconds=event.get(
+            fields = {
+                "seconds": event.get("seconds"),
+                "meaningful_first_token_seconds": event.get(
                     "meaningful_first_token_seconds"
                 ),
-                first_event_seconds=event.get("first_event_seconds"),
-                predicted_initial_seconds=event.get("predicted_initial_seconds"),
-                predicted_rearmed_seconds=event.get("predicted_rearmed_seconds"),
-                id_slot=event.get("id_slot"),
-                finish_reason=event.get("finish_reason"),
-                tool_calls=event.get("tool_calls"),
-                reasoning_tokens=event.get("reasoning_tokens"),
-                visible_tokens=event.get("visible_tokens"),
-                kernel_compiled=event.get("kernel_compiled"),
-                cached_tokens=t.get("cache_n"),
-                uncached_prompt_tokens=t.get("prompt_n"),
-                decoded_tokens=t.get("predicted_n"),
-                prompt_ms=t.get("prompt_ms"),
-                decode_ms=t.get("predicted_ms"),
-                decode_tps=t.get("predicted_per_second"),
-            )
+                "first_event_seconds": event.get("first_event_seconds"),
+                "predicted_initial_seconds": event.get("predicted_initial_seconds"),
+                "predicted_rearmed_seconds": event.get("predicted_rearmed_seconds"),
+                "id_slot": event.get("id_slot"),
+                "id_slot_source": event.get("id_slot_source"),
+                "finish_reason": event.get("finish_reason"),
+                "tool_calls": event.get("tool_calls"),
+                "reasoning_tokens": event.get("reasoning_tokens"),
+                "visible_tokens": event.get("visible_tokens"),
+                "kernel_compiled": event.get("kernel_compiled"),
+                "cached_tokens": t.get("cache_n"),
+                "uncached_prompt_tokens": t.get("prompt_n"),
+                "decoded_tokens": t.get("predicted_n"),
+                "prompt_ms": t.get("prompt_ms"),
+                "decode_ms": t.get("predicted_ms"),
+                "decode_tps": t.get("predicted_per_second"),
+            }
+            if r.get("outcome") == "stopped":
+                # The attempt stop is the cause; a later record only fills gaps.
+                _fill(r, fields)
+            else:
+                r.update(outcome=kind, **fields)
+            r.setdefault("_ended_at", event["at"])
         elif kind == "request_stopped" and rid in requests:
-            requests[rid].update(
-                outcome="stopped",
-                stop_reason=event.get("reason"),
-                seconds=event.get("seconds"),
-                predicted_initial_seconds=event.get("predicted_initial_seconds"),
-                predicted_rearmed_seconds=event.get("predicted_rearmed_seconds"),
-            )
+            r = requests[rid]
+            r.update(outcome="stopped", stop_reason=event.get("reason"))
+            r.update({k: event[k] for k in TIMING_FIELDS if event.get(k) is not None})
+            r.setdefault("_ended_at", event["at"])
         elif kind == "wire_failure" and rid in requests:
             r = requests[rid]
             r.setdefault("outcome", "wire_failure")
             r["error"] = event.get("error")
             r["_failed_at"] = event["at"]
-            for key in TIMING_FIELDS:
-                if r.get(key) is None and event.get(key) is not None:
-                    r[key] = event[key]
+            _fill(r, {k: event.get(k) for k in TIMING_FIELDS})
+            r.setdefault("_ended_at", event["at"])
             other.append({k: v for k, v in event.items() if k != "manifest_id"})
         elif kind == "request_resources" and rid in requests:
             requests[rid]["resources"] = {
@@ -119,11 +129,14 @@ def receipts(attempt: Path) -> dict:
                 for k, v in event.items()
                 if k not in ("at", "kind", "manifest_id", "request_id")
             }
-        elif kind == "session_end":
+        elif kind in ("session_end", "session_stopped"):
             sessions.append({
-                k: v for k, v in event.items() if k not in ("at", "manifest_id")
+                **{k: v for k, v in event.items() if k not in ("at", "manifest_id")},
+                "stopped": kind == "session_stopped",
             })
         elif kind not in ("progress", "owned_process"):
+            if kind == "session_start":
+                started[event["session"]] = event["workload"]
             other.append({k: v for k, v in event.items() if k != "manifest_id"})
     outcome = json.loads((attempt / "outcome.json").read_text(encoding="utf-8"))
     for r in requests.values():
@@ -136,9 +149,30 @@ def receipts(attempt: Path) -> dict:
             if r.get("seconds") is None:
                 r["seconds"] = round(r["_failed_at"] - r["_at"], 3)
                 r["seconds_source"] = "receipt timestamps"
-        r.pop("_at", None)
+        # Times relative to the attempt's first receipt: machine time is recomputable.
+        r["started_s"] = round(r.pop("_at") - t0, 3)
+        ended = r.pop("_ended_at", None)
+        r["ended_s"] = None if ended is None else round(ended - t0, 3)
         r.pop("_failed_at", None)
         r["missing"] = [f for f in REQUEST_FIELDS if r.get(f) is None]
+    machine_time = _machine_time(requests.values())
+    recorded = {s["session"] for s in sessions}
+    for index, workload in started.items():
+        fixture = attempt / "live" / "fixture"
+        if (
+            index not in recorded
+            and workload.startswith("long")
+            and task_python is not None
+            and fixture.is_dir()
+        ):
+            sessions.append({
+                "session": index,
+                "workload": workload,
+                "stopped": True,
+                "requests": sum(1 for r in requests.values() if r["session"] == index),
+                "verification": {"score": verify_long.score(fixture, task_python)},
+                "scored": "at publish, from the session's preserved fixture",
+            })
     outcome.pop("sessions", None)
     manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
     return {
@@ -148,9 +182,36 @@ def receipts(attempt: Path) -> dict:
         "source_commit": manifest.get("source_commit"),
         "outcome": outcome,
         "sessions": sessions,
+        "machine_time": machine_time,
         "requests": list(requests.values()),
         "events": other,
     }
+
+
+def _fill(record: dict, fields: dict) -> None:
+    for key, value in fields.items():
+        if record.get(key) is None and value is not None:
+            record[key] = value
+
+
+def _machine_time(requests) -> list[dict]:
+    """Per session: first request start to last response end, excluding load (S2's
+    definition), from the published relative times."""
+    spans = {}
+    for r in requests:
+        if r["ended_s"] is None:
+            continue
+        first, last = spans.get(r["session"], (r["started_s"], r["ended_s"]))
+        spans[r["session"]] = (min(first, r["started_s"]), max(last, r["ended_s"]))
+    return [
+        {
+            "session": session,
+            "first_request_s": first,
+            "last_response_s": last,
+            "machine_time_s": round(last - first, 3),
+        }
+        for session, (first, last) in sorted(spans.items())
+    ]
 
 
 def placeholders(lab: Path, attempt: Path) -> list[tuple[str, str]]:
@@ -220,7 +281,12 @@ def main():
     args = parser.parse_args()
     lab = args.lab.resolve()
     attempt = lab / "attempts" / args.attempt
-    text = sanitize(json.dumps(receipts(attempt), indent=1), placeholders(lab, attempt))
+    paths = json.loads((lab / "paths.json").read_text(encoding="utf-8"))
+    venv = Path(paths["task_venv"])
+    task_python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    text = sanitize(
+        json.dumps(receipts(attempt, task_python), indent=1), placeholders(lab, attempt)
+    )
     findings = privacy_screen(text, attempt)
     manifest = published_manifest(attempt, placeholders(lab, attempt))
     manifest_text = json.dumps(manifest, indent=1, sort_keys=True)

@@ -79,6 +79,9 @@ def test_lab_writers_emit_lf(tmp_path, monkeypatch):
     (attempt / "manifest.json").write_text(
         json.dumps({"id": "abc", "plan": "x"}), encoding="utf-8"
     )
+    (lab / "paths.json").write_text(
+        json.dumps({"task_venv": str(tmp_path / "venv")}), encoding="utf-8"
+    )
     out = tmp_path / "out"
     monkeypatch.setattr(
         sys,

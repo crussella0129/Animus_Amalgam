@@ -445,16 +445,6 @@ def main():
             python=sys.version,
             kernel_cache_bytes=kernel.last,
         )
-        probe_timeout = (
-            params.stall_multiple
-            * max(
-                cal.overhead_s,
-                params.min_prefill_sample_tokens
-                / (cal.prefill_tps * params.floor_fraction),
-            )
-            if cal
-            else None
-        )
         load_start = time.monotonic()
         server = spawn(command, "backend", kernel.env(base_env), attempt)
         backend_log = attempt / "backend.log"
@@ -468,7 +458,7 @@ def main():
                         f"http://127.0.0.1:{port}",
                         token,
                         "/props",
-                        probe_timeout or OBSERVATION_PERIOD * 4,
+                        probe_window(cal, params, None, OBSERVATION_PERIOD),
                     )
                     mismatch = server_identity_mismatch(
                         props,
@@ -528,7 +518,7 @@ def main():
             token,
             record_event,
             consume_request,
-            probe_timeout or params.stall_multiple * t_load,
+            probe_window(cal, params, t_load, OBSERVATION_PERIOD),
             OBSERVATION_PERIOD,
             predictor,
             kernel.bytes,
@@ -559,12 +549,7 @@ def main():
         active = wire.active if wire is not None else None
         if active is not None:
             record_event(
-                "request_stopped",
-                request_id=active["request_id"],
-                reason=reason,
-                seconds=stop_start - active["started"],
-                predicted_initial_seconds=active["predicted_initial"],
-                predicted_rearmed_seconds=active["predicted_rearmed"],
+                "request_stopped", **stopped_request(active, reason, stop_start)
             )
         live_driver = next(
             (p for p, _j, n in owned if n.startswith("cli") and p.poll() is None), None
@@ -590,6 +575,15 @@ def main():
                     error="process wait deadline exceeded",
                 )
         cleanup_seconds = time.monotonic() - stop_start
+        # The tree is gone, so the cut-short session's fixture is final (L2).
+        stopped = stopped_session(
+            interrupt_file_holder.get("session"),
+            wire,
+            Path(paths["task_venv"]),
+            manifest["allowlist"],
+        )
+        if stopped:
+            record_event("session_stopped", **stopped)
         record_event(
             "cleanup",
             seconds=cleanup_seconds,
@@ -642,6 +636,90 @@ def main():
 interrupt_file_holder: dict = {}
 
 
+def probe_window(cal, params, t_load, period) -> float:
+    """Timeout for a backend metadata probe (template, tokenize, slots, props).
+
+    Calibrated: the pre-first-event stall window. Before calibration it is the attempt's
+    own load time × k, and during the load itself the observation floor.
+    """
+    if cal:
+        return stall_window("pre_first_event", cal, params, period)
+    if t_load is None:
+        return params.min_observation_periods * period
+    return params.stall_multiple * t_load
+
+
+def stopped_request(active: dict, reason: str, now: float) -> dict:
+    """The receipt for a request an attempt stop cut short: cause, elapsed time and the
+    predictions it was sent with (INT-0007 AC7)."""
+    return {
+        "request_id": active["request_id"],
+        "reason": reason,
+        "seconds": now - active["started"],
+        "predicted_initial_seconds": active["predicted_initial"],
+        "predicted_rearmed_seconds": active["predicted_rearmed"],
+    }
+
+
+def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
+    """L2's "being stopped" branch: score a session an attempt stop cut short, from
+    its fixture state alone, once its process tree is gone."""
+    if current is None:
+        return None
+    session = wire.session if wire is not None else None
+    return {
+        "session": current["index"],
+        "workload": current["workload"],
+        "requests": session["requests"] if session else None,
+        "verification": verify_session(
+            current["workload"], current["fixture"], None, venv, allowlist
+        ),
+    }
+
+
+def erases_slot(index: int, spec: dict) -> bool:
+    """Every session after the first starts on an erased slot unless its plan keeps the
+    slot to measure cross-session prefix reuse (C3; attempt 04 erased them all)."""
+    return index > 1 and spec.get("erase_slot", True)
+
+
+class RequestExtrema:
+    """Resource extrema of the request in flight (L1).
+
+    Recorded when the request changes and whenever the session loop exits, by any
+    path: a guard stop raised inside ``observe()`` used to drop them.
+    """
+
+    FIELDS = (
+        ("ram_available_min", "ram_available", min),
+        ("vram_free_min", "vram_free", min),
+        ("page_in_max", "hard_page_in_bytes_per_second", max),
+        ("page_out_max", "page_out_bytes_per_second", max),
+        ("gpu_temperature_max", "gpu_temperature", max),
+    )
+
+    def __init__(self, record_event):
+        self.record_event = record_event
+        self.request_id, self.values = None, {}
+
+    def observe(self, request_id, sample) -> None:
+        if request_id != self.request_id:
+            self.close()
+            self.request_id = request_id
+        if request_id is not None and sample is not None:
+            for key, field, pick in self.FIELDS:
+                self.values[key] = pick(
+                    self.values.get(key, sample[field]), sample[field]
+                )
+
+    def close(self) -> None:
+        if self.request_id is not None:
+            self.record_event(
+                "request_resources", request_id=self.request_id, **self.values
+            )
+        self.request_id, self.values = None, {}
+
+
 def session_windows(cal, params, t_load, context, output_cap, period) -> dict:
     """Every time window a session uses, from the throughput model alone (T1, T3).
 
@@ -659,6 +737,7 @@ def session_windows(cal, params, t_load, context, output_cap, period) -> dict:
             "gap": gap_window(cal, params, period),
             "settle": stall["prefill"],
             "hermes_timer": backstop,
+            "probe": probe_window(cal, params, t_load, period),
         }
     window = uncalibrated_stall_window(t_load, params, period)
     return {
@@ -669,6 +748,7 @@ def session_windows(cal, params, t_load, context, output_cap, period) -> dict:
         ),
         "settle": window,
         "hermes_timer": params.stall_multiple * t_load,
+        "probe": probe_window(cal, params, t_load, period),
     }
 
 
@@ -713,7 +793,12 @@ def run_session(index, spec, ctx):
         cal, params, t_load, context, arm["output_cap"], OBSERVATION_PERIOD
     )
     root, home, fixture = fresh_session(attempt, workload)
-    if index > 1 and spec.get("erase_slot", True):
+    interrupt_file_holder["session"] = {
+        "index": index,
+        "workload": workload,
+        "fixture": fixture,
+    }
+    if erases_slot(index, spec):
         # A slot is busy until its current batch ends, even after its client has left.
         if not waiting(lambda: wire.slot_busy(OBSERVATION_PERIOD), windows["settle"]):
             return {"session": index, "attempt_stop": "backend slot did not settle"}
@@ -786,86 +871,74 @@ def run_session(index, spec, ctx):
     cpu = log_size = 0.0
     stop = None
     cancelled = False
-    extrema = {"request_id": None}
-
-    def close_extrema():
-        if extrema["request_id"] is not None:
-            record_event("request_resources", **extrema)
-        extrema.clear()
-        extrema["request_id"] = None
-
-    while driver.poll() is None:
-        sample, _ = observe()
-        now = time.monotonic()
-        active = wire.active
-        current = active["request_id"] if active is not None else None
-        if current != extrema["request_id"]:
-            close_extrema()
-            extrema["request_id"] = current
-        if current is not None and sample is not None:
-            for key, value, pick in (
-                ("ram_available_min", sample["ram_available"], min),
-                ("vram_free_min", sample["vram_free"], min),
-                ("page_in_max", sample["hard_page_in_bytes_per_second"], max),
-                ("page_out_max", sample["page_out_bytes_per_second"], max),
-                ("gpu_temperature_max", sample["gpu_temperature"], max),
-            ):
-                extrema[key] = pick(extrema.get(key, value), value)
-        if wire.failure:
-            stop = f"wire: {wire.failure}"
-            break
-        if ctx["server"].poll() is not None:
-            return {"session": index, "attempt_stop": "backend exited during a session"}
-        if kernel.grew():
-            # Kernel compilation is the backend working with no stream or slot signal.
-            gap_clock.progress(now)
-            if active is not None:
-                active["last_progress"] = now
-        if active is not None:
-            gap_clock.progress(now)
-            window = windows["stall"][active["phase"]]
-            verdict = step_stop(
-                active["started"],
-                active["last_progress"],
-                now,
-                window,
-                windows["request_backstop"],
+    extrema = RequestExtrema(record_event)
+    try:
+        while driver.poll() is None:
+            sample, _ = observe()
+            now = time.monotonic()
+            active = wire.active
+            extrema.observe(
+                active["request_id"] if active is not None else None, sample
             )
-            if verdict == "stall":
-                stop = f"stall in {active['phase']} (window {window:.1f}s)"
+            if wire.failure:
+                stop = f"wire: {wire.failure}"
                 break
-            if verdict == "backstop":
-                stop = "host-derived request backstop reached"
-                break
-            if (
-                workload == "main-cancel"
-                and active["first_token"] is not None
-                and not cancelled
-            ):
-                record_event(
-                    "cancel_trigger",
-                    session=index,
-                    slots=wire.last_slots,
-                    request_id=active["request_id"],
-                )
-                interrupt_file.touch()
-                wire.cancel_active()
-                cancelled = True
-                cancel_at = now
-        else:
-            new_cpu = tree_cpu(driver)
-            size = cli_log.stat().st_size if cli_log.exists() else 0
-            if new_cpu > cpu or size > log_size:
+            if ctx["server"].poll() is not None:
+                return {
+                    "session": index,
+                    "attempt_stop": "backend exited during a session",
+                }
+            if kernel.grew():
+                # Kernel compilation is the backend working with no stream or slot signal.
                 gap_clock.progress(now)
-            cpu, log_size = new_cpu, size
-            if gap_clock.stalled(now):
-                stop = "idle between requests beyond the host-derived gap window"
+                if active is not None:
+                    active["last_progress"] = now
+            if active is not None:
+                gap_clock.progress(now)
+                window = windows["stall"][active["phase"]]
+                verdict = step_stop(
+                    active["started"],
+                    active["last_progress"],
+                    now,
+                    window,
+                    windows["request_backstop"],
+                )
+                if verdict == "stall":
+                    stop = f"stall in {active['phase']} (window {window:.1f}s)"
+                    break
+                if verdict == "backstop":
+                    stop = "host-derived request backstop reached"
+                    break
+                if (
+                    workload == "main-cancel"
+                    and active["first_token"] is not None
+                    and not cancelled
+                ):
+                    record_event(
+                        "cancel_trigger",
+                        session=index,
+                        slots=wire.last_slots,
+                        request_id=active["request_id"],
+                    )
+                    interrupt_file.touch()
+                    wire.cancel_active()
+                    cancelled = True
+                    cancel_at = now
+            else:
+                new_cpu = tree_cpu(driver)
+                size = cli_log.stat().st_size if cli_log.exists() else 0
+                if new_cpu > cpu or size > log_size:
+                    gap_clock.progress(now)
+                cpu, log_size = new_cpu, size
+                if gap_clock.stalled(now):
+                    stop = "idle between requests beyond the host-derived gap window"
+                    break
+            if cancelled and now - cancel_at > CLEANUP_S:
+                stop = "cancelled request did not settle within the cleanup bound"
                 break
-        if cancelled and now - cancel_at > CLEANUP_S:
-            stop = "cancelled request did not settle within the cleanup bound"
-            break
-        time.sleep(LOOP_PERIOD)
-    close_extrema()
+            time.sleep(LOOP_PERIOD)
+    finally:
+        extrema.close()
     if stop and driver.poll() is None:
         interrupt_file.touch()
         wire.cancel_active()
@@ -936,6 +1009,7 @@ def run_session(index, spec, ctx):
         # AC1 coverage is recorded apart from completion: fewer requests is a finding.
         outcome["ac1_request_coverage"] = session["requests"] >= AC1_MIN_REQUESTS
     record_event("session_end", **outcome)
+    interrupt_file_holder.pop("session", None)  # scored above; not cut short
     # The session's whole tree goes before its state is archived, so nothing it started
     # (a background shell, say) outlives it into the next session at the same paths.
     for proc, job, _name in ctx["owned"]:

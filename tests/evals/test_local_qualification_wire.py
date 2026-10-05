@@ -53,6 +53,10 @@ class CaptureBackend:
         self.slots = [_slot(1)]
         self.tool_call = False
         self.finish_reason = "stop"
+        self.malformed = False  # break the stream after the first answer delta
+        self.hold_final_until_polled = False
+        self.request_active = False
+        self.polled_during_request = threading.Event()
         self.first_chunk_sent = threading.Event()
         owner = self
 
@@ -68,7 +72,13 @@ class CaptureBackend:
                 self.wfile.write(data)
 
             def do_GET(self):
-                self._json(owner.slots)
+                # Like the real server: a slot is processing only during a request.
+                if owner.request_active:
+                    owner.polled_during_request.set()
+                self._json([
+                    {**slot, "is_processing": owner.request_active}
+                    for slot in owner.slots
+                ])
 
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -87,18 +97,28 @@ class CaptureBackend:
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.end_headers()
+                owner.request_active = True
                 try:
-                    for chunk in owner.chunks():
+                    chunks = owner.chunks()
+                    for number, chunk in enumerate(chunks, start=1):
+                        if number == len(chunks) and owner.hold_final_until_polled:
+                            owner.polled_during_request.wait(10)
                         self.wfile.write(
                             b"data: " + json.dumps(chunk).encode() + b"\n\n"
                         )
                         self.wfile.flush()
                         owner.first_chunk_sent.set()
+                        if owner.malformed and number == 3:
+                            self.wfile.write(b"data: {not json\n\n")
+                            self.wfile.flush()
+                            return
                         time.sleep(owner.chunk_delay)
                     self.wfile.write(b"data: [DONE]\n\n")
                     self.wfile.flush()
                 except OSError:
                     pass  # the wire hung up (a cancel)
+                finally:
+                    owner.request_active = False
 
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
@@ -340,6 +360,10 @@ def test_slot_counters_are_progress_while_deltas_are_withheld(make_lab):
     sender = threading.Thread(target=lambda: _post(wire, _body(10)))
     sender.start()
     _wait_mid_stream(wire, backend)
+    deadline = time.monotonic() + 10
+    while not (wire.last_slots and wire.last_slots[0]["is_processing"]):
+        assert time.monotonic() < deadline, "the wire never polled the working slot"
+        time.sleep(0.01)
     backend.slots = [_slot(2)]  # the slot keeps decoding behind the stream
     deadline = time.monotonic() + 10
     while (
@@ -357,7 +381,7 @@ def test_receipt_fields_complete_or_named_missing(make_lab):
     backend, wire, records, _consumed = make_lab(
         arm=ARM_THINKING, predictor=lambda uncached, cap: 1.0 + uncached + cap
     )
-    backend.chunk_delay = 0.3  # long enough for the /slots poll to see the slot
+    backend.hold_final_until_polled = True  # the /slots poll sees the working slot
     _post(wire, _body(10))
     request = next(r for r in records if r["kind"] == "request")
     assert request["predicted_initial_seconds"] == 1.0 + 10 + 768  # known at send
@@ -413,3 +437,15 @@ def test_sequential_request_after_done_is_accepted_and_concurrent_is_refused(mak
     first.join()
     assert results == {"a": 200, "b": 409}
     assert "concurrent" in wire.failure
+
+
+def test_a_failing_request_keeps_its_timing_and_predictions(make_lab):
+    """AC7: a request that never completes still records elapsed time and predictions."""
+    backend, wire, records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.malformed = True
+    _post(wire, _body(10))
+    failure = _record(records, "wire_failure")
+    assert failure["request_id"] == 1 and "JSONDecodeError" in failure["error"]
+    assert failure["seconds"] is not None
+    assert failure["predicted_initial_seconds"] == 100.0
+    assert failure["predicted_rearmed_seconds"] is not None

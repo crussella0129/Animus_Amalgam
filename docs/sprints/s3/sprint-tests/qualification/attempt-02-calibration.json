@@ -41,7 +41,16 @@
     "expected_answer": false
    },
    "cancelled": false,
-   "slot_idle_after_cancel": null
+   "slot_idle_after_cancel": null,
+   "stopped": false
+  }
+ ],
+ "machine_time": [
+  {
+   "session": 1,
+   "first_request_s": 80.125,
+   "last_response_s": 140.11,
+   "machine_time_s": 59.985
   }
  ],
  "requests": [
@@ -59,6 +68,8 @@
    "stop_reason": "stopped: RuntimeError: supervisor scheduler lag exceeded two telemetry periods",
    "seconds": 59.985,
    "seconds_source": "receipt timestamps",
+   "started_s": 80.125,
+   "ended_s": 140.11,
    "missing": [
     "id_slot",
     "finish_reason",

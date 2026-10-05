@@ -18,7 +18,44 @@
   "load_seconds": 15.39000000001397,
   "max_supervisor_lag_seconds": 0.3910000000614673
  },
- "sessions": [],
+ "sessions": [
+  {
+   "session": 1,
+   "workload": "long:all",
+   "stopped": true,
+   "requests": 11,
+   "verification": {
+    "score": {
+     "items": {
+      "remove_guard": {
+       "pass": true
+      },
+      "discount": {
+       "pass": true
+      },
+      "total": {
+       "pass": false
+      },
+      "low_stock": {
+       "pass": false,
+       "error": "AttributeError: 'Inventory' object has no attribute 'low_stock'"
+      }
+     },
+     "passed": 2,
+     "of": 4
+    }
+   },
+   "scored": "at publish, from the session's preserved fixture"
+  }
+ ],
+ "machine_time": [
+  {
+   "session": 1,
+   "first_request_s": 32.891,
+   "last_response_s": 794.672,
+   "machine_time_s": 761.781
+  }
+ ],
  "requests": [
   {
    "request_id": 146,
@@ -35,6 +72,7 @@
    "first_event_seconds": 0.0470000000204891,
    "predicted_rearmed_seconds": 255.12432600558893,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 76,
@@ -53,6 +91,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 60
    },
+   "started_s": 32.891,
+   "ended_s": 97.532,
    "missing": [
     "id_slot"
    ]
@@ -72,6 +112,7 @@
    "first_event_seconds": 0.015000000013969839,
    "predicted_rearmed_seconds": 218.80751623675,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 13,
@@ -90,6 +131,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 57
    },
+   "started_s": 98.75,
+   "ended_s": 117.766,
    "missing": [
     "id_slot"
    ]
@@ -109,6 +152,7 @@
    "first_event_seconds": 0.03100000007543713,
    "predicted_rearmed_seconds": 227.16354514123978,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 255,
@@ -127,6 +171,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 58
    },
+   "started_s": 118.125,
+   "ended_s": 256.735,
    "missing": [
     "id_slot"
    ]
@@ -146,6 +192,7 @@
    "first_event_seconds": 0.062000000034458935,
    "predicted_rearmed_seconds": 221.46917213865444,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 23,
@@ -164,6 +211,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 56
    },
+   "started_s": 257.125,
+   "ended_s": 278.422,
    "missing": [
     "id_slot"
    ]
@@ -183,6 +232,7 @@
    "first_event_seconds": 0.030999999959021807,
    "predicted_rearmed_seconds": 216.92194830805218,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 255,
@@ -201,6 +251,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 55
    },
+   "started_s": 278.907,
+   "ended_s": 417.594,
    "missing": [
     "id_slot"
    ]
@@ -220,6 +272,7 @@
    "first_event_seconds": 0.062000000034458935,
    "predicted_rearmed_seconds": 221.7998796045054,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 255,
@@ -238,6 +291,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 57
    },
+   "started_s": 417.922,
+   "ended_s": 552.125,
    "missing": [
     "id_slot"
    ]
@@ -257,6 +312,7 @@
    "first_event_seconds": 0.0470000000204891,
    "predicted_rearmed_seconds": 221.6091912632581,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 59,
@@ -275,6 +331,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 58
    },
+   "started_s": 552.625,
+   "ended_s": 580.829,
    "missing": [
     "id_slot"
    ]
@@ -294,6 +352,7 @@
    "first_event_seconds": 0.0470000000204891,
    "predicted_rearmed_seconds": 216.93794830811365,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 43,
@@ -312,6 +371,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 56
    },
+   "started_s": 581.313,
+   "ended_s": 616.141,
    "missing": [
     "id_slot"
    ]
@@ -331,6 +392,7 @@
    "first_event_seconds": 0.030999999959021807,
    "predicted_rearmed_seconds": 216.62224466712476,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "tool_calls",
    "tool_calls": 1,
    "reasoning_tokens": 238,
@@ -349,6 +411,8 @@
     "page_out_max": 9010401.217454862,
     "gpu_temperature_max": 52
    },
+   "started_s": 616.469,
+   "ended_s": 723.235,
    "missing": [
     "id_slot"
    ]
@@ -368,6 +432,7 @@
    "first_event_seconds": 0.03100000007543713,
    "predicted_rearmed_seconds": 216.96328674139994,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 68,
@@ -386,6 +451,8 @@
     "page_out_max": 0.0,
     "gpu_temperature_max": 54
    },
+   "started_s": 723.922,
+   "ended_s": 775.172,
    "missing": [
     "id_slot"
    ]
@@ -404,6 +471,8 @@
    "stop_reason": "stopped: RuntimeError: RAM or VRAM reserve breached",
    "seconds": 19.156,
    "seconds_source": "receipt timestamps",
+   "started_s": 775.516,
+   "ended_s": 794.672,
    "missing": [
     "id_slot",
     "finish_reason",

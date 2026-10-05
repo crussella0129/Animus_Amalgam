@@ -42,7 +42,8 @@
    },
    "cancelled": false,
    "slot_idle_after_cancel": null,
-   "kernel_cache_growth_bytes": 60930298
+   "kernel_cache_growth_bytes": 60930298,
+   "stopped": false
   },
   {
    "kind": "session_end",
@@ -67,7 +68,8 @@
    },
    "cancelled": false,
    "slot_idle_after_cancel": null,
-   "kernel_cache_growth_bytes": 0
+   "kernel_cache_growth_bytes": 0,
+   "stopped": false
   },
   {
    "kind": "session_end",
@@ -92,7 +94,8 @@
    },
    "cancelled": false,
    "slot_idle_after_cancel": null,
-   "kernel_cache_growth_bytes": 0
+   "kernel_cache_growth_bytes": 0,
+   "stopped": false
   },
   {
    "kind": "session_end",
@@ -115,7 +118,34 @@
    "verification": null,
    "cancelled": true,
    "slot_idle_after_cancel": true,
-   "kernel_cache_growth_bytes": 0
+   "kernel_cache_growth_bytes": 0,
+   "stopped": false
+  }
+ ],
+ "machine_time": [
+  {
+   "session": 1,
+   "first_request_s": 69.703,
+   "last_response_s": 144.453,
+   "machine_time_s": 74.75
+  },
+  {
+   "session": 2,
+   "first_request_s": 149.875,
+   "last_response_s": 163.422,
+   "machine_time_s": 13.547
+  },
+  {
+   "session": 3,
+   "first_request_s": 169.641,
+   "last_response_s": 213.141,
+   "machine_time_s": 43.5
+  },
+  {
+   "session": 4,
+   "first_request_s": 218.641,
+   "last_response_s": 231.25,
+   "machine_time_s": 12.609
   }
  ],
  "requests": [
@@ -134,6 +164,7 @@
    "first_event_seconds": 0.015000000013969839,
    "predicted_rearmed_seconds": null,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 0,
@@ -145,6 +176,8 @@
    "prompt_ms": 68630.705,
    "decode_ms": 6088.785,
    "decode_tps": 0.8211818942531228,
+   "started_s": 69.703,
+   "ended_s": 144.453,
    "missing": [
     "id_slot",
     "predicted_initial_seconds",
@@ -167,6 +200,7 @@
    "first_event_seconds": 0.030999999959021807,
    "predicted_rearmed_seconds": null,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 0,
@@ -178,6 +212,8 @@
    "prompt_ms": 12062.881,
    "decode_ms": 1436.785,
    "decode_tps": 3.479991787219382,
+   "started_s": 149.875,
+   "ended_s": 163.422,
    "missing": [
     "id_slot",
     "predicted_initial_seconds",
@@ -200,6 +236,7 @@
    "first_event_seconds": 0.01600000006146729,
    "predicted_rearmed_seconds": null,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": "stop",
    "tool_calls": 0,
    "reasoning_tokens": 0,
@@ -211,6 +248,8 @@
    "prompt_ms": 12192.419,
    "decode_ms": 31263.465,
    "decode_tps": 3.518483955633197,
+   "started_s": 169.641,
+   "ended_s": 213.141,
    "missing": [
     "id_slot",
     "predicted_initial_seconds",
@@ -233,6 +272,7 @@
    "first_event_seconds": null,
    "predicted_rearmed_seconds": null,
    "id_slot": null,
+   "id_slot_source": null,
    "finish_reason": null,
    "tool_calls": null,
    "reasoning_tokens": null,
@@ -244,6 +284,8 @@
    "prompt_ms": null,
    "decode_ms": null,
    "decode_tps": null,
+   "started_s": 218.641,
+   "ended_s": 231.25,
    "missing": [
     "id_slot",
     "finish_reason",

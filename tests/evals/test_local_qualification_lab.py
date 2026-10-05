@@ -20,6 +20,7 @@ sys.path.insert(0, str(LAB_DIR))
 import driver  # noqa: E402
 import policy  # noqa: E402
 import prepare  # noqa: E402
+import publish  # noqa: E402
 import run  # noqa: E402
 import screen  # noqa: E402
 import verify_long  # noqa: E402
@@ -416,7 +417,7 @@ def test_session_windows_scale_with_the_host_rates():
     fast_w = run.session_windows(fast, run.TimeParams(), 15.0, 32768, 768, 0.0)
     for phase in ("pre_first_event", "prefill", "decode"):
         assert fast_w["stall"][phase] == pytest.approx(slow_w["stall"][phase] / 2)
-    for key in ("request_backstop", "hermes_timer", "settle"):
+    for key in ("request_backstop", "hermes_timer", "settle", "probe"):
         assert fast_w[key] == pytest.approx(slow_w[key] / 2)
     # The gap window is CLI start-up work, measured on the host, not token work.
     assert fast_w["gap"] == slow_w["gap"]
@@ -472,18 +473,18 @@ def test_every_supervisor_wait_keeps_observing():
     )
     assert len(ticks) == ready_after
     observed = []
-    assert not run.wait_while(lambda: True, 0.05, lambda: observed.append(1), 0.01)
-    assert observed  # the guards kept running until the timeout
+    assert not run.wait_while(lambda: True, 2.0, lambda: observed.append(1), 0.01)
+    assert len(observed) > 1  # the guards kept running until the timeout
 
 
 def test_only_the_planned_session_keeps_its_slot():
-    """Attempt 04: a blanket erase before every session made C3 unmeasurable."""
+    """Attempt 04: a blanket erase before every session made C3 unmeasurable. The
+    decision is ``run.erases_slot``, the one ``run_session`` makes."""
     arms = json.loads((LAB_DIR / "arms.json").read_text(encoding="utf-8"))
-    for plan_name, kept in (("calibration", [2]), ("screen", [2])):
+    for plan_name, kept in (("calibration", 2), ("screen", 2), ("R1", None)):
         sessions = prepare.resolve_sessions(arms, arms["attempt_plans"][plan_name])
-        assert [
-            i for i, s in enumerate(sessions, start=1) if not s["erase_slot"]
-        ] == kept
+        erased = [run.erases_slot(i, spec) for i, spec in enumerate(sessions, start=1)]
+        assert erased == [i > 1 and i != kept for i in range(1, len(sessions) + 1)]
 
 
 # C2 fails closed (C-009) ------------------------------------------------------------------
@@ -579,3 +580,156 @@ def test_tool_call_validity_names_bad_arguments_and_unknown_tools():
         {"name": "terminal", "arguments_valid": False, "known_tool": True},
         {"name": "browser", "arguments_valid": True, "known_tool": False},
     ]
+
+
+# Stop paths (critique round 2) ------------------------------------------------------------
+
+
+def test_stopped_request_keeps_its_cause_timing_and_predictions():
+    active = {
+        "request_id": 7,
+        "started": 100.0,
+        "predicted_initial": 50.0,
+        "predicted_rearmed": 40.0,
+    }
+    assert run.stopped_request(active, "stopped: RAM reserve", 130.5) == {
+        "request_id": 7,
+        "reason": "stopped: RAM reserve",
+        "seconds": 30.5,
+        "predicted_initial_seconds": 50.0,
+        "predicted_rearmed_seconds": 40.0,
+    }
+
+
+def test_request_extrema_are_recorded_when_a_guard_stops_the_loop():
+    """A guard raising inside observe() used to drop the in-flight request's extrema."""
+    recorded = []
+    extrema = run.RequestExtrema(lambda kind, **data: recorded.append((kind, data)))
+    sample = {
+        "ram_available": 6 << 30,
+        "vram_free": 2 << 30,
+        "hard_page_in_bytes_per_second": 1e6,
+        "page_out_bytes_per_second": 0.0,
+        "gpu_temperature": 55,
+    }
+    with pytest.raises(RuntimeError):
+        try:
+            extrema.observe(9, sample)
+            extrema.observe(9, {**sample, "ram_available": 5 << 30})
+            raise RuntimeError("RAM or VRAM reserve breached")
+        finally:
+            extrema.close()
+    assert recorded == [
+        (
+            "request_resources",
+            {
+                "request_id": 9,
+                "ram_available_min": 5 << 30,
+                "vram_free_min": 2 << 30,
+                "page_in_max": 1e6,
+                "page_out_max": 0.0,
+                "gpu_temperature_max": 55,
+            },
+        )
+    ]
+
+
+def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
+    fixture = tmp_path / "live" / "fixture"
+    shutil.copytree(verify_long.TASK / "fixture", fixture)
+    _apply_reference(fixture, 3)
+
+    class Wire:
+        session = {"requests": 6}
+
+    current = {"index": 2, "workload": "long:all", "fixture": fixture}
+    stopped = run.stopped_session(
+        current, Wire(), TASK_PYTHON.parent.parent, session[1]
+    )
+    assert stopped["session"] == 2 and stopped["requests"] == 6
+    assert stopped["verification"]["score"]["passed"] == 1
+    assert (
+        run.stopped_session(None, Wire(), TASK_PYTHON.parent.parent, session[1]) is None
+    )
+
+
+def _attempt(
+    tmp_path, events, reason="stopped: RuntimeError: RAM or VRAM reserve breached"
+):
+    attempt = tmp_path / "attempt-01-x"
+    attempt.mkdir()
+    (attempt / "events.jsonl").write_text(
+        "\n".join(json.dumps(e) for e in events) + "\n"
+    )
+    (attempt / "outcome.json").write_text(json.dumps({"reason": reason}))
+    (attempt / "manifest.json").write_text(json.dumps({"id": "abc", "plan": "R2"}))
+    return attempt
+
+
+REQUEST = {
+    "kind": "request",
+    "at": 10.0,
+    "request_id": 1,
+    "session": 1,
+    "input_tokens": 99,
+    "prompt_sha256": "p",
+    "system_sha256": "s",
+    "tools_sha256": "t",
+    "continuation_of_length_finish": False,
+    "predicted_initial_seconds": 50.0,
+}
+STOPPED = {
+    "kind": "request_stopped",
+    "at": 40.0,
+    "request_id": 1,
+    "reason": "stopped: RAM",
+    "seconds": 30.0,
+    "predicted_initial_seconds": 50.0,
+    "predicted_rearmed_seconds": 45.0,
+}
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        {
+            "kind": "wire_failure",
+            "at": 41.0,
+            "request_id": 1,
+            "error": "ConnectionAbortedError",
+        },
+        {"kind": "response_cancelled", "at": 41.0, "request_id": 1, "seconds": 31.0},
+    ],
+)
+def test_a_stopped_request_stays_stopped_whatever_lands_after(tmp_path, after):
+    resources = {
+        "kind": "request_resources",
+        "at": 39.0,
+        "request_id": 1,
+        "ram_available_min": 5,
+    }
+    record = publish.receipts(_attempt(tmp_path, [REQUEST, resources, STOPPED, after]))
+    (request,) = record["requests"]
+    assert request["outcome"] == "stopped" and request["stop_reason"] == "stopped: RAM"
+    assert request["seconds"] == 30.0  # the stop's own timing, not the later record's
+    assert request["predicted_initial_seconds"] == 50.0
+    assert request["predicted_rearmed_seconds"] == 45.0
+    assert request["resources"] == {"ram_available_min": 5}
+    assert record["machine_time"] == [
+        {
+            "session": 1,
+            "first_request_s": 0.0,
+            "last_response_s": 30.0,
+            "machine_time_s": 30.0,
+        }
+    ]
+
+
+def test_publish_scores_a_cut_short_session_from_its_fixture(tmp_path):
+    started = {"kind": "session_start", "at": 5.0, "session": 1, "workload": "long:all"}
+    attempt = _attempt(tmp_path, [started, REQUEST, STOPPED])
+    shutil.copytree(verify_long.TASK / "fixture", attempt / "live" / "fixture")
+    record = publish.receipts(attempt, TASK_PYTHON)
+    (session,) = record["sessions"]
+    assert session["stopped"] and session["requests"] == 1
+    assert session["verification"]["score"]["passed"] == 0

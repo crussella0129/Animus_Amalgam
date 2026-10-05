@@ -19,6 +19,7 @@
   "max_supervisor_lag_seconds": 0.0
  },
  "sessions": [],
+ "machine_time": [],
  "requests": [],
  "events": [
   {

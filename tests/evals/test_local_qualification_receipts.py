@@ -124,3 +124,52 @@ def test_stopped_requests_keep_their_cause_and_elapsed_time(receipt):
     for request in _load(receipt)["requests"]:
         if request.get("outcome") == "stopped":
             assert request["stop_reason"] and request["seconds"] is not None
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_completed_calibrated_requests_carry_timing_predictions_and_resources(receipt):
+    """AC7 and L1 by presence, not by being named: every request completed after
+    calibration has its actual and predicted time and its resource extrema."""
+    record = _load(receipt)
+    if not _manifest(record)["calibration_record"]:
+        return  # the calibration attempt predicts nothing yet
+    for request in record["requests"]:
+        if request.get("outcome") == "response_end":
+            for field in (
+                "seconds",
+                "predicted_initial_seconds",
+                "predicted_rearmed_seconds",
+                "resources",
+            ):
+                assert request.get(field) is not None, (request["request_id"], field)
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_machine_time_is_recomputable_from_the_receipt(receipt):
+    record = _load(receipt)
+    for span in record["machine_time"]:
+        ended = [
+            r
+            for r in record["requests"]
+            if r["session"] == span["session"] and r["ended_s"] is not None
+        ]
+        assert span["first_request_s"] == min(r["started_s"] for r in ended)
+        assert span["last_response_s"] == max(r["ended_s"] for r in ended)
+        assert span["machine_time_s"] == pytest.approx(
+            span["last_response_s"] - span["first_request_s"], abs=1e-3
+        )
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_attempt_stopped_long_sessions_are_scored(receipt):
+    """L2's "being stopped" branch: a long session an attempt stop cut short is scored
+    from its fixture state."""
+    record = _load(receipt)
+    if not record["outcome"]["reason"].startswith("stopped:"):
+        return
+    started = [e for e in record["events"] if e["kind"] == "session_start"]
+    if not started or not started[-1]["workload"].startswith("long"):
+        return
+    scored = {s["session"]: s for s in record["sessions"]}
+    session = scored[started[-1]["session"]]
+    assert session["verification"]["score"]["of"] == 4
