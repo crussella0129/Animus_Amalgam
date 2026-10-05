@@ -11,13 +11,15 @@
   [`qualification/`](qualification/).
 - **Ordering:** every live result below predates the operational confidence
   record (2026-10-04T01:58Z, `210d043a2a`). The one exception is the T5
-  bring-up replay, which is model-free and was re-run after each critique
-  round.
+  bring-up replay, which is model-free and was re-run after critique rounds
+  1 and 2. Round 3 changed nothing the bring-up runs.
 - **Machine time:** first request to last response, excluding load (the
   screen's locked definition), published per session in each receipt
   (`machine_time`). The O1 figures divide the machine time of every attempt
   of a run by the items those attempts verified. Sessions cut short by an
-  attempt stop are scored from their preserved fixture (L2).
+  attempt stop are scored from their preserved fixture (L2) and screened
+  (L4) from the conversation their last request forwarded. None was
+  flagged.
 
 | Plan test | EARS | Attempt | Result |
 |---|---|---|---|
@@ -30,7 +32,7 @@
 | `live_sampling_screen` | S1–S3 | 06 | **Pass.** Six configurations ran turns 1–3. Greedy was selected in both modes (off 259 s, on 515 s per verified item). off-vendor failed, contaminated twice. Reported as single seeded screening runs. |
 | `live_full_run_R0` | L1, L2, L4, O1 | 07 (stopped), 08 | **4/4 verified**, 18 requests (AC1 coverage not met). Per verified item: 205.3 s across all attempts (attempt 07 cut short at 3 requests, 0 verified from its preserved fixture), 180.2 s on the completed run. |
 | `live_full_run_R1` | L1, L2, L4, O1, O2 | 09 | **4/4 verified**, 20 requests (AC1 coverage met), 345.4 s per verified item. Every continued request rolls back the previous turn (median uncached 161). |
-| `live_full_run_R2` | L1, L2, L4, O1, O2 | 10–12 (stopped), 13 | **4/4 verified**, 18 requests. Per verified item: 384.3 s across all attempts (attempts 10, 11 and 12 verified 3, 0 and 2), 352.6 s on the completed run. Append-only (median uncached 60), except after a budget-truncated think block (all 5 large rollbacks). |
+| `live_full_run_R2` | L1, L2, L4, O1, O2 | 10–12 (stopped), 13 | **4/4 verified**, 18 requests. Per verified item: 384.3 s across all attempts (attempts 10, 11 and 12 verified 3, 0 and 2; attempt 12's two were screened clean at publish), 352.6 s on the completed run. Excluding attempt 12's two items gives 494.0 s; dividing by one run's 4 items gives 864.6 s. Append-only (median uncached 60), except after a budget-truncated think block (all 5 large rollbacks). |
 | R3 (density) | O3 | — | **Not run, by rule.** R1's median uncached count (161) does not exceed 2,000. |
 | `operational_repair_replay` | O4 | ledger | **Pass.** Every in-scope failure is linked to its diagnosis, repair commit and replay (the provenance table in the ledger). |
 | Prediction accuracy | O5, AC7 | all | 169 post-calibration requests. On the 165 completed requests, rearmed predicted/actual had a median of 4.34 (p10 1.56, p90 11.5), with one 9% under-prediction (a full-cap decode at about 8K context). The 4 attempt-stopped requests keep their stop cause and elapsed time; the pre-repair wire never recorded their predictions. Every stall and stop is listed in the ledger. |

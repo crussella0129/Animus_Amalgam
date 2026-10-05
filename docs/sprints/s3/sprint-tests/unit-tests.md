@@ -1,13 +1,14 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `1fca1a3095` (after critique round 2).
+- **Tested head:** `4f323770ee` (after critique round 3).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-05T20:35:10Z, covering the six
-  Sprint 3 formal files: **217 passed, 0 failed**. Runner log sha256
-  `72fefa4574746c93c5cb57ed10779342fd33e32854ee726cc9d55d9eb4061a34`. The
-  earlier run at `efeb4ef4c4` passed 171 (log `13bd883f…`). The logs are kept
+- **Final formal run (V1):** started 2026-10-05T21:09:07Z, covering the six
+  Sprint 3 formal files: **223 passed, 0 failed**. Runner log sha256
+  `bc3e1d5fa1263e53a188fced8fcd10976ec8f94b06a72969bb662daaffee07a0`. The
+  earlier runs at `1fca1a3095` and `efeb4ef4c4` passed 217 (log
+  `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
   with the lab (`<lab>/formal/`) and are not published, because tracebacks
   can contain local paths. The same set passed twice in a row with file
   retries off.
@@ -28,7 +29,7 @@
 | `test_no_window_is_shorter_than_the_observation_floor` | H2 | pass | On a near-infinitely fast host, every window equals 4 observation periods. |
 | `test_windows_scale_inversely_with_host_rate` (3) | H3 | pass | Scaling the rates by s scales the stall windows, backstop and sprint budget by 1/s (overhead terms zeroed). |
 | `test_session_windows_scale_with_the_host_rates` | T1, T3 | pass | Every session window comes from `run.session_windows`. Doubling the rates halves the stall windows, request backstop, settle window, Hermes timer and backend probe timeout (`probe_window`). The gap window follows the measured CLI start-up instead. |
-| `test_uncalibrated_windows_come_from_the_measured_load` | T1, T3 | pass | Before calibration, the windows are proportional to the attempt's own load time, with no backstop. They never fall below 4 observation periods (the retained cadence). |
+| `test_uncalibrated_windows_come_from_the_measured_load` | T1, T3 | pass | **Regression (round 3).** Before calibration, the windows, the backend probe timeout included, are proportional to the attempt's own load time, with no backstop. None falls below 4 observation periods (the retained cadence). During the load itself, the probe timeout is that floor. |
 | `test_stop_predicates_fire_at_boundary` | T2 | pass | Stale telemetry (3 periods), supervisor lag (2 periods), the launch cap, the request cap, the sprint budget (none during calibration) and load progress each flip exactly at their boundary. |
 | `test_arm_manifest_drives_server_flags` | M1 | pass | Context, checkpoints, min-step and trace verbosity come from the profile; spec is none; there is no `--predict`. |
 | `test_launch_flags_reproduce_the_published_full_run_argv` | M1 | pass | `launch_flags` reproduces the published R2 manifest's flags exactly. |
@@ -53,9 +54,12 @@
 | `test_contaminated_twice_is_a_failure_and_once_is_excluded` | L4, S2 | pass | One flag excludes the session (the re-run counts); two flags make the arm a failure with 0 verified items. |
 | `test_stopped_request_keeps_its_cause_timing_and_predictions` | AC7, M3 | pass | The `request_stopped` receipt carries the stop cause, elapsed time and both predictions. |
 | `test_request_extrema_are_recorded_when_a_guard_stops_the_loop` | L1 | pass | **Regression (round 2).** When a guard raises inside the loop, the in-flight request's resource extrema are still recorded, with the running minimum and maximum. |
-| `test_a_cut_short_session_is_scored_from_its_fixture` | L2 | pass | A session an attempt stop cut short is scored from its fixture: 1 verified after turn 3, with its request count. |
+| `test_a_cut_short_session_is_scored_from_its_fixture` | L2 | pass | A session an attempt stop cut short is scored from its fixture: 1 verified after turn 3, with its request count and an empty L4 screen. |
+| `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. |
+| `test_scoring_a_cut_short_session_never_raises_into_the_stop_path` | L2, AC7 | pass | **Regression (round 3).** When scoring raises, `stopped_session` returns the session with the error as its verification. `run.bounded` returns `None` past its bound and the result within it. |
 | `test_a_stopped_request_stays_stopped_whatever_lands_after` (2) | AC7, M3 | pass | **Regression (round 2).** After `request_stopped`, a later `wire_failure` or `response_cancelled` keeps the stopped outcome, its cause, its own timing, both predictions and the resources. Machine time is computed. |
-| `test_publish_scores_a_cut_short_session_from_its_fixture` | L2 | pass | Publishing scores a cut-short session from its preserved fixture. |
+| `test_publish_scores_and_screens_a_cut_short_session` (2) | L2, L4 | pass | **Regression (round 3).** Publishing scores a cut-short session from its preserved fixture and screens its last request's conversation: clean when it runs the check, flagged when it reads outside the fixture. |
+| `test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause` | AC7, M3 | pass | **Regression (round 3, attempt 02).** An aborted request takes its own session's recorded stop as its cause. A failure in a session that ended without a stop stays a wire failure, and only a request in flight at the attempt stop takes the attempt's reason, timed from its receipts. |
 
 ## Regressions proven red on the pre-repair revision (V2)
 
@@ -68,7 +72,7 @@ earliest bases could be collected; the committed tests are unchanged.
 | cancel returns promptly, recorded as a cancel | `714f5afd4f` | `e4b2b7df1b` | **Behavior:** no `response_cancelled`, and the wire could not settle (the attempt-02 freeze). |
 | cancelled and stopped requests keep their timing | `efeb4ef4c4` | `0cd28ab8cc` | **Behavior:** the cancel record had no predictions. |
 | slot identified from `/slots` | `efeb4ef4c4` | `0cd28ab8cc` | **Behavior:** no prediction at send, and no `id_slot` without a streamed one. |
-| per-session erase | `32a1d3342b` | `f09d3863a0` | **Schema:** the manifest had no per-session erase field (`KeyError: 'erase_slot'`), so every session was erased. Now asserted through `run.erases_slot`, the decision `run_session` makes. |
+| per-session erase | `32a1d3342b` | `f09d3863a0` | **API:** the committed test calls `run.erases_slot`, which the base lacks. The defect, every session erased because the manifest had no per-session erase field, is evidenced live by attempt 04. |
 | observing waits | `714f5afd4f` | `e4b2b7df1b` | **API:** there was no module-level `wait_while`; the old inline waits skipped `observe()`. The defect is evidenced live by attempt 02's lag stop. |
 | stopped outcome survives a later record | `1fca1a3095` | `efeb4ef4c4` | **Behavior:** a later `response_cancelled` relabelled the stopped request (and there was no `machine_time`). |
 | failing request keeps its timing | `efeb4ef4c4` | `0cd28ab8cc` | **Behavior:** the `wire_failure` record had no `seconds`. |
@@ -83,9 +87,26 @@ earliest bases could be collected; the committed tests are unchanged.
 | fixed live session paths | `32a1d3342b` | `f09d3863a0` | **API:** the per-index signature produced a new path per session. |
 | telemetry writer survives a held file | `bead0e57aa` | `d33c1e4371` | **API:** no `publish`; the old writer raised. |
 | admission headroom from the receipt | `e062f5ee9d` | `4e6148c5ff` | **API:** the old signature took the sample from the caller (the attempt-04 class). |
+| aborted request takes its own session's stop | `4f323770ee` | `4a039353ac` | **Behavior:** the stall-stopped request took the attempt's later lag cause. |
+| published cause matches the session's stop | `4f323770ee` | `4a039353ac` | **Behavior:** attempt 02's request 1 was published with the lag cause, not its stall. |
+| cut-short session screened from its last conversation | `4f323770ee` | `4a039353ac` | **Behavior:** the screen saw no conversation, so `../../secret` was not flagged. |
+| stop-path scoring never raises | `4f323770ee` | `4a039353ac` | **Behavior:** the scoring error propagated out of `stopped_session`. |
+| probe timeout floored before calibration | `4f323770ee` | `4a039353ac` | **Behavior:** the probe timeout was 0 s at a zero load time, below the observation floor. |
+| publish screens a cut-short session | `4f323770ee` | `4a039353ac` | **API:** the at-publish verification had no `contamination`. |
+| published stopped sessions screened | `4f323770ee` | `4a039353ac` | **API:** the published receipts of attempts 05, 07, 11 and 12 had no `contamination`. |
+| live in-flight stop receipt | `4f323770ee` | `4a039353ac` | **API:** the wire session had no `last_messages`; the stop receipt itself read the live `Wire.active` correctly at base. |
+| delivered tool calls in the screened conversation | `4f323770ee` | `4a039353ac` | **API:** the wire session had no `last_messages`. |
 
-For the API and schema reds, the defect itself is evidenced live by the
-attempt that found it (02, 04, 07, 11 and 12). The test pins the repaired
-contract. `launch_flags`, `read_sample`, `session_windows`, `probe_window`
+V2 covers 27 regressions: 16 red on the behavior assertion and 11 on an
+API the repair introduced. For the API reds of rounds 1 and 2, the defect
+itself is evidenced live by the attempt that found it (02, 04, 07, 11 and
+12); the test pins the repaired contract. The round-3 API reds are the new
+L4 fields that the round-3 behavior reds depend on.
+
+In the round-3 worktree, the base copy of
+`test_session_env_is_private_and_repository_free` also failed. The worktree
+sat inside the owner's `TEMP`, which breaks the test's premise that the
+repository is outside it. The failure is an artifact of where the worktree
+was, not a regression, and the test passes in the checkout. `launch_flags`, `read_sample`, `session_windows`, `probe_window`
 and `step_stop` are behavior-preserving T-214 seams; their reds on older
 bases are missing attributes, not defects.

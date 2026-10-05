@@ -703,10 +703,12 @@ scores the fixture that the stop preserved in `<attempt>/live`:
 
 | Attempt | Session | Requests | Verified |
 |---|---|---|---|
-| 05 | screen session 3 | — | 0 |
+| 05 | screen session 3 | 3 | 0 |
 | 07 | R0 | 3 | 0 |
 | 11 | R2 | 3 | 0 |
-| 12 | R2 | 10 | **2** |
+| 12 | R2 | 11 | **2** |
+
+(Request counts corrected in round 3; see below.)
 
 **Further lab changes after confidence** (not replayed live, covered by the
 formal tests at `1fca1a3095`):
@@ -716,18 +718,59 @@ formal tests at `1fca1a3095`):
 - `erases_slot`;
 - `probe_window`, which derives the backend probe timeout.
 
-Requests stopped in attempts 11 and 12, before `RequestExtrema` existed,
-name their resource extrema as missing.
+Requests stopped in attempts 02, 05, 07, 11 and 12, before
+`RequestExtrema` existed, name their resource extrema as missing (corrected
+in round 3).
 
-**Plan deviation: the retained fixed values.** The locked plan retained
-only the cadences and the 2 s grace and 5 s cleanup. The Test phase listed
-every other fixed bound with its reason in the lab README:
+**Plan deviation: the retained fixed values** (restated in round 3). The
+locked plan retained the cadences and the guards counted in them, the 2 s
+grace and 5 s cleanup, the wire's 1 s lock handoff and the `git` tool
+timeouts. The Test phase listed every other fixed bound with its reason in
+the lab README:
 
 - the telemetry writer retry;
 - the `nvidia-smi` query;
 - the verifier process and thread bounds;
-- the `git` identity probes;
 - one-time venv creation;
-- the wire-close settle.
+- the backend listener check after cleanup (0.2 s).
 
 None of these bounds token work.
+
+## Test-phase corrections (critique round 3)
+
+These are recorded in response to [critique-03](critique-03.md). The code
+changes are at `4f323770ee`. They were not replayed live, because no launch
+envelope remains. The publish changes ran over every real attempt, and
+all 13 receipts were republished.
+
+**Stop causes.** Attempt 02's only request was stopped by its session's
+stall rule (`stall in prefill (window 47.0s)`). The attempt itself stopped
+later, on scheduler lag. The receipt had given the request the attempt's
+cause. It now carries its own session's stop, and only a request in flight
+at the attempt stop takes the attempt's reason.
+
+**Cut-short sessions screened (L4).** Each cut-short session was screened
+from the conversation its last request forwarded. In all four, that
+request was in flight at the stop, so no executed tool call came after it:
+
+| Attempt | Session | Requests | Messages screened | Tool calls | Flagged |
+|---|---|---|---|---|---|
+| 05 | screen session 3 | 3 | 6 | 2 | none |
+| 07 | R0 | 3 | 6 | 2 | none |
+| 11 | R2 | 3 | 6 | 2 | none |
+| 12 | R2 | 11 | 22 | 6 | none |
+
+Going forward, the wire also keeps the response it last delivered, so a
+stop between requests screens the tool calls Hermes may already have run.
+
+**O1 under every reading.** Machine time per verified item:
+
+| Run | Completed run only | All attempts, all items verified (O1) | All attempts, cut-short items excluded | All attempts ÷ one run's 4 items |
+|---|---|---|---|---|
+| R0 | 180.2 s | **205.3 s** | 205.3 s | 205.3 s |
+| R1 | 345.4 s | **345.4 s** | 345.4 s | 345.4 s |
+| R2 | 352.6 s | **384.3 s** | 494.0 s | 864.6 s |
+
+R0 < R1 < R2 under every reading. Attempt 12's two items now pass L4, so
+O1 counts them; the other columns show what excluding them, or
+reading the round-1 denominator, would give.

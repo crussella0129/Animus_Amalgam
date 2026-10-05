@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `1fca1a3095`, after
-two critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `4f323770ee`, after
+three critique rounds.
 
 ## Intent Verification
 
@@ -20,7 +20,7 @@ two critique rounds.
 | AC4 — MTP | Deferred to T-217. | — |
 | AC5 — compression | Deferred to T-219. | — |
 | AC6 — default local policy with evidence | **Met for the settings measured.** | [`local-operating-policy.md`](../../../lineage/local-operating-policy.md) ranks by machine time per verified item, with failures in the denominators and receipt links. The live profile is unchanged (P2). |
-| AC7 — host-derived deadlines, stall rule, backstop, predicted vs actual, stops recorded as failures | **Met on the lab route.** The Hermes-side deadlines are T-219. | The T-215 unit tests (H1–H3), including `step_stop`'s backstop and stall decisions. Live, only stalls and resource guards stopped work, and no backstop was reached. All 165 completed post-calibration requests carry predicted and actual time and resource extrema, asserted by presence. The 4 attempt-stopped requests keep their stop cause and elapsed time, but their predictions (and, in attempts 11 and 12, their extrema) were not recorded by the pre-repair lab. The repaired lab keeps both on every stop path (`stopped_request`, `RequestExtrema`), and both paths are tested. |
+| AC7 — host-derived deadlines, stall rule, backstop, predicted vs actual, stops recorded as failures | **Met on the lab route.** The Hermes-side deadlines are T-219. | The T-215 unit tests (H1–H3), including `step_stop`'s backstop and stall decisions. Live, only stalls and resource guards stopped work, and no backstop was reached. All 165 completed post-calibration requests carry every L1 field, asserted by presence; `id_slot` is named missing because b10964 does not stream it. The 4 attempt-stopped requests after calibration (attempts 05, 07, 11 and 12) keep their own stop cause and elapsed time, but the pre-repair lab recorded neither their predictions nor their extrema. Attempt 02's stall-stopped calibration request also lacks extrema. The repaired lab keeps both on every stop path (`stopped_request`, `RequestExtrema`), and both paths are tested. |
 
 ### INT-0004 — bounded local-model qualification
 
@@ -35,8 +35,8 @@ two critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **217 passed, 0 failed** across six files at `1fca1a3095`. Runner log sha256 `72fefa45…`, started 2026-10-05T20:35:10Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
-| Regressions red on base (V2) | All 18 failed on their repair's parent revision. 11 failed on the behavior assertion itself, 1 on a missing schema field, and 6 because the repair introduced the API. Each of the 7 non-behavioral defects is evidenced live by the attempt that found it. |
+| Formal unit and integration | **223 passed, 0 failed** across six files at `4f323770ee`. Runner log sha256 `bc3e1d5f…`, started 2026-10-05T21:09:07Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Regressions red on base (V2) | All 27 failed on their repair's parent revision. 16 failed on the behavior assertion itself and 11 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 4 of round 3 are the new L4 fields that its behavior reds depend on. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
 | Live-profile fingerprints (P2) | `config.yaml` `a48b4add…` and `presets.ini` `bb35c72d…` match the Sprint 3 baseline. |
 
@@ -54,6 +54,10 @@ regression:
    dropped the in-flight request's resource extrema; and sessions cut short
    by an attempt stop were never scored** (`1fca1a3095`): critique-02
    C-001, C-002 and C-005.
+5. **An aborted request took the attempt's later, unrelated cause; cut-short
+   sessions were never L4-screened; stop-path scoring could raise past the
+   ledger charge; and the probe timeout had no floor before calibration**
+   (`4f323770ee`): critique-03 C-001, C-002, C-003 and C-005.
 
 ## Concern dispositions (critique round 1)
 
@@ -90,17 +94,30 @@ was addressed:
 | C-006: sub-2 s and sleep-based synchronization | **Fixed.** The `wait_while` timeout case uses 2 s. The capture backend reports a slot as processing only during a request and holds its final chunk until a poll is served, and the slots test waits until the wire has seen the working slot. |
 | C-007: stale completion records; R1 rounding; unpublished inputs | **Fixed.** The completion entries for T-214, T-216 and T-221 carry corrections. Receipts publish per-request relative times and per-session machine time. The O1 figures are recomputed from them, divided by the items every attempt verified. R1 is 345.4 s under both readings. |
 
+## Concern dispositions (critique round 3)
+
+[critique-03](critique-03.md) returned `block` with 6 concerns:
+
+| Concern | Response |
+|---|---|
+| C-001: attempt 02's stall-stopped request published with the attempt's later cause | **Fixed.** An aborted request takes its own session's recorded stop as its cause. Only a request in flight at the attempt stop takes the attempt's reason. Attempt 02's request 1 now reads `stall in prefill (window 47.0s)`. The receipt test asserts the cause equals the session's stop or the attempt's reason (red on base), and a publish test covers all three cases. |
+| C-002: cut-short sessions never L4-screened, yet counted in O1 | **Fixed.** The wire keeps the conversation it last forwarded plus the response it last delivered, and the stop path screens it. Publish screened attempts 05, 07, 11 and 12 from their last request's conversation, each stopped in flight: none was flagged. Tests flag a contaminated cut-short session on both paths. O1 is reported under every reading: R2 is 384.3 s with attempt 12's screened items, 494.0 s without them and 864.6 s divided by one run's 4 items. R0 < R1 < R2 under each. |
+| C-003: stop-path seams tested on hand-built inputs; scoring unguarded in `finally` | **Fixed.** A wire test feeds the live `Wire.active` into `stopped_request` mid-stream. Stop-path scoring is bounded by `VERIFY_S` and never raises: an error or overrun is recorded as the session's verification, and the ledger charge and outcome follow. |
+| C-004: L1 presence covered only part of L1 | **Fixed.** Every L1 field is asserted present on completed calibrated requests. `id_slot` must be named missing, since these receipts predate the `/slots` correlation. |
+| C-005: records misstated the evidence and the plan | **Fixed.** Extrema are missing in attempts 02, 05, 07, 11 and 12. The request counts are 3 (attempt 05) and 11 (attempt 12). The erase red is restated as API, making V2 16 behavioral and 11 API. The plan already retained the `git` timeouts and the 1 s lock handoff; the deviation is restated below with the 0.2 s listener check added. The uncalibrated probe window is asserted, and now keeps the observation floor. |
+| C-006: the capture backend released its final chunk before the wire had necessarily seen the slot | **Fixed.** The final chunk is released only after the test observes `slot_seen`. The wire file passed 4 runs in a row with retries off. |
+
 ## Plan deviation: retained fixed values
 
-The build plan retained only the observation cadences and the 2 s grace and
-5 s cleanup. The Test phase found and kept further fixed bounds:
+The build plan retained the observation cadences and the guards counted in
+them, the 2 s grace and 5 s cleanup, the wire's 1 s lock handoff and the
+`git` tool timeouts. The Test phase found and kept further fixed bounds:
 
 - the telemetry writer retry (half a sample period);
 - the `nvidia-smi` query (2 s);
 - the hidden verifier's process and thread bounds (60 and 120 s);
-- the `git` identity probes (10 s);
 - one-time venv creation (600 s);
-- the wire-close settle (1 s).
+- the backend listener check after cleanup (0.2 s).
 
 Each bounds process start-up, I/O or polling, never token work. They are
 listed with their reasons in the lab README. Every window that scales with

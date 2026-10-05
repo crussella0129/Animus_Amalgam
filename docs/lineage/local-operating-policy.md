@@ -36,7 +36,11 @@ shown beside it.
 | 2 | Thinking on, budget 256, greedy, echo off (R1) | 4/4 | 20 | **345.4 s**, 1,058.3 tokens | 345.4 s, 1,058.3 tokens | attempt 09 |
 | 3 | Thinking on, budget 256, greedy, **echo on** (R2) | 4/4 | 18 | **384.3 s**, 1,171.6 tokens | 352.6 s, 1,150.8 tokens | attempts 10 (wire defect, 3 verified), 11 (host maintenance, 0), 12 (owner apps, 2), 13 |
 
-The order is the same under both readings. R2's all-attempts figure is
+The order is the same under every reading. Attempt 12's two items came
+from a session cut short by a resource stop, scored from its fixture and
+screened clean (L4) at publish. Excluding them puts R2 at 494.0 s;
+dividing all of R2's machine time by one run's 4 items gives 864.6 s. R2's
+all-attempts figure is
 raised by one repaired lab defect and two host resource stops, not by echo.
 On the completed runs, echo was within 2% of R1.
 
