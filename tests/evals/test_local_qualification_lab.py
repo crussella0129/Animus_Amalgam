@@ -430,6 +430,10 @@ def test_uncalibrated_windows_come_from_the_measured_load():
     long = run.session_windows(None, params, 20.0, 32768, 512, 0.5)
     assert long["stall"]["prefill"] == 2 * short["stall"]["prefill"] == 20.0
     assert long["hermes_timer"] == 2 * short["hermes_timer"]
+    # Plan deviation: the calibration session's own T_cli reaches the supervisor only
+    # in the driver's result, after the session; the gap stands on the load time too.
+    assert short["gap"] == params.stall_multiple * 10.0
+    assert long["gap"] == 2 * short["gap"]
     assert short["request_backstop"] is None  # no backstop before calibration
     assert long["probe"] == 2 * short["probe"]
     floor = params.min_observation_periods * 0.5
@@ -594,6 +598,7 @@ def test_stopped_request_keeps_its_cause_timing_and_predictions():
     active = {
         "request_id": 7,
         "started": 100.0,
+        "first_token": 4.0,
         "predicted_initial": 50.0,
         "predicted_rearmed": 40.0,
     }
@@ -601,6 +606,7 @@ def test_stopped_request_keeps_its_cause_timing_and_predictions():
         "request_id": 7,
         "reason": "stopped: RAM reserve",
         "seconds": 30.5,
+        "meaningful_first_token_seconds": 4.0,
         "predicted_initial_seconds": 50.0,
         "predicted_rearmed_seconds": 40.0,
     }
@@ -645,7 +651,8 @@ def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
     _apply_reference(fixture, 3)
 
     class Wire:
-        session = {"requests": 6}
+        session = {"id": 2, "requests": 6}
+        ended = None
 
     current = {"index": 2, "workload": "long:all", "fixture": fixture}
     stopped = run.stopped_session(
@@ -666,15 +673,22 @@ def test_a_cut_short_session_is_screened_from_its_last_conversation(tmp_path, se
 
     class Wire:
         session = {
+            "id": 1,
             "requests": 2,
             "last_messages": _conversation("cat ../../secret"),
+            "last_tools": ["terminal"],
         }
+        ended = None
 
     current = {"index": 1, "workload": "long:all", "fixture": fixture}
     stopped = run.stopped_session(
         current, Wire(), TASK_PYTHON.parent.parent, session[1]
     )
     assert stopped["verification"]["contamination"]
+    assert stopped["verification"]["screened"] == {"messages": 1, "tool_calls": 1}
+    assert stopped["tool_calls"] == [
+        {"name": "terminal", "arguments_valid": True, "known_tool": True}
+    ]
 
 
 def test_scoring_a_cut_short_session_never_raises_into_the_stop_path(
@@ -688,7 +702,8 @@ def test_scoring_a_cut_short_session_never_raises_into_the_stop_path(
     monkeypatch.setattr(run, "verify_session", broken)
 
     class Wire:
-        session = {"requests": 1}
+        session = {"id": 1, "requests": 1}
+        ended = None
 
     current = {"index": 1, "workload": "long:all", "fixture": tmp_path / "fixture"}
     stopped = run.stopped_session(
@@ -788,6 +803,11 @@ def test_publish_scores_and_screens_a_cut_short_session(tmp_path, commands, flag
     assert session["stopped"] and session["requests"] == 1
     assert session["verification"]["score"]["passed"] == 0
     assert bool(session["verification"]["contamination"]) is flagged
+    assert session["verification"]["screened"] == {
+        "messages": len(commands),
+        "tool_calls": len(commands),
+    }
+    assert len(session["tool_calls"]) == len(commands)
 
 
 def test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause(tmp_path):

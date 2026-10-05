@@ -111,6 +111,7 @@ class Wire:
         self.last_slots = None
         self.failure = None
         self.session = None
+        self.ended = None
         # One request in flight: _in_flight holds the owning handler's token from
         # acceptance until the client has the whole response, and _gate makes every
         # check-and-set atomic. lock then serializes the accounting tail, which a
@@ -156,6 +157,7 @@ class Wire:
         precheck=None,
     ):
         self.failure = None
+        self.ended = None
         self.session = {
             "id": session_id,
             "arm": arm,
@@ -171,7 +173,10 @@ class Wire:
         }
 
     def end_session(self):
+        """The ended session stays readable until the next one begins: an attempt stop
+        during its verification still screens the conversation it forwarded (L4)."""
         session, self.session = self.session, None
+        self.ended = session
         return session
 
     @staticmethod
@@ -327,6 +332,10 @@ class Wire:
             session["requests"] += 1
             messages = original.get("messages") or []
             session["last_messages"] = messages
+            session["last_tools"] = [
+                (t.get("function") or {}).get("name")
+                for t in original.get("tools") or []
+            ]
             system = (
                 messages[0]
                 if messages and messages[0].get("role") == "system"

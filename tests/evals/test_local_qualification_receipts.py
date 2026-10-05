@@ -24,9 +24,12 @@ QUALIFICATION = (
 RECEIPTS = sorted(QUALIFICATION.glob("attempt-*.json"))
 PRIVATE = re.compile(r"[A-Za-z]:[\\/]+Users|/Users/|/home/|Bearer\s|\b[0-9a-f]{48}\b")
 # L1/M3: every request carries these, or names them missing; never silently absent.
+# Tool-call validity is per session (M3), checked on the sessions.
 REQUEST_FIELDS = (
+    "meaningful_first_token_seconds",
     "id_slot",
     "finish_reason",
+    "tool_calls",
     "input_tokens",
     "cached_tokens",
     "uncached_prompt_tokens",
@@ -135,9 +138,9 @@ def test_stopped_requests_keep_their_own_cause_and_elapsed_time(receipt):
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
-def test_completed_calibrated_requests_carry_every_l1_field(receipt):
-    """AC7 and L1 by presence, not by being named: every request completed after
-    calibration carries every L1 field. The one exception is ``id_slot``: b10964's
+def test_completed_calibrated_requests_carry_every_l1_and_m3_field(receipt):
+    """AC7, L1 and M3 by presence, not by being named: every request completed after
+    calibration carries every field. The one exception is ``id_slot``: b10964's
     stream does not return it. The wire reads it from ``/slots`` since the round-2
     repair, after these attempts ran, so here it must be named missing."""
     record = _load(receipt)
@@ -150,6 +153,15 @@ def test_completed_calibrated_requests_carry_every_l1_field(receipt):
                     assert field in request["missing"], request["request_id"]
                     continue
                 assert request.get(field) is not None, (request["request_id"], field)
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_long_sessions_carry_tool_call_validity(receipt):
+    """M3: every long session, finished or cut short, records each tool call's parse
+    and argument validity."""
+    for session in _load(receipt)["sessions"]:
+        if str(session.get("workload", "")).startswith("long"):
+            assert isinstance(session.get("tool_calls"), list), session["session"]
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
@@ -182,6 +194,11 @@ def test_attempt_stopped_long_sessions_are_scored(receipt):
     session = scored[started[-1]["session"]]
     assert session["verification"]["score"]["of"] == 4
     assert session["verification"]["contamination"] == []
+    # An empty screen must not pass as a clean one: it saw the session's tool calls.
+    screened = session["verification"]["screened"]
+    if session["requests"]:
+        assert screened["messages"] > 0 and screened["tool_calls"] > 0
+    assert len(session["tool_calls"]) == screened["tool_calls"]
     if session.get("scored", "").startswith("at publish"):
         # Screened from the last request's conversation: complete only if that
         # request was still in flight, so no executed tool call came after it.

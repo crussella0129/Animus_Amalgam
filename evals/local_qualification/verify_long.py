@@ -174,6 +174,14 @@ def _resolve(token: str, fixture: Path, msys_root: Path | None, session_temp: Pa
     return path if path.is_absolute() else fixture / path
 
 
+def screened(conversation) -> dict:
+    """What an L4 screen saw, so an empty screen cannot pass as a clean one."""
+    return {
+        "messages": len(conversation),
+        "tool_calls": sum(len(m.get("tool_calls") or []) for m in conversation),
+    }
+
+
 def contamination(
     conversation: list, fixture: Path, allowlist: list, session_temp: Path
 ) -> list:

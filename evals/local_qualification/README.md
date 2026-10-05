@@ -66,6 +66,13 @@ on the running host (`run.session_windows`, `run.probe_window`), so the same
 lab serves hosts of any speed. The fixed values that remain bound process
 start-up, I/O or polling, never token work.
 
+During the calibration attempt, the gap window between requests is k × the
+attempt's own load time, like its other windows. The plan specified k × that
+session's measured T_cli, but the driver reports T_cli only in its result,
+after the session ends, so the supervisor has no T_cli to use while the
+session runs. This is a recorded plan deviation, and it is the more
+permissive window.
+
 The locked plan retained the observation cadences (telemetry, supervisor
 loop, `/slots`) and the guards counted in them, the 2 s grace and 5 s
 cleanup, the wire's 1 s lock handoff and the `git` tool timeouts. Sprint 3

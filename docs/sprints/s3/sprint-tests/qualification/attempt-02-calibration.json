@@ -71,8 +71,10 @@
    "started_s": 80.125,
    "ended_s": 140.11,
    "missing": [
+    "meaningful_first_token_seconds",
     "id_slot",
     "finish_reason",
+    "tool_calls",
     "cached_tokens",
     "uncached_prompt_tokens",
     "reasoning_tokens",

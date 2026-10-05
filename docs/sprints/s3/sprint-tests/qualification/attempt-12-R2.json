@@ -24,6 +24,38 @@
    "workload": "long:all",
    "stopped": true,
    "requests": 11,
+   "tool_calls": [
+    {
+     "name": "terminal",
+     "arguments_valid": true,
+     "known_tool": true
+    },
+    {
+     "name": "terminal",
+     "arguments_valid": true,
+     "known_tool": true
+    },
+    {
+     "name": "terminal",
+     "arguments_valid": true,
+     "known_tool": true
+    },
+    {
+     "name": "terminal",
+     "arguments_valid": true,
+     "known_tool": true
+    },
+    {
+     "name": "terminal",
+     "arguments_valid": true,
+     "known_tool": true
+    },
+    {
+     "name": "terminal",
+     "arguments_valid": true,
+     "known_tool": true
+    }
+   ],
    "verification": {
     "score": {
      "items": {
@@ -44,7 +76,11 @@
      "passed": 2,
      "of": 4
     },
-    "contamination": []
+    "contamination": [],
+    "screened": {
+     "messages": 22,
+     "tool_calls": 6
+    }
    },
    "scored": "at publish, from the session's preserved fixture and the conversation the wire last forwarded"
   }
@@ -475,8 +511,10 @@
    "started_s": 775.516,
    "ended_s": 794.672,
    "missing": [
+    "meaningful_first_token_seconds",
     "id_slot",
     "finish_reason",
+    "tool_calls",
     "cached_tokens",
     "uncached_prompt_tokens",
     "reasoning_tokens",

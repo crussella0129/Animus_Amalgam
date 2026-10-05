@@ -54,6 +54,7 @@ from policy import (
     supervisor_lagged,
     telemetry_stale,
 )
+from driver import tool_call_validity
 import verify_long
 from wire import Wire
 
@@ -665,9 +666,21 @@ def stopped_request(active: dict, reason: str, now: float) -> dict:
         "request_id": active["request_id"],
         "reason": reason,
         "seconds": now - active["started"],
+        "meaningful_first_token_seconds": active["first_token"],
         "predicted_initial_seconds": active["predicted_initial"],
         "predicted_rearmed_seconds": active["predicted_rearmed"],
     }
+
+
+def stop_active_request(wire, record_event, cause: str) -> None:
+    """Stop the in-flight request: its receipt names the cause first, so the cancel
+    record that follows is never read as a deliberate cancel (AC7, H2)."""
+    active = wire.active
+    if active is not None:
+        record_event(
+            "request_stopped", **stopped_request(active, cause, time.monotonic())
+        )
+    wire.cancel_active()
 
 
 def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
@@ -680,7 +693,10 @@ def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
     """
     if current is None:
         return None
-    session = wire.session if wire is not None else None
+    # The session may have ended at the wire already, if the stop came while it was
+    # being verified; a session's own id tells it from the previous one.
+    candidates = (wire.session, wire.ended) if wire is not None else ()
+    session = next((s for s in candidates if s and s["id"] == current["index"]), None)
     conversation = (session or {}).get("last_messages") or []
     try:
         verification = verify_session(
@@ -696,6 +712,9 @@ def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
         "session": current["index"],
         "workload": current["workload"],
         "requests": session["requests"] if session else None,
+        "tool_calls": None
+        if session is None
+        else tool_call_validity(conversation, set(session.get("last_tools") or [])),
         "verification": verification,
     }
 
@@ -973,7 +992,7 @@ def run_session(index, spec, ctx):
         extrema.close()
     if stop and driver.poll() is None:
         interrupt_file.touch()
-        wire.cancel_active()
+        stop_active_request(wire, record_event, stop)
         waiting(lambda: driver.poll() is None, GRACE_S)
     slot_idle = None
     if cancelled:
@@ -1067,15 +1086,17 @@ def verify_session(workload, fixture, result, venv, allowlist):
         return {"expected_answer": bool(result and result.get("expected_answer"))}
     if workload.startswith("long"):
         python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        conversation = (result or {}).get("conversation") or []
         return {
             "score": verify_long.score(fixture, python),
             # Hermes points TMPDIR and its scratch directory into the session's own home.
             "contamination": verify_long.contamination(
-                (result or {}).get("conversation") or [],
+                conversation,
                 fixture,
                 [*allowlist, str(fixture.parent / "home")],
                 fixture.parent / "home" / "tmp",
             ),
+            "screened": verify_long.screened(conversation),
         }
     return None
 

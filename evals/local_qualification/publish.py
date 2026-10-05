@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 
+from driver import tool_call_validity
 from policy import manifest_digest
 import verify_long
 
@@ -22,8 +23,10 @@ REPO = HERE.parents[1]
 
 # L1: the request fields every long-task receipt carries; a missing one is named, never dropped.
 REQUEST_FIELDS = (
+    "meaningful_first_token_seconds",
     "id_slot",
     "finish_reason",
+    "tool_calls",
     "input_tokens",
     "cached_tokens",
     "uncached_prompt_tokens",
@@ -59,7 +62,7 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
     ``task_python`` scores a long session an attempt stop cut short before the lab
     recorded ``session_stopped`` itself, from its preserved fixture (L2).
     """
-    requests, sessions, started, other, last_messages = {}, [], {}, [], {}
+    requests, sessions, started, other, last_body = {}, [], {}, [], {}
     t0 = None
     for event in _events(attempt):
         kind = event["kind"]
@@ -68,9 +71,7 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             continue
         rid = event.get("request_id")
         if kind == "request":
-            last_messages[event["session"]] = (event.get("original_body") or {}).get(
-                "messages"
-            ) or []
+            last_body[event["session"]] = event.get("original_body") or {}
             requests[rid] = {
                 "request_id": rid,
                 "session": event["session"],
@@ -174,16 +175,21 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             and task_python is not None
             and fixture.is_dir()
         ):
+            body = last_body.get(index) or {}
+            conversation = body.get("messages") or []
+            known = {
+                (t.get("function") or {}).get("name") for t in body.get("tools") or []
+            }
             sessions.append({
                 "session": index,
                 "workload": workload,
                 "stopped": True,
                 "requests": sum(1 for r in requests.values() if r["session"] == index),
+                "tool_calls": tool_call_validity(conversation, known),
                 "verification": {
                     "score": verify_long.score(fixture, task_python),
-                    "contamination": _screen(
-                        attempt, fixture, last_messages.get(index) or []
-                    ),
+                    "contamination": _screen(attempt, fixture, conversation),
+                    "screened": verify_long.screened(conversation),
                 },
                 "scored": "at publish, from the session's preserved fixture and the "
                 "conversation the wire last forwarded",

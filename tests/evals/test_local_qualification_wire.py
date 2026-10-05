@@ -12,6 +12,7 @@ runner imports its siblings top-level, so the lab directory goes first on ``sys.
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import shutil
 import sys
 import threading
 import time
@@ -25,7 +26,9 @@ from evals.local_qualification.wire import Wire
 sys.path.insert(
     0, str(Path(__file__).resolve().parents[2] / "evals" / "local_qualification")
 )
+import publish  # noqa: E402
 import run  # noqa: E402
+import verify_long  # noqa: E402
 
 INPUT_LIMIT = 50
 ARM_THINKING = {"output_cap": 768, "thinking": True, "reasoning_budget": 256}
@@ -262,6 +265,21 @@ def _wait_mid_stream(wire, backend, timeout=10.0):
     raise AssertionError("the wire never saw the first upstream event")
 
 
+def _published(records, tmp_path):
+    """The wire's own receipts, published as an attempt's."""
+    attempt = tmp_path / "attempt-01-x"
+    attempt.mkdir()
+    events = [{"at": float(i), **r} for i, r in enumerate(records)]
+    (attempt / "events.jsonl").write_text(
+        "\n".join(json.dumps(e) for e in events) + "\n"
+    )
+    (attempt / "outcome.json").write_text(json.dumps({"reason": "sessions complete"}))
+    (attempt / "manifest.json").write_text(
+        json.dumps({"id": "m", "plan": "R2", "allowlist": []})
+    )
+    return publish.receipts(attempt)
+
+
 def _record(records, kind, timeout=10.0):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -464,6 +482,82 @@ def test_cancel_returns_promptly_and_is_recorded_as_a_cancel(make_lab):
     assert cancelled["seconds"] is not None  # a stopped request keeps its timing (AC7)
     assert cancelled["predicted_initial_seconds"] == 100.0
     assert wire.failure is None
+
+
+def test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not(
+    make_lab, tmp_path
+):
+    """Round 4: a stall or backstop cancels the request through the wire, as the C4
+    cancel does; only the stop's own receipt tells them apart in the published record."""
+    backend, wire, records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.chunk_delay = 2.0
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    cause = "stall in decode (window 5.0s)"
+    run.stop_active_request(
+        wire, lambda kind, **data: records.append({"kind": kind, **data}), cause
+    )
+    sender.join(timeout=30)
+    _record(records, "response_cancelled")
+    backend.first_chunk_sent.clear()
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    wire.cancel_active()  # the deliberate main-cancel (C4) records no stop
+    sender.join(timeout=30)
+    deadline = time.monotonic() + 10
+    while sum(r["kind"] == "response_cancelled" for r in records) < 2:
+        assert time.monotonic() < deadline, "the second cancel was not recorded"
+        time.sleep(0.01)
+    stopped, cancelled = _published(records, tmp_path)["requests"]
+    assert (stopped["outcome"], stopped["stop_reason"]) == ("stopped", cause)
+    assert stopped["predicted_initial_seconds"] == 100.0
+    assert "meaningful_first_token_seconds" in stopped or (
+        "meaningful_first_token_seconds" in stopped["missing"]
+    )
+    assert cancelled["outcome"] == "response_cancelled"
+    assert "stop_reason" not in cancelled
+
+
+def test_a_stop_during_verification_still_screens_the_ended_session(make_lab, tmp_path):
+    """Round 4: a guard can stop the attempt while a session is being verified, after
+    the wire has ended it; the stop path must still screen what it forwarded (L4)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    body = _body(5, stream=False, tool_words=1)
+    body["messages"] += [
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": "call_0",
+                    "type": "function",
+                    "function": {
+                        "name": "terminal",
+                        "arguments": json.dumps({"command": "cat ../../secret"}),
+                    },
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_0", "content": "x"},
+    ]
+    _post(wire, body)
+    _record(records, "response_end")
+    wire.end_session()
+    fixture = tmp_path / "live" / "fixture"
+    shutil.copytree(verify_long.TASK / "fixture", fixture)
+    (tmp_path / "live" / "home" / "tmp").mkdir(parents=True)
+    current = {"index": 1, "workload": "long:all", "fixture": fixture}
+    venv = Path(sys.executable).parent.parent
+    stopped = run.stopped_session(current, wire, venv, [str(venv)])
+    assert stopped["requests"] == 1
+    assert stopped["verification"]["screened"] == {
+        "messages": len(body["messages"]) + 1,  # the delivered response too
+        "tool_calls": 2,
+    }
+    assert stopped["verification"]["contamination"]
+    assert [c["known_tool"] for c in stopped["tool_calls"]] == [True, True]
 
 
 def test_sequential_request_after_done_is_accepted_and_concurrent_is_refused(make_lab):
