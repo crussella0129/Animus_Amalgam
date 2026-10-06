@@ -26,7 +26,7 @@ ten critique rounds.
 
 | Gap carried into Sprint 3 | Status | Evidence |
 |---|---|---|
-| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build with every library, a clean Hermes commit, the task corpus, the interpreter and the seed (asserted since rounds 8 and 9). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Retries are published as truncation continuations, as refusals that name a preceding length finish, and, since round 10, as `retry_of` for any re-sent conversation; no published session re-sent one. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
+| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build with every library, a clean Hermes commit, the task corpus, the interpreter and the seed (asserted since rounds 8 and 9). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Retries are published as truncation continuations, as refusals that name a preceding length finish, and, since round 10, as `retry_of` for a byte-identical re-send; no published session re-sent one. Hermes's empty-response nudge (a new prompt after an empty `stop` response) is not yet marked; no published request had an empty response, and marking it is backlog T-226. AC4 is closed for the retry classes Sprint 3 detects. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
 | AC2 time gate (host-derived) | **Met.** | 10,788.8 s charged against the 81,365 s host-derived backstop budget. Calibration was in the ledger before the screen. |
 | AC2 main-cancel replay and OS kill safety | **Met.** | C4: the slot was idle in 0.84 s and cleanup took 0.88 s. The T5 bring-up replay: the silent tree was stopped by the stall rule and gone in 0.047 s, a chatty child survived, and the sentinel survived. |
 
@@ -76,10 +76,12 @@ regression:
    input was 9,935 tokens, not 7,867.
 10. **The wire's concurrency refusal wrote no receipt** (`a80294f17a`):
    critique-09 C-001. Attempt 10's session ended when Hermes retried after request 142's cap-cut response and the wire refused the retry as concurrent. That refusal wrote no receipt, so the retry has no request record, and every published request reads `continuation_of_length_finish: false`. Since round 9 the wire receipts this refusal like every other one.
-11. **Cut-short sessions dropped their first rendered prefix; retries after
-   a non-length finish were indistinguishable; the screen and timer checks
-   leaned on mutable lab state** (`35087cbdf7`): critique-10 C-002 to
-   C-004.
+11. **Cut-short sessions dropped their first rendered prefix; a
+   byte-identical re-send was indistinguishable from a new request; the
+   screen and timer checks leaned on mutable lab state; a refusal on the
+   lock-timeout path could read the previous finish** (`35087cbdf7`):
+   critique-10 C-001 to C-004. No test exercises the lock-timeout path
+   (both round-10 wire tests pass on base); that test is backlog T-226.
 
 ## Concern dispositions (critique round 1)
 
@@ -207,6 +209,17 @@ was addressed:
 | C-003: checks leaned on mutable lab config | **Fixed.** The screen check's oracle is frozen: the arms the same sprint's full runs ran, and the screen manifest's own arms. Sessions now record the backstop their timers were set against. Schema-2 receipts still recompute it from the frozen calibration record. |
 | C-004: cut-short sessions skipped by the M4 check | **Fixed.** The stop path and publish keep a cut-short session's first prefix. The check skips only sessions with no request (an API red on base for attempts 05, 07, 11 and 12). |
 | C-005: two misstatements | **Fixed.** The AC7 row names every live stop cause, and the V2 accounting states what each API red pins. |
+
+## Concern dispositions (critique round 11, final)
+
+The final [critique](critique.md) returned `proceed-with-caveats` with 4 concerns. They are dispositioned here, without further evidence changes:
+
+| Concern | Response |
+|---|---|
+| C-001: `retry_of` catches only byte-identical re-sends | **Scope narrowed; deferred** to backlog **T-226**. The AC4 row now names the retry classes detected. Hermes's empty-response nudge is not marked yet. No published request had an empty response (zero visible tokens and zero tool calls), so no Sprint 3 figure depends on it. T-226 adds `follows_empty_response` with a synthetic publish test, and T-224 checks it live. The round-10 C-002 "Fixed" covers byte-identical re-sends only. |
+| C-002: the applied backstop is untested where written, and the receipt rule falls back | **Deferred** to **T-226**, which requires `request_backstop_seconds` on every calibrated schema-3 session start with no fallback, tests that it equals `session_windows`' backstop, and adds receipt rules for retry marking and `decoded_tokens_observed`. Until then, T-224 checks those items by hand. The schema-2 recompute uses the current `throughput.request_backstop` formula over the frozen calibration record: T-219 must keep that formula, or freeze the Sprint 3 values, when it reworks the module. |
+| C-003: the sequential-retry repair was never replayed live | **Deferred** to **T-224**, which now provokes a cap-cut tool call deliberately: a session whose output cap is below one tool call. It checks admission at `[DONE]`, `continuation_of_length_finish` and `retry_of` on each retry, and how the retries end. The wire replaces Hermes's boosted retry cap with the arm cap, so a retry can be cut again. T-224 records the outcome, and T-219 decides whether the lab should honor the boost. |
+| C-004: the round-10 wire change has no test that runs it | **Wording corrected** in item 11 above. The integration row for `test_a_refusal_after_a_length_finish_says_so` overstates: that test shows the receipt field's true case, not the finish-before-admit change, which no test exercises. **Deferred** to **T-226**: a lock-timeout refusal test, red on `230d451b60`, with a slow accounting tail and a short probe timeout. |
 
 ## Plan deviation: retained fixed values
 
