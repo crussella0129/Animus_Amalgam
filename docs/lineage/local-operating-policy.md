@@ -36,6 +36,8 @@ shown beside it.
 | 2 | Thinking on, budget 256, greedy, echo off (R1) | 4/4 | 20 | **345.4 s**, 1,058.3 tokens | 345.4 s, 1,058.3 tokens | attempt 09 |
 | 3 | Thinking on, budget 256, greedy, **echo on** (R2) | 4/4 | 18 | **384.3 s**, 1,171.6 tokens | 352.6 s, 1,150.8 tokens | attempts 10 (wire defect, 3 verified), 11 (host maintenance, 0), 12 (owner apps, 2), 13 |
 
+Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Their time after prefill bounds the missing decode at the calibrated rate: at most about 108 tokens in R0 and 376 in R2, or at most 584.6 and 1,213.3 tokens per verified item.
+
 The order is the same under every reading. Attempt 12's two items came
 from a session cut short by a resource stop, scored from its fixture and
 screened clean (L4) at publish. Excluding them puts R2 at 494.0 s;

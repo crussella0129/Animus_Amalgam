@@ -694,7 +694,8 @@ stopped attempt count, because they were really produced.
 
 This supersedes the round-1 table above. Round 1 divided by 4, ignoring
 the partial items in stopped attempts, and rounded R1 two ways. The ranking
-(R0 < R1 < R2) is unchanged.
+(R0 < R1 < R2) is unchanged. The token figures are lower bounds (see
+round 6).
 
 **Stopped sessions scored (L2).** Sessions that an attempt stop cut short
 are now scored from their fixture state. Going forward, `run.py` does this
@@ -827,3 +828,19 @@ republished.
 - **Hermes timers.** Every session after calibration ran with its Hermes
   timer equal to its own request backstop: 1,931.4 s at the 512 cap and
   2,219.9 s at the 768 cap.
+
+## Test-phase corrections (critique round 6)
+
+These are recorded in response to [critique-06](critique-06.md), which passed
+with caveats. The code changes are at `a730a0a39e`. They were not replayed
+live (T-224), and all 13 receipts were republished.
+
+- **Decoded tokens of stopped requests.** Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Their time after prefill bounds the missing decode at the calibrated rate: at most about 108 tokens in R0 and 376 in R2, or at most 584.6 and 1,213.3 tokens per verified item. R1 has no stopped
+  request, so its figure is exact. Each estimate takes the request's
+  seconds after its last prefill progress at 3.55 tok/s: 30.5 s for request
+  91, 89.1 s for 145 and 16.7 s for 156. Decode slows as context grows, so
+  the true counts are lower. From now on a stop receipt carries the last
+  `/slots` decode count as an observed lower bound.
+- **Schema 3.** Manifests frozen from now on carry schema 3. Their receipts
+  must carry `id_slot` (from `/slots`) and tool-call tokens, and must
+  validate every delivered call. The 13 published attempts are schema 2.

@@ -1,15 +1,15 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `9c373121cd` (after critique round 5).
+- **Tested head:** `a730a0a39e` (after critique round 6).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-06T03:25:18Z, covering the six
+- **Final formal run (V1):** started 2026-10-06T03:45:41Z, covering the six
   Sprint 3 formal files: **291 passed, 0 failed**. Runner log sha256
-  `5816e66f037223c50862f088519b5a0d85a700bbe708ab5e1b9f7e0a1334ce4f`. The
-  earlier runs at `663bac6a2a`, `4f323770ee`, `1fca1a3095` and `efeb4ef4c4`
-  passed 238 (log `b6d63e54…`), 223 (log `bc3e1d5f…`), 217 (log
-  `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
+  `652194079ce640ebac4e8eacc72e25d0d7298944fc29803e2090f694896c95ad`. The
+  earlier runs at `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
+  and `efeb4ef4c4` passed 291 (log `5816e66f…`), 238 (log `b6d63e54…`),
+  223 (log `bc3e1d5f…`), 217 (log `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
   with the lab (`<lab>/formal/`) and are not published, because tracebacks
   can contain local paths. The same set passed twice in a row with file
   retries off.
@@ -53,7 +53,7 @@
 | `test_tool_call_validity_names_bad_arguments_and_unknown_tools` | M3 | pass | Unparseable arguments and unknown tools are named per call (`wire.tool_call_validity`, which the wire records and the driver also uses). |
 | `test_screen_ranking_rule` | S2 | pass | Verified, then time per item, then decoded tokens. The all-zero case is inconclusive and ranked by machine time. The mid probe is never selected. |
 | `test_contaminated_twice_is_a_failure_and_once_is_excluded` | L4, S2 | pass | One flag excludes the session (the re-run counts); two flags make the arm a failure with 0 verified items. |
-| `test_stopped_request_keeps_its_cause_timing_and_predictions` | AC7, M3 | pass | **Regression (round 4).** The `request_stopped` receipt carries the stop cause, elapsed time, meaningful first token and both predictions. |
+| `test_stopped_request_keeps_its_cause_timing_and_predictions` | AC7, M3 | pass | **Regressions (rounds 4 and 6).** The `request_stopped` receipt carries the stop cause, elapsed time, meaningful first token, both predictions and the last `/slots` decode count as an observed lower bound. |
 | `test_request_extrema_are_recorded_when_a_guard_stops_the_loop` | L1 | pass | **Regression (round 2).** When a guard raises inside the loop, the in-flight request's resource extrema are still recorded, with the running minimum and maximum. |
 | `test_a_cut_short_session_is_scored_from_its_fixture` | L2 | pass | A session an attempt stop cut short is scored from its fixture: 1 verified after turn 3, with its request count, an empty L4 screen and, being under 20 requests, AC1 coverage not met (L2, round 5). |
 | `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. The screen publishes what it saw (1 message, 1 tool call), and the session records the call's validity. |
@@ -110,17 +110,22 @@ earliest bases could be collected; the committed tests are unchanged.
 | a call cut at the output cap is recorded invalid | `9c373121cd` | `5d62e8e2d5` | **API:** `response_end` had no `tool_call_validity`. |
 | tool-call output counted in the token split | `9c373121cd` | `5d62e8e2d5` | **API:** no `tool_call_tokens` at the wire, and no published `unsplit_decoded_tokens`. |
 | AC1 coverage on the being-stopped path | `9c373121cd` | `5d62e8e2d5` | **API:** no `policy.ac1_request_coverage`. The cut-short long:all sessions of attempts 07, 11 and 12 had no `ac1_request_coverage`. |
+| stop receipt carries a decode lower bound | `a730a0a39e` | `cf895ec191` | **Behavior:** `stopped_request` dropped the `/slots` decode count it had seen. |
+| live stall stop names its decode missing | `a730a0a39e` | `cf895ec191` | **Behavior:** the published stopped request neither named `decoded_tokens` missing nor kept the observed count. |
+| published requests name decoded tokens missing | `a730a0a39e` | `cf895ec191` | **Behavior:** the 6 requests that never completed (attempts 02, 04, 05, 07, 11 and 12) left `decoded_tokens` silently absent. |
 
-V2 covers 40 regressions: 22 red on the behavior assertion and 18 on an
+V2 covers 43 regressions: 25 red on the behavior assertion and 18 on an
 API the repair introduced. For the API reds of rounds 1 and 2, the defect
 itself is evidenced live by the attempt that found it (02, 04, 07, 11 and
 12); the test pins the repaired contract. The API reds of rounds 3 to 5 are
 the new fields and seams that those rounds' behavior reds depend on. Round
 5's assertions on supervisor lag, the Hermes timers against the backstop,
 the request-limit receipt and the live first token pass on base: they cover
-behavior that was already correct.
+behavior that was already correct. So do round 6's markup-bearing split
+test and the schema-scoped receipt checks, which hold receipts from the
+repaired lab to stricter rules.
 
-In the round-3 to round-5 worktrees, the base copy of
+In the round-3 to round-6 worktrees, the base copy of
 `test_session_env_is_private_and_repository_free` also failed. The worktree
 sat inside the owner's `TEMP`, which breaks the test's premise that the
 repository is outside it. The failure is an artifact of where the worktree

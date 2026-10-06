@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `9c373121cd`, after
-five critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `a730a0a39e`, after
+six critique rounds.
 
 ## Intent Verification
 
@@ -15,18 +15,18 @@ five critique rounds.
 | AC | Status | Evidence |
 |---|---|---|
 | AC1 — at least 20 requests on a multi-file task with per-turn receipts | **Partly met.** Receipts are complete; the 20-request count was reached by R1 only. | R1 made 20 requests. R0 and R2 made 18 each, recorded as coverage not met, separately from completion (L2). All three verified 4/4. Every request carries every L1 field or names it missing (`test_every_request_names_its_missing_fields`). The fix is owned by backlog **T-223**. |
-| AC2 — off vs bounded vs unbounded at the best-screened sampling, per verified completion, including failures | **Met for off and bounded**; unbounded is T-218. | The screen selected greedy in both modes. Per verified item, across every attempt of a run, failed and stopped ones included (O1): R0 205.3 s and R1 345.4 s. The completed runs alone: 180.2 s and 345.4 s. The inputs are published per session in the receipts. |
+| AC2 — off vs bounded vs unbounded at the best-screened sampling, per verified completion, including failures | **Met for off and bounded**; unbounded is T-218. | The screen selected greedy in both modes. Per verified item, across every attempt of a run, failed and stopped ones included (O1): R0 205.3 s and 557.5 decoded tokens, and R1 345.4 s and 1,058.3 tokens. The completed runs alone: 180.2 s and 345.4 s. R0's token figure is a lower bound: one stopped request's decode was never returned, which bounds it at 584.6. The inputs are published per session in the receipts. |
 | AC3 — byte-identical cross-session prefix, and append-only history with thinking on | **Met.** | C3: byte-identical prompts, 1147 of 1151 tokens reused. Thinking on, echo off: every turn rolls back the previous turn (median uncached 161). The replayed repair, `model.reasoning_echo: true`, makes history append-only (median 60), except after a budget-truncated think block. |
 | AC4 — MTP | Deferred to T-217. | — |
 | AC5 — compression | Deferred to T-219. | — |
 | AC6 — default local policy with evidence | **Met for the settings measured.** | [`local-operating-policy.md`](../../../lineage/local-operating-policy.md) ranks by machine time per verified item, with failures in the denominators and receipt links. The live profile is unchanged (P2). |
-| AC7 — host-derived deadlines, stall rule, backstop, predicted vs actual, stops recorded as failures | **Met on the lab route.** The Hermes-side deadlines are T-219. | The T-215 unit tests (H1–H3), including `step_stop`'s backstop and stall decisions. Live, only stalls and resource guards stopped work, and no backstop was reached. All 165 completed post-calibration requests carry every L1 field, asserted by presence; `id_slot` is named missing because b10964 does not stream it. The 4 attempt-stopped requests after calibration (attempts 05, 07, 11 and 12) keep their own stop cause and elapsed time, but the pre-repair lab recorded neither their predictions nor their extrema. Attempt 02's stall-stopped calibration request also lacks extrema. The repaired lab keeps both on every stop path (`stopped_request`, `RequestExtrema`), and both paths are tested. |
+| AC7 — host-derived deadlines, stall rule, backstop, predicted vs actual, stops recorded as failures | **Met on the lab route.** The Hermes-side deadlines are T-219. | The T-215 unit tests (H1–H3), including `step_stop`'s backstop and stall decisions. Live, only stalls and resource guards stopped work, and no backstop was reached. All 165 completed post-calibration requests carry every L1 and M3 request field, asserted by presence. The exceptions are `id_slot`, which b10964 does not stream, and tool-call tokens, which the live runs' wire did not count; both are named missing. The 4 attempt-stopped requests after calibration (attempts 05, 07, 11 and 12) keep their own stop cause and elapsed time, but the pre-repair lab recorded neither their predictions nor their extrema. Attempt 02's stall-stopped calibration request also lacks extrema. The repaired lab keeps both on every stop path (`stopped_request`, `RequestExtrema`), and both paths are tested. |
 
 ### INT-0004 — bounded local-model qualification
 
 | Gap carried into Sprint 3 | Status | Evidence |
 |---|---|---|
-| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests). Every request carries each of its 17 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
+| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
 | AC2 time gate (host-derived) | **Met.** | 10,788.8 s charged against the 81,365 s host-derived backstop budget. Calibration was in the ledger before the screen. |
 | AC2 main-cancel replay and OS kill safety | **Met.** | C4: the slot was idle in 0.84 s and cleanup took 0.88 s. The T5 bring-up replay: the silent tree was stopped by the stall rule and gone in 0.047 s, a chatty child survived, and the sentinel survived. |
 
@@ -35,8 +35,8 @@ five critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **291 passed, 0 failed** across six files at `9c373121cd`. Runner log sha256 `5816e66f…`, started 2026-10-06T03:25:18Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
-| Regressions red on base (V2) | All 40 failed on their repair's parent revision. 22 failed on the behavior assertion itself and 18 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
+| Formal unit and integration | **291 passed, 0 failed** across six files at `a730a0a39e`. Runner log sha256 `65219407…`, started 2026-10-06T03:45:41Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Regressions red on base (V2) | All 43 failed on their repair's parent revision. 25 failed on the behavior assertion itself and 18 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
 | Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
 | Policy review (P1) | **Pass** (`policy_evidence_review`, 2026-10-05T21:38Z). See [e2e-tests](e2e-tests.md). |
@@ -67,6 +67,9 @@ regression:
    at the output cap; tool-call output was in neither half of the token
    split; cut-short long sessions had no AC1 coverage** (`9c373121cd`):
    critique-05 C-001, C-002 and C-003.
+8. **Requests that never completed left their decode count silently
+   absent, so token figures read as exact** (`a730a0a39e`): critique-06
+   C-001.
 
 ## Concern dispositions (critique round 1)
 
@@ -139,6 +142,17 @@ was addressed:
 | C-003: four planned checks unasserted | **Fixed.** Maximum supervisor lag is asserted on every outcome: over two periods exactly when the attempt stopped on lag. AC1 coverage is recorded and asserted on every long:all session, cut-short ones included; 07, 11 and 12 are not met. The Hermes timers are asserted at or above the backstop, through `session_windows` and against every published session's applied timer. The request-limit refusal's `wire_failure` receipt is asserted. |
 | C-004: round-4 records misstated attempt 04; an assertion could not fail | **Fixed.** Attempt 04's cancelled request carries its first token (12.344 s) and names only its tool-call count missing; the ledger, this report and the V2 row are corrected. The live-wire test stops after the first token and asserts that the published value equals the wire's. |
 | C-005: no named live replay of the post-confidence stop paths | **Deferred with rationale** to backlog **T-224**: Sprint 4's first lab attempt replays them, with the receipt checks listed there. The launch envelope is spent, and a replay needs the owner's approval. |
+
+## Concern dispositions (critique round 6)
+
+[critique-06](critique-06.md) returned `proceed-with-caveats` with 4 concerns. Each was addressed, and the critic was re-run:
+
+| Concern | Response |
+|---|---|
+| C-001: stopped requests' decoded tokens counted as zero | **Fixed.** `decoded_tokens` is a named-missing field. The 6 requests that never completed name it (red on base). A stop receipt now carries the last `/slots` decode count as an observed lower bound, tested from the live wire. The ledger and policy label their token figures. Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Their time after prefill bounds the missing decode at the calibrated rate: at most about 108 tokens in R0 and 376 in R2, or at most 584.6 and 1,213.3 tokens per verified item. The time ranking is unaffected. |
+| C-002: the split test matched the double by construction | **Fixed.** The capture backend decodes 2 tokens of template markup. The test asserts that the parts stay within the decode, and that the published remainder equals the markup. |
+| C-003: receipt checks could not hold the replay to the new behavior | **Fixed.** The repaired lab writes schema-3 manifests, and only schema-2 receipts (the live runs) may name the later fields missing or leave cap-cut calls unvalidated. A cut-short session's screened history may lack only cap-cut calls. |
+| C-004: small record drifts | **Fixed.** Per-request validity is published only where the wire recorded it. The AC7 row names both missing fields. T-210 and T-211 carry round-5 corrections. INT-0004 links the Sprint 3 ledger. |
 
 ## Plan deviation: retained fixed values
 
