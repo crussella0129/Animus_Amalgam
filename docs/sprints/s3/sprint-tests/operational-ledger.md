@@ -835,12 +835,39 @@ These are recorded in response to [critique-06](critique-06.md), which passed
 with caveats. The code changes are at `a730a0a39e`. They were not replayed
 live (T-224), and all 13 receipts were republished.
 
-- **Decoded tokens of stopped requests.** Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Their time after prefill bounds the missing decode at the calibrated rate: at most about 108 tokens in R0 and 376 in R2, or at most 584.6 and 1,213.3 tokens per verified item. R1 has no stopped
-  request, so its figure is exact. Each estimate takes the request's
-  seconds after its last prefill progress at 3.55 tok/s: 30.5 s for request
-  91, 89.1 s for 145 and 16.7 s for 156. Decode slows as context grows, so
-  the true counts are lower. From now on a stop receipt carries the last
+- **Decoded tokens of stopped requests.** Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Each receipt publishes how long the request ran after its prompt was fully processed: 30.5, 89.1 and 16.7 s. At the fastest decode rate any receipt shows (3.743 tok/s), that time allows about 114 more tokens in R0 and 396 in R2, or about 586.1 and 1,215.6 tokens per verified item. This is an estimate from the receipts, not a strict bound. (Restated in round 7.) R1 has no stopped
+  request, so its figure is exact. From now on a stop receipt carries the last
   `/slots` decode count as an observed lower bound.
 - **Schema 3.** Manifests frozen from now on carry schema 3. Their receipts
   must carry `id_slot` (from `/slots`) and tool-call tokens, and must
   validate every delivered call. The 13 published attempts are schema 2.
+
+## Test-phase corrections (critique round 7)
+
+These are recorded in response to [critique-07](critique-07.md), which passed
+with caveats. The code changes are at `47522c6a2d`. All 13 receipts were
+republished.
+
+- **Echo and prefill.** Echo on cut the median continued request's
+  uncached prompt from 161 to 60 tokens. It did not cut the total: R2's
+  completed run (attempt 13) processed 8,259 uncached prompt tokens in
+  90.3 s, against R1's 7,943 in 93.7 s. The policy's "about 60% of the
+  prefill work" is corrected.
+- **Peak input.** The peak rendered input across the full runs was 9,935
+  tokens (attempt 13, request 174), within the 31,488-token ceiling. The
+  7,867 above is R1's.
+- **The screen re-scan, published.** Attempt 06's receipt now carries the
+  S2 ranking under the current L4 scan, beside each session's live verdict:
+  - sessions 6 and 7 (off-model-default) and 10 and 11 (on-mid-probe) were
+    flagged live for `/.git/`, resolved against Git's install path, and the
+    shell-local `$f`. Both are false positives of the pre-repair scanner,
+    and the re-scan clears them;
+  - sessions 4 and 5 (off-vendor) stay flagged for files written to the
+    then-shared `/tmp`.
+
+  Re-ranking the published sessions reproduces `screen_winners`
+  (off-greedy, on-greedy).
+- **The decode estimate.** Each stopped request publishes its seconds after
+  prefill: 30.5 s (91), 89.1 s (145) and 16.7 s (156). The estimate uses the
+  fastest decode rate any receipt shows (3.743 tok/s, attempt 06's request
+  71), not the calibrated 3.55: 23 of 162 completed requests decoded faster.

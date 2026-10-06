@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `a730a0a39e`, after
-six critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `47522c6a2d`, after
+seven critique rounds.
 
 ## Intent Verification
 
@@ -15,7 +15,7 @@ six critique rounds.
 | AC | Status | Evidence |
 |---|---|---|
 | AC1 — at least 20 requests on a multi-file task with per-turn receipts | **Partly met.** Receipts are complete; the 20-request count was reached by R1 only. | R1 made 20 requests. R0 and R2 made 18 each, recorded as coverage not met, separately from completion (L2). All three verified 4/4. Every request carries every L1 field or names it missing (`test_every_request_names_its_missing_fields`). The fix is owned by backlog **T-223**. |
-| AC2 — off vs bounded vs unbounded at the best-screened sampling, per verified completion, including failures | **Met for off and bounded**; unbounded is T-218. | The screen selected greedy in both modes. Per verified item, across every attempt of a run, failed and stopped ones included (O1): R0 205.3 s and 557.5 decoded tokens, and R1 345.4 s and 1,058.3 tokens. The completed runs alone: 180.2 s and 345.4 s. R0's token figure is a lower bound: one stopped request's decode was never returned, which bounds it at 584.6. The inputs are published per session in the receipts. |
+| AC2 — off vs bounded vs unbounded at the best-screened sampling, per verified completion, including failures | **Met for off and bounded**; unbounded is T-218. | The screen selected greedy in both modes. Per verified item, across every attempt of a run, failed and stopped ones included (O1): R0 205.3 s and 557.5 decoded tokens, and R1 345.4 s and 1,058.3 tokens. The completed runs alone: 180.2 s and 345.4 s. R0's token figure is a lower bound: one stopped request's decode was never returned. From its published seconds after prefill, at the fastest decode rate any receipt shows, it is about 586.1 at most. The inputs are published per session in the receipts. |
 | AC3 — byte-identical cross-session prefix, and append-only history with thinking on | **Met.** | C3: byte-identical prompts, 1147 of 1151 tokens reused. Thinking on, echo off: every turn rolls back the previous turn (median uncached 161). The replayed repair, `model.reasoning_echo: true`, makes history append-only (median 60), except after a budget-truncated think block. |
 | AC4 — MTP | Deferred to T-217. | — |
 | AC5 — compression | Deferred to T-219. | — |
@@ -35,11 +35,11 @@ six critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **291 passed, 0 failed** across six files at `a730a0a39e`. Runner log sha256 `65219407…`, started 2026-10-06T03:45:41Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
-| Regressions red on base (V2) | All 43 failed on their repair's parent revision. 25 failed on the behavior assertion itself and 18 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
+| Formal unit and integration | **318 passed, 0 failed** across six files at `47522c6a2d`. Runner log sha256 `2eaec3de…`, started 2026-10-06T04:07:50Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Regressions red on base (V2) | All 45 failed on their repair's parent revision. 25 failed on the behavior assertion itself and 20 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
-| Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
-| Policy review (P1) | **Pass** (`policy_evidence_review`, 2026-10-05T21:38Z). See [e2e-tests](e2e-tests.md). |
+| Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, and 2026-10-06T04:11:27Z, head `47522c6a2d`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
+| Policy review (P1) | **Pass** (`policy_evidence_review`, re-reviewed 2026-10-06T04:11Z after round 7 corrected two policy figures). See [e2e-tests](e2e-tests.md). |
 
 ## Failures found and fixed
 
@@ -70,6 +70,10 @@ regression:
 8. **Requests that never completed left their decode count silently
    absent, so token figures read as exact** (`a730a0a39e`): critique-06
    C-001.
+9. **Two policy figures contradicted the receipts, and the screen ranking
+   rested on an unpublished re-scan** (`47522c6a2d`): critique-07 C-001 and
+   C-002. Echo's prefill saving was the median, not the total, and the peak
+   input was 9,935 tokens, not 7,867.
 
 ## Concern dispositions (critique round 1)
 
@@ -149,10 +153,21 @@ was addressed:
 
 | Concern | Response |
 |---|---|
-| C-001: stopped requests' decoded tokens counted as zero | **Fixed.** `decoded_tokens` is a named-missing field. The 6 requests that never completed name it (red on base). A stop receipt now carries the last `/slots` decode count as an observed lower bound, tested from the live wire. The ledger and policy label their token figures. Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Their time after prefill bounds the missing decode at the calibrated rate: at most about 108 tokens in R0 and 376 in R2, or at most 584.6 and 1,213.3 tokens per verified item. The time ranking is unaffected. |
+| C-001: stopped requests' decoded tokens counted as zero | **Fixed.** `decoded_tokens` is a named-missing field. The 6 requests that never completed name it (red on base). A stop receipt now carries the last `/slots` decode count as an observed lower bound, tested from the live wire. The ledger and policy label their token figures. Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Each receipt publishes how long the request ran after its prompt was fully processed: 30.5, 89.1 and 16.7 s. At the fastest decode rate any receipt shows (3.743 tok/s), that time allows about 114 more tokens in R0 and 396 in R2, or about 586.1 and 1,215.6 tokens per verified item. This is an estimate from the receipts, not a strict bound. (Restated in round 7.) The time ranking is unaffected. |
 | C-002: the split test matched the double by construction | **Fixed.** The capture backend decodes 2 tokens of template markup. The test asserts that the parts stay within the decode, and that the published remainder equals the markup. |
 | C-003: receipt checks could not hold the replay to the new behavior | **Fixed.** The repaired lab writes schema-3 manifests, and only schema-2 receipts (the live runs) may name the later fields missing or leave cap-cut calls unvalidated. A cut-short session's screened history may lack only cap-cut calls. |
 | C-004: small record drifts | **Fixed.** Per-request validity is published only where the wire recorded it. The AC7 row names both missing fields. T-210 and T-211 carry round-5 corrections. INT-0004 links the Sprint 3 ledger. |
+
+## Concern dispositions (critique round 7)
+
+[critique-07](critique-07.md) returned `proceed-with-caveats` with 4 concerns. Each was addressed, and the critic was re-run:
+
+| Concern | Response |
+|---|---|
+| C-001: echo saving and peak input contradicted by the receipts | **Fixed.** The policy states the median saving (161 to 60 uncached tokens per continued request) beside the totals, which did not fall (R2 8,259 tokens in 90.3 s, R1 7,943 in 93.7 s). It corrects the peak to 9,935 tokens. The echo recommendation rests on AC3's append-only history, with no throughput claim. P1 was re-reviewed. |
+| C-002: screen ranking from an unpublished re-scan | **Fixed.** Attempt 06's receipt publishes the ranking under the current scan, beside every session's live verdict. A receipt test re-ranks the published sessions and gets the recorded `screen_winners` (red on base). The tool calls themselves stay in the lab for privacy. The policy names the live scan's false positives. |
+| C-003: schema-3 rules could never run | **Addressed; the rules first run in T-224.** The receipt suite reads every sprint's published attempts, so the Sprint 4 replay's schema-3 receipts meet them. T-224 names the suite as its acceptance check and adds `id_slot` and `decoded_tokens_observed` to its checklist. No schema-3 receipt exists yet. |
+| C-004: the decode "bound" used the calibrated rate, from unpublished inputs | **Fixed.** Each stopped request publishes its seconds after prefill. The estimate uses the fastest decode rate any receipt shows (3.743 tok/s), is labelled an estimate, and drops the context-slowdown claim. |
 
 ## Plan deviation: retained fixed values
 

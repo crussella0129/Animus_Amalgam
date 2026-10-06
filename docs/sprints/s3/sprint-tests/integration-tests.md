@@ -1,8 +1,8 @@
 # Sprint 3 Integration Test Results (after operational confidence)
 
-- **Tested head:** `a730a0a39e` (after critique round 6). These results are
-  part of the final formal run recorded in [unit-tests](unit-tests.md) (291
-  passed, 0 failed; runner log sha256 `65219407…`).
+- **Tested head:** `47522c6a2d` (after critique round 7). These results are
+  part of the final formal run recorded in [unit-tests](unit-tests.md) (318
+  passed, 0 failed; runner log sha256 `2eaec3de…`).
 - **Runner:** `scripts/run_tests.sh` on the owner's Windows 11 host.
 - **Ordering:** written and first run after the confidence record
   (2026-10-04T01:58Z).
@@ -46,6 +46,10 @@ that owner releases it (`0cd28ab8cc`).
 
 ## Published receipts and manifests
 
+Since round 7 these tests read every sprint's published `attempt-*.json`, so
+the repaired lab's first schema-3 receipts (backlog T-224) meet the stricter
+rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
+
 | Test | EARS | Result | Assertion |
 |---|---|---|---|
 | `test_every_attempt_is_published` | V3 | pass | Attempt indices 1–13, taken from the final budget counter, each have a published receipt. |
@@ -62,6 +66,8 @@ that owner releases it (`0cd28ab8cc`).
 | `test_the_token_split_accounts_for_decoded_output` (13) | L1 | pass | **Round 5.** Reasoning, visible and tool-call tokens never exceed the decoded count, and the published remainder makes up the difference. |
 | `test_supervisor_lag_is_recorded_and_stops_only_past_two_periods` (13) | M3 | pass | **Round 5.** Every outcome records its maximum supervisor lag. It exceeds two telemetry periods exactly when the attempt stopped on lag (attempt 02, 14.9 s); the others peaked at 0.63 s. |
 | `test_long_all_sessions_record_ac1_coverage` (13) | L2 | pass | **Regression (round 5).** Every long:all session, completed or stopped, records AC1 coverage, true exactly at 20 requests or more. |
+| `test_published_screen_reproduces_the_recorded_winners` (13) | S2, L4 | pass | **Regression (round 7).** A screen attempt's receipt publishes each session's verdict under the current scan beside the live one. Re-ranking the published sessions under L4's pick gives the published ranking and the recorded `screen_winners`, and each session's score and live verdict match the receipt's session record. |
+| `test_a_stopped_requests_unreturned_decode_is_bounded_by_the_receipt` (13) | O1 | pass | **Round 7.** Where a stopped request publishes its seconds after prefill, it names `decoded_tokens` missing, and the time lies within its elapsed time. |
 | `test_hermes_timers_hold_at_or_above_each_sessions_backstop` (13) | M2 | pass | **Round 5.** After calibration, every session's applied Hermes timer, and the manifest's declared timers, are at or above the request backstop recomputed from the calibration record, the time parameters and that session's output cap. |
 
 ## Windows file behaviour (`windows_only`)
@@ -86,6 +92,7 @@ Sprint 2 checkpoint merge) and on head: `tests/hermes_cli/test_local_*.py`,
 | Head `663bac6a2a` | 34 | 569 | 1 | 2 | `7848fb9f…` |
 | Head `9c373121cd` | 34 | 622 | 1 | 2 | `99a776a6…` |
 | Head `a730a0a39e` | 34 | 622 | 1 | 2 | `d10f32f0…` |
+| Head `47522c6a2d` | 34 | 649 | 1 | 2 | `20559fd5…` |
 
 - **New failures on head:** none.
 - **Fixed on head (6):** the shell-hook, hooks-CLI, cron catch-up and

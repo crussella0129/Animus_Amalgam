@@ -36,7 +36,7 @@ shown beside it.
 | 2 | Thinking on, budget 256, greedy, echo off (R1) | 4/4 | 20 | **345.4 s**, 1,058.3 tokens | 345.4 s, 1,058.3 tokens | attempt 09 |
 | 3 | Thinking on, budget 256, greedy, **echo on** (R2) | 4/4 | 18 | **384.3 s**, 1,171.6 tokens | 352.6 s, 1,150.8 tokens | attempts 10 (wire defect, 3 verified), 11 (host maintenance, 0), 12 (owner apps, 2), 13 |
 
-Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Their time after prefill bounds the missing decode at the calibrated rate: at most about 108 tokens in R0 and 376 in R2, or at most 584.6 and 1,213.3 tokens per verified item.
+Token figures are lower bounds. Three stopped requests (attempt 07's request 91, attempt 11's 145 and attempt 12's 156) never returned a decode count, so their receipts name it missing and the sums count them as 0. Each receipt publishes how long the request ran after its prompt was fully processed: 30.5, 89.1 and 16.7 s. At the fastest decode rate any receipt shows (3.743 tok/s), that time allows about 114 more tokens in R0 and 396 in R2, or about 586.1 and 1,215.6 tokens per verified item. This is an estimate from the receipts, not a strict bound.
 
 The order is the same under every reading. Attempt 12's two items came
 from a session cut short by a resource stop, scored from its fixture and
@@ -54,6 +54,14 @@ both thinking modes:
 | Thinking off | greedy 259 s < model default (1.0 / 0.95 / 20) 319 s < vendor non-thinking (0.7 / 0.8 / 20, presence 1.5): failed, wrote helper files outside its fixture twice |
 | Thinking on | greedy 515 s < vendor or model default 521 s; the mid probe (0.6 / 0.95 / 20) is not selectable |
 
+The ranking uses the current L4 scan. The live scan, before its repair,
+also flagged model default and the mid probe twice. Those flags were false
+positives: `/.git/` resolved against the Git install path, and a
+shell-local `$f`. Attempt 06's receipt publishes both verdicts for every
+session (`screen`), and a receipt test re-ranks them to the recorded
+winners. Vendor non-thinking stays contaminated under both scans, because
+it wrote into the then-shared `/tmp`.
+
 **Reasoning echo** (O2). With thinking on and echo off, every continued
 request rolls back the previous turn's generated tokens. The median was 161
 uncached tokens per continued request in R1, against 56 with thinking off.
@@ -61,9 +69,13 @@ With echo on, the median fell to 60 and history stays append-only: 12 of
 17 continued requests rolled back at most 1 token. The exception is every
 turn whose reasoning hit the 256-token budget: all 5 large rollbacks
 (412–678 tokens) followed exactly those turns, because the forced end of
-thinking renders differently from what was generated. Echo removed about
-60% of the prefill work, but throughput on the completed runs was unchanged
-(352.6 s against 345.4 s per verified item), because decode dominates on this host.
+thinking renders differently from what was generated. Echo cut the median
+continued request's uncached prompt by about 60%, but not the total. R2's
+completed run (attempt 13) processed 8,259 uncached prompt tokens in 90.3 s,
+against R1's 7,943 in 93.7 s. The budget-cut rollbacks, and the different
+path the model took, kept the total level. Throughput on the completed runs
+was unchanged (352.6 s against 345.4 s per verified item), because decode
+dominates on this host.
 
 **Checkpoint density** (O3). R3 was not run. R1's median uncached tokens per
 continued request (161) never approached the 2,000 threshold. llama.cpp's
@@ -82,9 +94,11 @@ on this workload.
    ranking**: echo on ranks third, 2% slower than echo off on the completed
    runs, and further behind across all attempts because of host stops
    unrelated to echo. It is chosen for INT-0007 AC3. It keeps history
-   append-only, so prefill stops growing with each turn's reasoning, and it
-   removed about 60% of the prefill work here. Its throughput benefit on
-   longer sessions and slower-prefill hosts was not measured. Expect a
+   append-only, so a continued request reprocesses only its new turn: the
+   median uncached prompt fell from 161 to 60 tokens. The total prefill on
+   these runs did not fall (8,259 against 7,943 uncached tokens), and the
+   throughput benefit on longer sessions and slower-prefill hosts was not
+   measured. Expect a
    one-turn rollback after each budget-truncated think block, until
    uncapped thinking (T-218) removes the cut.
 3. **Keep the NVIDIA kernel cache persistent.** A cold driver JIT cache
@@ -98,7 +112,7 @@ on this workload.
 
 | Setting | Choice | Rationale |
 |---|---|---|
-| Context | 32,768 | Peak rendered input was 7,867 tokens. Admission fits 32K with 5 frozen checkpoints (5 × 149.6 MiB) inside the 4 GiB RAM reserve. Larger windows were not measured. |
+| Context | 32,768 | Peak rendered input was 9,935 tokens (attempt 13). Admission fits 32K with 5 frozen checkpoints (5 × 149.6 MiB) inside the 4 GiB RAM reserve. Larger windows were not measured. |
 | Environment probe | `agent.environment_probe: false` | It adds a model turn and tokens with no task value (Sprint 2, L-19). |
 | Time model | m = 2.0, k = 20, f = 0.5, U = 2048 (T-215) | Every deadline derives from the host's own calibration. Over 165 requests, predicted over actual time (after the rearm) had a median of 4.3 and a p10 of 1.56. It prices the full output cap, so it is a conservative bound, not a forecast. It under-predicted once, by 9%: a full-cap decode at about 8K context, because decode slows as context grows. Enforcement uses the stall rule and a floor-priced backstop, which was never reached. |
 | Toolset | `terminal` only | The task needs only shell work. Every extra tool schema is sent on every request. |

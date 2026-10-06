@@ -1,13 +1,13 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `a730a0a39e` (after critique round 6).
+- **Tested head:** `47522c6a2d` (after critique round 7).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-06T03:45:41Z, covering the six
-  Sprint 3 formal files: **291 passed, 0 failed**. Runner log sha256
-  `652194079ce640ebac4e8eacc72e25d0d7298944fc29803e2090f694896c95ad`. The
-  earlier runs at `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
+- **Final formal run (V1):** started 2026-10-06T04:07:50Z, covering the six
+  Sprint 3 formal files: **318 passed, 0 failed**. Runner log sha256
+  `2eaec3de6a6705c7feb5ed9a4582124bb3d083bcd074507c1901134754ebcead`. The
+  earlier runs at `a730a0a39e` (291, log `65219407…`), `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
   and `efeb4ef4c4` passed 291 (log `5816e66f…`), 238 (log `b6d63e54…`),
   223 (log `bc3e1d5f…`), 217 (log `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
   with the lab (`<lab>/formal/`) and are not published, because tracebacks
@@ -59,6 +59,7 @@
 | `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. The screen publishes what it saw (1 message, 1 tool call), and the session records the call's validity. |
 | `test_scoring_a_cut_short_session_never_raises_into_the_stop_path` | L2, AC7 | pass | **Regression (round 3).** When scoring raises, `stopped_session` returns the session with the error as its verification. `run.bounded` returns `None` past its bound and the result within it. |
 | `test_a_stopped_request_stays_stopped_whatever_lands_after` (2) | AC7, M3 | pass | **Regression (round 2).** After `request_stopped`, a later `wire_failure` or `response_cancelled` keeps the stopped outcome, its cause, its own timing, both predictions and the resources. Machine time is computed. |
+| `test_a_stopped_request_publishes_its_time_after_prefill` | O1, AC7 | pass | **Regression (round 7).** A stopped request whose decode went unreturned names `decoded_tokens` missing and publishes its seconds after the prompt was fully processed, from its own progress receipt. |
 | `test_publish_scores_and_screens_a_cut_short_session` (2) | L2, L4 | pass | **Regression (round 3).** Publishing scores a cut-short session from its preserved fixture and screens its last request's conversation: clean when it runs the check, flagged when it reads outside the fixture. The screen's message and tool-call counts, and each call's validity, are published, with AC1 coverage for a long:all session (round 5). |
 | `test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause` | AC7, M3 | pass | **Regression (round 3, attempt 02).** An aborted request takes its own session's recorded stop as its cause. A failure in a session that ended without a stop stays a wire failure, and only a request in flight at the attempt stop takes the attempt's reason, timed from its receipts. |
 
@@ -113,8 +114,10 @@ earliest bases could be collected; the committed tests are unchanged.
 | stop receipt carries a decode lower bound | `a730a0a39e` | `cf895ec191` | **Behavior:** `stopped_request` dropped the `/slots` decode count it had seen. |
 | live stall stop names its decode missing | `a730a0a39e` | `cf895ec191` | **Behavior:** the published stopped request neither named `decoded_tokens` missing nor kept the observed count. |
 | published requests name decoded tokens missing | `a730a0a39e` | `cf895ec191` | **Behavior:** the 6 requests that never completed (attempts 02, 04, 05, 07, 11 and 12) left `decoded_tokens` silently absent. |
+| stopped request publishes its time after prefill | `47522c6a2d` | `f56cf5f195` | **API:** no `seconds_after_prefill`. |
+| screen receipt reproduces the recorded winners | `47522c6a2d` | `f56cf5f195` | **API:** attempt 06's receipt had no `screen` report, only the pre-repair live verdicts. |
 
-V2 covers 43 regressions: 25 red on the behavior assertion and 18 on an
+V2 covers 45 regressions: 25 red on the behavior assertion and 20 on an
 API the repair introduced. For the API reds of rounds 1 and 2, the defect
 itself is evidenced live by the attempt that found it (02, 04, 07, 11 and
 12); the test pins the repaired contract. The API reds of rounds 3 to 5 are
@@ -125,7 +128,7 @@ behavior that was already correct. So do round 6's markup-bearing split
 test and the schema-scoped receipt checks, which hold receipts from the
 repaired lab to stricter rules.
 
-In the round-3 to round-6 worktrees, the base copy of
+In the round-3 to round-7 worktrees, the base copy of
 `test_session_env_is_private_and_repository_free` also failed. The worktree
 sat inside the owner's `TEMP`, which breaks the test's premise that the
 repository is outside it. The failure is an artifact of where the worktree
