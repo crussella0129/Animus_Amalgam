@@ -114,7 +114,10 @@
    "kernel_cache_growth_bytes": 0,
    "rerun_of": null,
    "ac1_request_coverage": false,
-   "stopped": false
+   "stopped": false,
+   "delivered_tool_calls": 10,
+   "unvalidated_tool_calls": 0,
+   "length_finished_tool_call_requests": []
   }
  ],
  "machine_time": [
@@ -146,6 +149,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 76,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 0,
    "uncached_prompt_tokens": 3749,
@@ -162,8 +167,10 @@
    },
    "started_s": 39.531,
    "ended_s": 104.328,
+   "unsplit_decoded_tokens": 46,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -186,6 +193,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 13,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 3870,
    "uncached_prompt_tokens": 238,
@@ -202,8 +211,10 @@
    },
    "started_s": 105.484,
    "ended_s": 124.531,
+   "unsplit_decoded_tokens": 47,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -226,6 +237,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 255,
    "visible_tokens": 206,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 4167,
    "uncached_prompt_tokens": 1045,
@@ -242,8 +255,10 @@
    },
    "started_s": 124.859,
    "ended_s": 262.75,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -266,6 +281,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 23,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5208,
    "uncached_prompt_tokens": 492,
@@ -282,8 +299,10 @@
    },
    "started_s": 263.047,
    "ended_s": 283.391,
+   "unsplit_decoded_tokens": 30,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -306,6 +325,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 17,
    "visible_tokens": 133,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5752,
    "uncached_prompt_tokens": 54,
@@ -322,8 +343,10 @@
    },
    "started_s": 283.859,
    "ended_s": 327.375,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -346,6 +369,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5958,
    "uncached_prompt_tokens": 30,
@@ -362,8 +387,10 @@
    },
    "started_s": 327.609,
    "ended_s": 464.234,
+   "unsplit_decoded_tokens": 230,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -386,6 +413,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 55,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5984,
    "uncached_prompt_tokens": 524,
@@ -402,8 +431,10 @@
    },
    "started_s": 464.625,
    "ended_s": 493.094,
+   "unsplit_decoded_tokens": 30,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -426,6 +457,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 37,
    "visible_tokens": 75,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6592,
    "uncached_prompt_tokens": 54,
@@ -442,8 +475,10 @@
    },
    "started_s": 493.516,
    "ended_s": 526.609,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -466,6 +501,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6760,
    "uncached_prompt_tokens": 25,
@@ -482,8 +519,10 @@
    },
    "started_s": 526.906,
    "ended_s": 643.062,
+   "unsplit_decoded_tokens": 153,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -506,6 +545,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 48,
    "visible_tokens": 88,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6781,
    "uncached_prompt_tokens": 470,
@@ -522,8 +563,10 @@
    },
    "started_s": 643.578,
    "ended_s": 686.547,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -546,6 +589,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 173,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7389,
    "uncached_prompt_tokens": 27,
@@ -562,8 +607,10 @@
    },
    "started_s": 686.812,
    "ended_s": 780.203,
+   "unsplit_decoded_tokens": 152,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -586,6 +633,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 21,
    "visible_tokens": 72,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7740,
    "uncached_prompt_tokens": 58,
@@ -602,8 +651,10 @@
    },
    "started_s": 780.703,
    "ended_s": 808.578,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -626,6 +677,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7893,
    "uncached_prompt_tokens": 58,
@@ -642,8 +695,10 @@
    },
    "started_s": 808.969,
    "ended_s": 998.125,
+   "unsplit_decoded_tokens": 419,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -666,6 +721,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7947,
    "uncached_prompt_tokens": 742,
@@ -682,8 +739,10 @@
    },
    "started_s": 998.609,
    "ended_s": 1133.562,
+   "unsplit_decoded_tokens": 177,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -706,6 +765,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 23,
    "visible_tokens": 148,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 8685,
    "uncached_prompt_tokens": 500,
@@ -722,8 +783,10 @@
    },
    "started_s": 1134.094,
    "ended_s": 1191.5,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -746,6 +809,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 73,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 9358,
    "uncached_prompt_tokens": 60,
@@ -762,8 +827,10 @@
    },
    "started_s": 1191.781,
    "ended_s": 1243.609,
+   "unsplit_decoded_tokens": 92,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -786,6 +853,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 92,
    "visible_tokens": 126,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 9582,
    "uncached_prompt_tokens": 105,
@@ -802,8 +871,10 @@
    },
    "started_s": 1244.297,
    "ended_s": 1313.219,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -826,6 +897,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 255,
    "visible_tokens": 174,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 9907,
    "uncached_prompt_tokens": 28,
@@ -842,8 +915,10 @@
    },
    "started_s": 1313.594,
    "ended_s": 1449.734,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   }
  ],

@@ -63,6 +63,7 @@ class CaptureBackend:
         self.tokenize_delay = 0.0  # the wire's post-response accounting runs /tokenize
         self.slots = [_slot(1)]
         self.tool_call = False
+        self.tool_arguments = json.dumps({"command": "ls"})
         self.finish_reason = "stop"
         self.malformed = False  # break the stream after the first answer delta
         self.hold_final = False  # the final chunk waits for release_final
@@ -142,13 +143,17 @@ class CaptureBackend:
                         "id": "call_1",
                         "function": {
                             "name": "terminal",
-                            "arguments": json.dumps({"command": "ls"}),
+                            "arguments": self.tool_arguments,
                         },
                     }
                 ]
             }
+            answer_words = len(f"terminal {self.tool_arguments}".split())
         else:
             answer = {"content": "ok done"}
+            answer_words = 2
+        # Words stand for tokens throughout: the decode count is what was streamed.
+        decoded = len("think it over".split()) + answer_words
         return [
             {"prompt_progress": {"total": 3, "cache": 0, "processed": 3, "time_ms": 1}},
             {"choices": [{"delta": {"reasoning_content": "think it over"}}]},
@@ -159,7 +164,7 @@ class CaptureBackend:
                     "cache_n": 0,
                     "prompt_n": 3,
                     "prompt_ms": 30.0,
-                    "predicted_n": 5,
+                    "predicted_n": decoded,
                     "predicted_ms": 1500.0,
                     "predicted_per_second": 3.3,
                 },
@@ -334,11 +339,13 @@ def test_exhausted_request_budget_refuses_before_generation(make_lab):
 
 
 def test_session_request_limit(make_lab):
-    backend, wire, _records, consumed = make_lab(request_limit=1)
+    backend, wire, records, consumed = make_lab(request_limit=1)
     assert _post(wire, _body(10))[0] == 200
     assert _post(wire, _body(10))[0] == 422
     assert len(backend.completions) == 1 and len(consumed) == 1
     assert "session request limit" in wire.failure
+    # The refusal is an arm failure on the receipt, not only the wire's state.
+    assert "session request limit" in _record(records, "wire_failure")["error"]
 
 
 def test_wire_streams_and_reassembles(make_lab):
@@ -358,12 +365,40 @@ def test_wire_streams_and_reassembles(make_lab):
 def test_streamed_tool_call_is_reassembled_and_counted(make_lab):
     backend, wire, records, _consumed = make_lab()
     backend.tool_call = True
-    _status, folded = _post(wire, _body(10, stream=False))
+    _status, folded = _post(wire, _body(10, stream=False, tool_words=1))
     call = json.loads(folded)["choices"][0]["message"]["tool_calls"][0]
     assert call["function"]["name"] == "terminal"
     assert json.loads(call["function"]["arguments"]) == {"command": "ls"}
     # A non-streaming client has its payload before the wire's accounting records it.
-    assert _record(records, "response_end")["tool_calls"] == 1
+    end = _record(records, "response_end")
+    assert end["tool_calls"] == 1
+    assert end["tool_call_validity"] == [
+        {"name": "terminal", "arguments_valid": True, "known_tool": True}
+    ]
+    # L1, round 5: the split accounts for the decoded output; tool-call output is its
+    # own count, not lost from both reasoning and visible.
+    assert end["visible_tokens"] == 0 and end["tool_call_tokens"] > 0
+    assert (
+        end["reasoning_tokens"] + end["visible_tokens"] + end["tool_call_tokens"]
+        == end["timings"]["predicted_n"]
+    )
+
+
+def test_a_tool_call_cut_at_the_output_cap_is_recorded_invalid(make_lab):
+    """Round 5, attempt 10: a call cut at the cap never reached Hermes's history, so
+    validity from that history showed 7 of 7 valid; the wire records every delivered
+    call (M3)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    backend.finish_reason = "length"
+    backend.tool_arguments = '{"command": "cat fi'
+    _post(wire, _body(10, stream=False, tool_words=1))
+    end = _record(records, "response_end")
+    assert end["finish_reason"] == "length"
+    assert end["tool_call_validity"] == [
+        {"name": "terminal", "arguments_valid": False, "known_tool": True}
+    ]
+    assert wire.session["tool_call_validity"] == end["tool_call_validity"]
 
 
 def test_the_screened_conversation_includes_tool_calls_already_delivered(make_lab):
@@ -436,6 +471,7 @@ def test_receipt_fields_complete_or_named_missing(make_lab):
     # b10964's stream carries no id_slot; the working slot comes from /slots instead.
     assert end["id_slot"] == 0 and end["id_slot_source"] == "slots"
     assert end["reasoning_tokens"] == 3 and end["visible_tokens"] == 2
+    assert end["tool_call_tokens"] == 0 and end["tool_call_validity"] == []
     assert end["meaningful_first_token_seconds"] is not None
     assert end["predicted_initial_seconds"] and end["predicted_rearmed_seconds"]
     assert (
@@ -494,6 +530,11 @@ def test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not(
     sender = threading.Thread(target=lambda: _post(wire, _body(10)))
     sender.start()
     _wait_mid_stream(wire, backend)
+    deadline = time.monotonic() + 10
+    while (wire.active or {}).get("first_token") is None:
+        assert time.monotonic() < deadline, "no token reached the wire"
+        time.sleep(0.01)
+    first_token = wire.active["first_token"]
     cause = "stall in decode (window 5.0s)"
     run.stop_active_request(
         wire, lambda kind, **data: records.append({"kind": kind, **data}), cause
@@ -513,9 +554,7 @@ def test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not(
     stopped, cancelled = _published(records, tmp_path)["requests"]
     assert (stopped["outcome"], stopped["stop_reason"]) == ("stopped", cause)
     assert stopped["predicted_initial_seconds"] == 100.0
-    assert "meaningful_first_token_seconds" in stopped or (
-        "meaningful_first_token_seconds" in stopped["missing"]
-    )
+    assert stopped["meaningful_first_token_seconds"] == first_token
     assert cancelled["outcome"] == "response_cancelled"
     assert "stop_reason" not in cancelled
 
@@ -557,7 +596,11 @@ def test_a_stop_during_verification_still_screens_the_ended_session(make_lab, tm
         "tool_calls": 2,
     }
     assert stopped["verification"]["contamination"]
-    assert [c["known_tool"] for c in stopped["tool_calls"]] == [True, True]
+    # Validity covers the calls this wire delivered: the response, not the history.
+    assert stopped["tool_calls"] == [
+        {"name": "terminal", "arguments_valid": True, "known_tool": True}
+    ]
+    assert stopped["ac1_request_coverage"] is False
 
 
 def test_sequential_request_after_done_is_accepted_and_concurrent_is_refused(make_lab):

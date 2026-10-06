@@ -14,9 +14,9 @@ import os
 from pathlib import Path
 import re
 
-from driver import tool_call_validity
-from policy import manifest_digest
+from policy import ac1_request_coverage, manifest_digest
 import verify_long
+from wire import tool_call_validity
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
@@ -32,6 +32,7 @@ REQUEST_FIELDS = (
     "uncached_prompt_tokens",
     "reasoning_tokens",
     "visible_tokens",
+    "tool_call_tokens",
     "prompt_ms",
     "decode_ms",
     "decode_tps",
@@ -100,6 +101,8 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "tool_calls": event.get("tool_calls"),
                 "reasoning_tokens": event.get("reasoning_tokens"),
                 "visible_tokens": event.get("visible_tokens"),
+                "tool_call_tokens": event.get("tool_call_tokens"),
+                "tool_call_validity": event.get("tool_call_validity"),
                 "kernel_compiled": event.get("kernel_compiled"),
                 "cached_tokens": t.get("cache_n"),
                 "uncached_prompt_tokens": t.get("prompt_n"),
@@ -164,6 +167,16 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
         ended = r.pop("_ended_at", None)
         r["ended_s"] = None if ended is None else round(ended - t0, 3)
         r.pop("_failed_at", None)
+        split = [
+            r.get(k) for k in ("decoded_tokens", "reasoning_tokens", "visible_tokens")
+        ]
+        if None not in split:
+            # Decoded output that is neither reasoning, visible content nor counted
+            # tool-call output: template markup, plus tool-call output in receipts
+            # whose wire did not count it (before round 5).
+            r["unsplit_decoded_tokens"] = (
+                split[0] - split[1] - split[2] - (r.get("tool_call_tokens") or 0)
+            )
         r["missing"] = [f for f in REQUEST_FIELDS if r.get(f) is None]
     machine_time = _machine_time(requests.values())
     recorded = {s["session"] for s in sessions}
@@ -176,6 +189,7 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             and fixture.is_dir()
         ):
             body = last_body.get(index) or {}
+            own_requests = [r for r in requests.values() if r["session"] == index]
             conversation = body.get("messages") or []
             known = {
                 (t.get("function") or {}).get("name") for t in body.get("tools") or []
@@ -184,8 +198,13 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "session": index,
                 "workload": workload,
                 "stopped": True,
-                "requests": sum(1 for r in requests.values() if r["session"] == index),
+                "requests": len(own_requests),
                 "tool_calls": tool_call_validity(conversation, known),
+                **(
+                    {"ac1_request_coverage": ac1_request_coverage(len(own_requests))}
+                    if workload == "long:all"
+                    else {}
+                ),
                 "verification": {
                     "score": verify_long.score(fixture, task_python),
                     "contamination": _screen(attempt, fixture, conversation),
@@ -194,6 +213,22 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "scored": "at publish, from the session's preserved fixture and the "
                 "conversation the wire last forwarded",
             })
+    for s in sessions:
+        if str(s.get("workload", "")).startswith("long") and isinstance(
+            s.get("tool_calls"), list
+        ):
+            # Validity covers every delivered call, or names the shortfall: Hermes's
+            # history, the source before round 5, drops a call it rejected.
+            own = [r for r in requests.values() if r["session"] == s["session"]]
+            s["delivered_tool_calls"] = sum(r.get("tool_calls") or 0 for r in own)
+            s["unvalidated_tool_calls"] = s["delivered_tool_calls"] - len(
+                s["tool_calls"]
+            )
+            s["length_finished_tool_call_requests"] = [
+                r["request_id"]
+                for r in own
+                if r.get("finish_reason") == "length" and r.get("tool_calls")
+            ]
     outcome.pop("sessions", None)
     manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
     return {

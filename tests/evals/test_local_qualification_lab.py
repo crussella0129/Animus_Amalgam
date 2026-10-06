@@ -25,6 +25,7 @@ import publish  # noqa: E402
 import run  # noqa: E402
 import screen  # noqa: E402
 import verify_long  # noqa: E402
+import wire  # noqa: E402
 
 TASK_PYTHON = Path(sys.executable)
 
@@ -97,7 +98,16 @@ def test_session_env_is_private_and_repository_free(tmp_path, monkeypatch):
 
 
 def test_session_config_holds_timers_at_or_above_the_backstop(tmp_path):
-    config = run.session_config("http://127.0.0.1:1/v1", 32768, True, 940.0, tmp_path)
+    """M2: Hermes's timers come from the session windows, at or above the request
+    backstop, so the lab's own stall rule and backstop decide every stop."""
+    cal = run.Calibration(
+        prefill_tps=96.8, decode_tps=3.55, overhead_s=0.02, load_s=45.0, cli_start_s=3.0
+    )
+    windows = run.session_windows(cal, run.TimeParams(), 45.0, 32768, 768, 0.5)
+    assert windows["hermes_timer"] >= windows["request_backstop"]
+    config = run.session_config(
+        "http://127.0.0.1:1/v1", 32768, True, windows["hermes_timer"], tmp_path
+    )
     assert config["agent"]["environment_probe"] is False
     assert config["model"]["reasoning_echo"] is True
     timers = [
@@ -106,7 +116,7 @@ def test_session_config_holds_timers_at_or_above_the_backstop(tmp_path):
         config["agent"]["local_stream_stale_timeout"],
         config["agent"]["turn_liveness"]["timeout_s"],
     ]
-    assert min(timers) >= 940.0
+    assert min(timers) >= windows["request_backstop"]
 
 
 # Kernel cache (attempt 02 repair) ------------------------------------------------------
@@ -460,6 +470,7 @@ def test_stop_predicates_fire_at_boundary():
         100.001, 100.0
     )
     assert not policy.budget_exceeded(1e9, None)  # calibration has no budget yet
+    assert not policy.ac1_request_coverage(19) and policy.ac1_request_coverage(20)
     quiet = {"vram_used": 5, "ram_available": 9}
     assert not policy.load_progressed(quiet, dict(quiet), log_grew=False)
     assert policy.load_progressed(
@@ -584,7 +595,7 @@ def test_tool_call_validity_names_bad_arguments_and_unknown_tools():
             ]
         }
     ]
-    assert driver.tool_call_validity(conversation, {"terminal"}) == [
+    assert wire.tool_call_validity(conversation, {"terminal"}) == [
         {"name": "terminal", "arguments_valid": True, "known_tool": True},
         {"name": "terminal", "arguments_valid": False, "known_tool": True},
         {"name": "browser", "arguments_valid": True, "known_tool": False},
@@ -651,7 +662,7 @@ def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
     _apply_reference(fixture, 3)
 
     class Wire:
-        session = {"id": 2, "requests": 6}
+        session = {"id": 2, "requests": 6, "tool_call_validity": []}
         ended = None
 
     current = {"index": 2, "workload": "long:all", "fixture": fixture}
@@ -659,6 +670,7 @@ def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
         current, Wire(), TASK_PYTHON.parent.parent, session[1]
     )
     assert stopped["session"] == 2 and stopped["requests"] == 6
+    assert stopped["ac1_request_coverage"] is False  # L2: under 20, being stopped
     assert stopped["verification"]["score"]["passed"] == 1
     assert stopped["verification"]["contamination"] == []
     assert (
@@ -677,6 +689,7 @@ def test_a_cut_short_session_is_screened_from_its_last_conversation(tmp_path, se
             "requests": 2,
             "last_messages": _conversation("cat ../../secret"),
             "last_tools": ["terminal"],
+            "tool_call_validity": [],
         }
         ended = None
 
@@ -686,9 +699,6 @@ def test_a_cut_short_session_is_screened_from_its_last_conversation(tmp_path, se
     )
     assert stopped["verification"]["contamination"]
     assert stopped["verification"]["screened"] == {"messages": 1, "tool_calls": 1}
-    assert stopped["tool_calls"] == [
-        {"name": "terminal", "arguments_valid": True, "known_tool": True}
-    ]
 
 
 def test_scoring_a_cut_short_session_never_raises_into_the_stop_path(
@@ -702,7 +712,7 @@ def test_scoring_a_cut_short_session_never_raises_into_the_stop_path(
     monkeypatch.setattr(run, "verify_session", broken)
 
     class Wire:
-        session = {"id": 1, "requests": 1}
+        session = {"id": 1, "requests": 1, "tool_call_validity": []}
         ended = None
 
     current = {"index": 1, "workload": "long:all", "fixture": tmp_path / "fixture"}
@@ -808,6 +818,7 @@ def test_publish_scores_and_screens_a_cut_short_session(tmp_path, commands, flag
         "tool_calls": len(commands),
     }
     assert len(session["tool_calls"]) == len(commands)
+    assert session["ac1_request_coverage"] is False
 
 
 def test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause(tmp_path):

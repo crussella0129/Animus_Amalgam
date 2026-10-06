@@ -100,7 +100,12 @@
    "kernel_cache_growth_bytes": 0,
    "rerun_of": null,
    "ac1_request_coverage": false,
-   "stopped": false
+   "stopped": false,
+   "delivered_tool_calls": 8,
+   "unvalidated_tool_calls": 1,
+   "length_finished_tool_call_requests": [
+    142
+   ]
   }
  ],
  "machine_time": [
@@ -132,6 +137,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 76,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 0,
    "uncached_prompt_tokens": 3749,
@@ -148,8 +155,10 @@
    },
    "started_s": 32.313,
    "ended_s": 98.938,
+   "unsplit_decoded_tokens": 46,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -172,6 +181,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 8,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 3870,
    "uncached_prompt_tokens": 238,
@@ -188,8 +199,10 @@
    },
    "started_s": 100.141,
    "ended_s": 118.672,
+   "unsplit_decoded_tokens": 47,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -212,6 +225,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 255,
    "visible_tokens": 232,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 4162,
    "uncached_prompt_tokens": 1045,
@@ -228,8 +243,10 @@
    },
    "started_s": 118.985,
    "ended_s": 276.641,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -252,6 +269,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 7,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5203,
    "uncached_prompt_tokens": 518,
@@ -268,8 +287,10 @@
    },
    "started_s": 276.938,
    "ended_s": 293.953,
+   "unsplit_decoded_tokens": 30,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -292,6 +313,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 17,
    "visible_tokens": 131,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5757,
    "uncached_prompt_tokens": 54,
@@ -308,8 +331,10 @@
    },
    "started_s": 294.406,
    "ended_s": 341.219,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -332,6 +357,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5961,
    "uncached_prompt_tokens": 30,
@@ -348,8 +375,10 @@
    },
    "started_s": 341.578,
    "ended_s": 491.203,
+   "unsplit_decoded_tokens": 225,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -372,6 +401,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 161,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5987,
    "uncached_prompt_tokens": 519,
@@ -388,8 +419,10 @@
    },
    "started_s": 491.625,
    "ended_s": 554.094,
+   "unsplit_decoded_tokens": 30,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -412,6 +445,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 35,
    "visible_tokens": 79,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6696,
    "uncached_prompt_tokens": 54,
@@ -428,8 +463,10 @@
    },
    "started_s": 554.547,
    "ended_s": 591.11,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -452,6 +489,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6866,
    "uncached_prompt_tokens": 25,
@@ -468,8 +507,10 @@
    },
    "started_s": 591.422,
    "ended_s": 718.578,
+   "unsplit_decoded_tokens": 153,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -492,6 +533,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 48,
    "visible_tokens": 92,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6887,
    "uncached_prompt_tokens": 470,
@@ -508,8 +551,10 @@
    },
    "started_s": 719.094,
    "ended_s": 766.531,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -532,6 +577,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 160,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7499,
    "uncached_prompt_tokens": 27,
@@ -548,8 +595,10 @@
    },
    "started_s": 766.891,
    "ended_s": 864.86,
+   "unsplit_decoded_tokens": 152,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -572,6 +621,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 13,
    "visible_tokens": 60,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7837,
    "uncached_prompt_tokens": 58,
@@ -588,8 +639,10 @@
    },
    "started_s": 865.422,
    "ended_s": 889.469,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -612,6 +665,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7970,
    "uncached_prompt_tokens": 58,
@@ -628,8 +683,10 @@
    },
    "started_s": 889.75,
    "ended_s": 1126.516,
+   "unsplit_decoded_tokens": 513,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   }
  ],

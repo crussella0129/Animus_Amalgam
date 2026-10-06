@@ -114,7 +114,10 @@
    "kernel_cache_growth_bytes": 0,
    "rerun_of": null,
    "ac1_request_coverage": false,
-   "stopped": false
+   "stopped": false,
+   "delivered_tool_calls": 10,
+   "unvalidated_tool_calls": 0,
+   "length_finished_tool_call_requests": []
   }
  ],
  "machine_time": [
@@ -146,6 +149,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 0,
    "uncached_prompt_tokens": 3713,
@@ -162,8 +167,10 @@
    },
    "started_s": 32.485,
    "ended_s": 75.563,
+   "unsplit_decoded_tokens": 47,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -186,6 +193,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 3759,
    "uncached_prompt_tokens": 243,
@@ -202,8 +211,10 @@
    },
    "started_s": 76.688,
    "ended_s": 92.188,
+   "unsplit_decoded_tokens": 45,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -226,6 +237,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 194,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 4046,
    "uncached_prompt_tokens": 1047,
@@ -242,8 +255,10 @@
    },
    "started_s": 92.516,
    "ended_s": 160.703,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -266,6 +281,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5287,
    "uncached_prompt_tokens": 26,
@@ -282,8 +299,10 @@
    },
    "started_s": 160.969,
    "ended_s": 171.907,
+   "unsplit_decoded_tokens": 28,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -306,6 +325,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 114,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5340,
    "uncached_prompt_tokens": 56,
@@ -322,8 +343,10 @@
    },
    "started_s": 172.407,
    "ended_s": 208.125,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -346,6 +369,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5510,
    "uncached_prompt_tokens": 32,
@@ -362,8 +387,10 @@
    },
    "started_s": 208.407,
    "ended_s": 267.453,
+   "unsplit_decoded_tokens": 185,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -386,6 +413,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 77,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5726,
    "uncached_prompt_tokens": 56,
@@ -402,8 +431,10 @@
    },
    "started_s": 267.938,
    "ended_s": 292.469,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -426,6 +457,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5859,
    "uncached_prompt_tokens": 27,
@@ -442,8 +475,10 @@
    },
    "started_s": 292.782,
    "ended_s": 340.063,
+   "unsplit_decoded_tokens": 147,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -466,6 +501,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 83,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6032,
    "uncached_prompt_tokens": 56,
@@ -482,8 +519,10 @@
    },
    "started_s": 340.547,
    "ended_s": 366.875,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -506,6 +545,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6171,
    "uncached_prompt_tokens": 29,
@@ -522,8 +563,10 @@
    },
    "started_s": 367.125,
    "ended_s": 405.782,
+   "unsplit_decoded_tokens": 118,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -546,6 +589,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 40,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6317,
    "uncached_prompt_tokens": 56,
@@ -562,8 +607,10 @@
    },
    "started_s": 406.297,
    "ended_s": 419.578,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -586,6 +633,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6413,
    "uncached_prompt_tokens": 60,
@@ -602,8 +651,10 @@
    },
    "started_s": 419.875,
    "ended_s": 532.047,
+   "unsplit_decoded_tokens": 364,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -626,6 +677,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6836,
    "uncached_prompt_tokens": 62,
@@ -642,8 +695,10 @@
    },
    "started_s": 532.594,
    "ended_s": 564.469,
+   "unsplit_decoded_tokens": 102,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -666,6 +721,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6999,
    "uncached_prompt_tokens": 37,
@@ -682,8 +739,10 @@
    },
    "started_s": 564.922,
    "ended_s": 599.188,
+   "unsplit_decoded_tokens": 110,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -706,6 +765,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 136,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7145,
    "uncached_prompt_tokens": 62,
@@ -722,8 +783,10 @@
    },
    "started_s": 599.672,
    "ended_s": 642.469,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -746,6 +809,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7343,
    "uncached_prompt_tokens": 62,
@@ -762,8 +827,10 @@
    },
    "started_s": 642.719,
    "ended_s": 671.391,
+   "unsplit_decoded_tokens": 90,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -786,6 +853,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 107,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7494,
    "uncached_prompt_tokens": 107,
@@ -802,8 +871,10 @@
    },
    "started_s": 672.047,
    "ended_s": 706.032,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -826,6 +897,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 143,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7708,
    "uncached_prompt_tokens": 30,
@@ -842,8 +915,10 @@
    },
    "started_s": 706.391,
    "ended_s": 753.282,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   }
  ],

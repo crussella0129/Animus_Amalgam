@@ -116,7 +116,10 @@
      "tool_calls": 2
     }
    },
-   "scored": "at publish, from the session's preserved fixture and the conversation the wire last forwarded"
+   "scored": "at publish, from the session's preserved fixture and the conversation the wire last forwarded",
+   "delivered_tool_calls": 2,
+   "unvalidated_tool_calls": 0,
+   "length_finished_tool_call_requests": []
   }
  ],
  "machine_time": [
@@ -160,6 +163,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 5,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 0,
    "uncached_prompt_tokens": 1151,
@@ -176,8 +181,10 @@
    },
    "started_s": 31.594,
    "ended_s": 44.437,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -200,6 +207,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 0,
    "visible_tokens": 5,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 1147,
    "uncached_prompt_tokens": 4,
@@ -216,8 +225,10 @@
    },
    "started_s": 49.844,
    "ended_s": 52.375,
+   "unsplit_decoded_tokens": 1,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -240,6 +251,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 0,
    "uncached_prompt_tokens": 3709,
@@ -256,8 +269,10 @@
    },
    "started_s": 57.859,
    "ended_s": 100.75,
+   "unsplit_decoded_tokens": 47,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -280,6 +295,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 0,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 3755,
    "uncached_prompt_tokens": 243,
@@ -296,8 +313,10 @@
    },
    "started_s": 102.094,
    "ended_s": 117.719,
+   "unsplit_decoded_tokens": 45,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -325,6 +344,7 @@
     "uncached_prompt_tokens",
     "reasoning_tokens",
     "visible_tokens",
+    "tool_call_tokens",
     "prompt_ms",
     "decode_ms",
     "decode_tps",

@@ -56,6 +56,7 @@
      "known_tool": true
     }
    ],
+   "ac1_request_coverage": false,
    "verification": {
     "score": {
      "items": {
@@ -82,7 +83,10 @@
      "tool_calls": 6
     }
    },
-   "scored": "at publish, from the session's preserved fixture and the conversation the wire last forwarded"
+   "scored": "at publish, from the session's preserved fixture and the conversation the wire last forwarded",
+   "delivered_tool_calls": 6,
+   "unvalidated_tool_calls": 0,
+   "length_finished_tool_call_requests": []
   }
  ],
  "machine_time": [
@@ -114,6 +118,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 76,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 0,
    "uncached_prompt_tokens": 3749,
@@ -130,8 +136,10 @@
    },
    "started_s": 32.891,
    "ended_s": 97.532,
+   "unsplit_decoded_tokens": 46,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -154,6 +162,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 13,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 3870,
    "uncached_prompt_tokens": 238,
@@ -170,8 +180,10 @@
    },
    "started_s": 98.75,
    "ended_s": 117.766,
+   "unsplit_decoded_tokens": 47,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -194,6 +206,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 255,
    "visible_tokens": 205,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 4167,
    "uncached_prompt_tokens": 1045,
@@ -210,8 +224,10 @@
    },
    "started_s": 118.125,
    "ended_s": 256.735,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -234,6 +250,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 23,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5208,
    "uncached_prompt_tokens": 491,
@@ -250,8 +268,10 @@
    },
    "started_s": 257.125,
    "ended_s": 278.422,
+   "unsplit_decoded_tokens": 30,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -274,6 +294,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 255,
    "visible_tokens": 231,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5751,
    "uncached_prompt_tokens": 54,
@@ -290,8 +312,10 @@
    },
    "started_s": 278.907,
    "ended_s": 417.594,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -314,6 +338,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 255,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 5801,
    "uncached_prompt_tokens": 523,
@@ -330,8 +356,10 @@
    },
    "started_s": 417.922,
    "ended_s": 552.125,
+   "unsplit_decoded_tokens": 212,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -354,6 +382,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 59,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6320,
    "uncached_prompt_tokens": 506,
@@ -370,8 +400,10 @@
    },
    "started_s": 552.625,
    "ended_s": 580.829,
+   "unsplit_decoded_tokens": 30,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -394,6 +426,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 43,
    "visible_tokens": 79,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 6914,
    "uncached_prompt_tokens": 54,
@@ -410,8 +444,10 @@
    },
    "started_s": 581.313,
    "ended_s": 616.141,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -434,6 +470,8 @@
    "tool_calls": 1,
    "reasoning_tokens": 238,
    "visible_tokens": 0,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7092,
    "uncached_prompt_tokens": 25,
@@ -450,8 +488,10 @@
    },
    "started_s": 616.469,
    "ended_s": 723.235,
+   "unsplit_decoded_tokens": 133,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -474,6 +514,8 @@
    "tool_calls": 0,
    "reasoning_tokens": 68,
    "visible_tokens": 99,
+   "tool_call_tokens": null,
+   "tool_call_validity": null,
    "kernel_compiled": false,
    "cached_tokens": 7487,
    "uncached_prompt_tokens": 58,
@@ -490,8 +532,10 @@
    },
    "started_s": 723.922,
    "ended_s": 775.172,
+   "unsplit_decoded_tokens": 3,
    "missing": [
-    "id_slot"
+    "id_slot",
+    "tool_call_tokens"
    ]
   },
   {
@@ -519,6 +563,7 @@
     "uncached_prompt_tokens",
     "reasoning_tokens",
     "visible_tokens",
+    "tool_call_tokens",
     "prompt_ms",
     "decode_ms",
     "decode_tps",

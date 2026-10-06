@@ -41,6 +41,7 @@ from hermes_cli.local_runtime.throughput import (
     uncalibrated_stall_window,
 )
 from policy import (
+    ac1_request_coverage,
     PagingGuard,
     admission_requirements,
     admitted,
@@ -54,7 +55,6 @@ from policy import (
     supervisor_lagged,
     telemetry_stale,
 )
-from driver import tool_call_validity
 import verify_long
 from wire import Wire
 
@@ -68,7 +68,6 @@ BASELINE_SAMPLES = 10  # telemetry samples before admission (retained)
 GRACE_S, CLEANUP_S = 2, 5  # INT-0004 AC2 OS-level kill safety (retained)
 MAX_CHECKPOINTS = 32
 VERIFY_S = 120  # hidden-verifier process bound (retained: OS safety, not token work)
-AC1_MIN_REQUESTS = 20
 ARMS = json.loads((HERE / "arms.json").read_text(encoding="utf-8"))
 ENV_ALLOWED = {
     "SYSTEMROOT",
@@ -708,15 +707,16 @@ def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
         )
     except Exception as exc:
         verification = {"error": f"{type(exc).__name__}: {exc}"}
-    return {
+    stopped = {
         "session": current["index"],
         "workload": current["workload"],
         "requests": session["requests"] if session else None,
-        "tool_calls": None
-        if session is None
-        else tool_call_validity(conversation, set(session.get("last_tools") or [])),
+        "tool_calls": None if session is None else session["tool_call_validity"],
         "verification": verification,
     }
+    if session is not None and current["workload"] == "long:all":
+        stopped["ac1_request_coverage"] = ac1_request_coverage(session["requests"])
+    return stopped
 
 
 def bounded(fn, seconds):
@@ -1049,7 +1049,7 @@ def run_session(index, spec, ctx):
         "first_request": session["first_request"],
         "machine_seconds": time.monotonic() - session_start,
         "cli_start_seconds": (result or {}).get("cli_start_seconds"),
-        "tool_calls": (result or {}).get("tool_calls"),
+        "tool_calls": session["tool_call_validity"],
         "verification": verification,
         "cancelled": cancelled,
         "slot_idle_after_cancel": slot_idle,
@@ -1058,7 +1058,7 @@ def run_session(index, spec, ctx):
     }
     if workload == "long:all":
         # AC1 coverage is recorded apart from completion: fewer requests is a finding.
-        outcome["ac1_request_coverage"] = session["requests"] >= AC1_MIN_REQUESTS
+        outcome["ac1_request_coverage"] = ac1_request_coverage(session["requests"])
     record_event("session_end", **outcome)
     interrupt_file_holder.pop("session", None)  # scored above; not cut short
     # The session's whole tree goes before its state is archived, so nothing it started

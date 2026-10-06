@@ -51,7 +51,14 @@ limits and task sequence.
     non-streaming clients.
   - It polls `/slots` as a second progress signal.
   - It records predicted and actual time, timings, `id_slot`,
-    `finish_reason`, and the reasoning/visible token split.
+    `finish_reason`, and the decoded-token split. Reasoning tokens are the
+    think block. Visible tokens are assistant content only. Tool-call tokens
+    are each delivered call's name and arguments. Publish names the
+    remainder of the decoded count (`unsplit_decoded_tokens`), which is
+    template markup, and in receipts before tool-call tokens were counted
+    also the tool-call output.
+  - It records each delivered tool call's parse and argument validity,
+    including a call Hermes rejects, such as one cut at the output cap.
 - **`driver.py`** — one Hermes CLI session. The repository is importable only
   through its own `sys.path`, so the CLI and tool environment carry no
   repository path.

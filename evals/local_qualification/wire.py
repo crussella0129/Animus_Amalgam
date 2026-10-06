@@ -36,6 +36,24 @@ def bound_body(body, arm, sampling, seed):
     return bounded
 
 
+def tool_call_validity(conversation, known_tools):
+    """Per tool call: arguments parse as a JSON object and the tool exists."""
+    calls = []
+    for message in conversation:
+        for call in message.get("tool_calls") or []:
+            fn = call.get("function", {})
+            try:
+                args_ok = isinstance(json.loads(fn.get("arguments") or "{}"), dict)
+            except ValueError:
+                args_ok = False
+            calls.append({
+                "name": fn.get("name"),
+                "arguments_valid": args_ok,
+                "known_tool": fn.get("name") in known_tools,
+            })
+    return calls
+
+
 class Reassembler:
     """Folds streamed chat-completion deltas into one non-streaming response."""
 
@@ -168,6 +186,9 @@ class Wire:
             "requests": 0,
             "last_finish": None,
             "first_request": None,
+            # Every tool call this session delivered, as delivered: Hermes's own history
+            # drops a call it rejects, such as one cut at the output cap (M3).
+            "tool_call_validity": [],
             # precheck(original_body) -> result; runs once, on the first request, before generation.
             "precheck": precheck,
         }
@@ -470,6 +491,18 @@ class Wire:
             self._release_in_flight(token)  # delivered; accounting follows
             # Hermes may run this response's tool calls before any further request.
             session["last_messages"] = [*messages, folded.message()]
+            delivered = folded.message().get("tool_calls") or []
+            validity = tool_call_validity(
+                [{"tool_calls": delivered}], set(session["last_tools"])
+            )
+            session["tool_call_validity"] += validity
+            # Tool-call output is neither reasoning nor visible content (L1).
+            texts["tool_calls"] = [
+                "\n".join(
+                    f"{c['function']['name']} {c['function']['arguments']}"
+                    for c in delivered
+                )
+            ]
             split = {}
             for kind, parts in texts.items():
                 text = "".join(parts)
@@ -500,7 +533,9 @@ class Wire:
                 timings=timings,
                 reasoning_tokens=split["reasoning"],
                 visible_tokens=split["content"],
+                tool_call_tokens=split["tool_calls"],
                 tool_calls=len(folded.tool_calls),
+                tool_call_validity=validity,
                 progress=self.active.get("progress"),
                 kernel_compiled=None
                 if kernel_start is None

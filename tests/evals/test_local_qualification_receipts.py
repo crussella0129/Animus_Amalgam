@@ -11,7 +11,12 @@ import re
 
 import pytest
 
-from evals.local_qualification.policy import manifest_digest
+from evals.local_qualification.policy import manifest_digest, supervisor_lagged
+from hermes_cli.local_runtime.throughput import (
+    Calibration,
+    TimeParams,
+    request_backstop,
+)
 
 QUALIFICATION = (
     Path(__file__).resolve().parents[2]
@@ -35,6 +40,7 @@ REQUEST_FIELDS = (
     "uncached_prompt_tokens",
     "reasoning_tokens",
     "visible_tokens",
+    "tool_call_tokens",
     "prompt_ms",
     "decode_ms",
     "decode_tps",
@@ -44,6 +50,11 @@ REQUEST_FIELDS = (
     "resources",
 )
 RATES = {"prefill_tps", "decode_tps", "overhead_s", "load_s", "cli_start_s"}
+# Fields the live runs' wire could not record: b10964 streams no id_slot (correlated
+# from /slots since round 2), and tool-call tokens are counted since round 5.
+LATER_FIELDS = {"id_slot", "tool_call_tokens"}
+TELEMETRY_PERIOD = 1.0  # the retained telemetry cadence (lab README)
+AC1_REQUESTS = 20  # INT-0007 AC1
 
 
 def _load(path):
@@ -149,19 +160,91 @@ def test_completed_calibrated_requests_carry_every_l1_and_m3_field(receipt):
     for request in record["requests"]:
         if request.get("outcome") == "response_end":
             for field in REQUEST_FIELDS:
-                if field == "id_slot" and request.get(field) is None:
+                if field in LATER_FIELDS and request.get(field) is None:
                     assert field in request["missing"], request["request_id"]
                     continue
                 assert request.get(field) is not None, (request["request_id"], field)
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
-def test_long_sessions_carry_tool_call_validity(receipt):
-    """M3: every long session, finished or cut short, records each tool call's parse
-    and argument validity."""
+def test_long_sessions_validate_every_delivered_tool_call(receipt):
+    """M3: every long session, finished or cut short, records each delivered tool
+    call's parse and argument validity, or names the shortfall. Only a call cut at
+    the output cap can be missing from Hermes's history, the pre-round-5 source."""
+    record = _load(receipt)
+    for session in record["sessions"]:
+        if not str(session.get("workload", "")).startswith("long"):
+            continue
+        own = [r for r in record["requests"] if r["session"] == session["session"]]
+        delivered = sum(r.get("tool_calls") or 0 for r in own)
+        cut = sum(
+            r["tool_calls"]
+            for r in own
+            if r.get("finish_reason") == "length" and r.get("tool_calls")
+        )
+        unvalidated = session.get("unvalidated_tool_calls", 0)
+        assert len(session["tool_calls"]) + unvalidated == delivered
+        assert 0 <= unvalidated <= cut, session["session"]
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_the_token_split_accounts_for_decoded_output(receipt):
+    """L1: reasoning, visible content and tool-call output never exceed what was
+    decoded, and the remainder is published."""
+    for request in _load(receipt)["requests"]:
+        parts = [
+            request.get(k)
+            for k in ("decoded_tokens", "reasoning_tokens", "visible_tokens")
+        ]
+        if None in parts:
+            continue
+        counted = parts[1] + parts[2] + (request.get("tool_call_tokens") or 0)
+        assert request["unsplit_decoded_tokens"] == parts[0] - counted >= 0
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_supervisor_lag_is_recorded_and_stops_only_past_two_periods(receipt):
+    """M3: maximum supervisor lag is the host-responsiveness proxy; past two
+    telemetry periods it stops the attempt, and only then."""
+    outcome = _load(receipt)["outcome"]
+    lag = outcome["max_supervisor_lag_seconds"]
+    assert lag >= 0
+    assert supervisor_lagged(0.0, lag, TELEMETRY_PERIOD) == (
+        "scheduler lag" in outcome["reason"]
+    )
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_long_all_sessions_record_ac1_coverage(receipt):
+    """L2: every long:all session, completed or stopped, records AC1 coverage."""
     for session in _load(receipt)["sessions"]:
-        if str(session.get("workload", "")).startswith("long"):
-            assert isinstance(session.get("tool_calls"), list), session["session"]
+        if session.get("workload") == "long:all":
+            covered = session["requests"] >= AC1_REQUESTS
+            assert session["ac1_request_coverage"] is covered, session["session"]
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+def test_hermes_timers_hold_at_or_above_each_sessions_backstop(receipt):
+    """M2: after calibration, every session's Hermes timers, and the manifest's
+    declared ones, sit at or above the request backstop for its own output cap."""
+    record = _load(receipt)
+    manifest = _manifest(record)
+    calibration = manifest["calibration_record"]
+    if not calibration:
+        return  # during calibration the timers follow the measured load time
+    cal = Calibration(**{k: calibration["rates"][k] for k in RATES})
+    params = TimeParams(**manifest["time_params"])
+    context = manifest["launch"]["context"]
+    caps = {s["arm_name"]: s["arm"]["output_cap"] for s in manifest["sessions"]}
+    declared = [
+        v
+        for k, v in manifest["hermes_timeouts"].items()
+        if k not in ("note", "terminal_timeout")  # a tool bound, not a request's
+    ]
+    assert min(declared) >= request_backstop(cal, params, context, max(caps.values()))
+    for start in (e for e in record["events"] if e["kind"] == "session_start"):
+        backstop = request_backstop(cal, params, context, caps[start["arm"]])
+        assert start["hermes_timer_seconds"] >= backstop, start["session"]
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)

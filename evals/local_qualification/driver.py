@@ -12,6 +12,8 @@ import sys
 import threading
 import time
 
+from wire import tool_call_validity
+
 REPO = Path(__file__).resolve().parents[2]
 TASKS = Path(__file__).resolve().parent / "tasks"
 
@@ -40,24 +42,6 @@ def workload_prompts(workload):
         return turns
     first, last = (int(x) for x in span.split("-"))
     return turns[first - 1 : last]
-
-
-def tool_call_validity(conversation, known_tools):
-    """Per tool call: arguments parse as a JSON object and the tool exists."""
-    calls = []
-    for message in conversation:
-        for call in message.get("tool_calls") or []:
-            fn = call.get("function", {})
-            try:
-                args_ok = isinstance(json.loads(fn.get("arguments") or "{}"), dict)
-            except ValueError:
-                args_ok = False
-            calls.append({
-                "name": fn.get("name"),
-                "arguments_valid": args_ok,
-                "known_tool": fn.get("name") in known_tools,
-            })
-    return calls
 
 
 def main():

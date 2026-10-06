@@ -9,6 +9,15 @@ PAGING_RATE_LIMIT = 64 << 20
 PAGING_STREAK_LIMIT = 3
 
 
+AC1_MIN_REQUESTS = 20  # INT-0007 AC1
+
+
+def ac1_request_coverage(requests: int) -> bool:
+    """A long:all session reached AC1's request count; a shortfall is a finding,
+    recorded apart from completion (L2)."""
+    return requests >= AC1_MIN_REQUESTS
+
+
 def manifest_digest(manifest: dict) -> str:
     identity = {k: v for k, v in manifest.items() if k != "id"}
     return hashlib.sha256(
