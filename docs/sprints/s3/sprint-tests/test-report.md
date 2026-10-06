@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `47522c6a2d`, after
-seven critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `32b8e50eaf`, after
+eight critique rounds.
 
 ## Intent Verification
 
@@ -15,7 +15,7 @@ seven critique rounds.
 | AC | Status | Evidence |
 |---|---|---|
 | AC1 — at least 20 requests on a multi-file task with per-turn receipts | **Partly met.** Receipts are complete; the 20-request count was reached by R1 only. | R1 made 20 requests. R0 and R2 made 18 each, recorded as coverage not met, separately from completion (L2). All three verified 4/4. Every request carries every L1 field or names it missing (`test_every_request_names_its_missing_fields`). The fix is owned by backlog **T-223**. |
-| AC2 — off vs bounded vs unbounded at the best-screened sampling, per verified completion, including failures | **Met for off and bounded**; unbounded is T-218. | The screen selected greedy in both modes. Per verified item, across every attempt of a run, failed and stopped ones included (O1): R0 205.3 s and 557.5 decoded tokens, and R1 345.4 s and 1,058.3 tokens. The completed runs alone: 180.2 s and 345.4 s. R0's token figure is a lower bound: one stopped request's decode was never returned. From its published seconds after prefill, at the fastest decode rate any receipt shows, it is about 586.1 at most. The inputs are published per session in the receipts. |
+| AC2 — off vs bounded vs unbounded at the best-screened sampling, per verified completion, including failures | **Met for off and bounded**; unbounded is T-218. | The screen selected greedy in both modes. Per verified item, across every attempt of a run, failed and stopped ones included (O1): R0 205.3 s and 557.5 decoded tokens, and R1 345.4 s and 1,058.3 tokens. The completed runs alone: 180.2 s and 345.4 s. R0's token figure is a lower bound: one stopped request's decode was never returned. From its published seconds after prefill, at the fastest decode rate any receipt shows, an estimate is about 586.1. The screen's greedy selection is the completed screen's (attempt 06). Counting the earlier stopped screen (attempt 05) as O1 counts stops, thinking-off model default would lead, at 318.5 s against greedy's 375.4 s; the full-length comparison is backlog T-225. The inputs are published per session in the receipts. |
 | AC3 — byte-identical cross-session prefix, and append-only history with thinking on | **Met.** | C3: byte-identical prompts, 1147 of 1151 tokens reused. Thinking on, echo off: every turn rolls back the previous turn (median uncached 161). The replayed repair, `model.reasoning_echo: true`, makes history append-only (median 60), except after a budget-truncated think block. |
 | AC4 — MTP | Deferred to T-217. | — |
 | AC5 — compression | Deferred to T-219. | — |
@@ -26,7 +26,7 @@ seven critique rounds.
 
 | Gap carried into Sprint 3 | Status | Evidence |
 |---|---|---|
-| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
+| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build, Hermes commit and task corpus (asserted since round 8). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
 | AC2 time gate (host-derived) | **Met.** | 10,788.8 s charged against the 81,365 s host-derived backstop budget. Calibration was in the ledger before the screen. |
 | AC2 main-cancel replay and OS kill safety | **Met.** | C4: the slot was idle in 0.84 s and cleanup took 0.88 s. The T5 bring-up replay: the silent tree was stopped by the stall rule and gone in 0.047 s, a chatty child survived, and the sentinel survived. |
 
@@ -35,7 +35,7 @@ seven critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **318 passed, 0 failed** across six files at `47522c6a2d`. Runner log sha256 `2eaec3de…`, started 2026-10-06T04:07:50Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Formal unit and integration | **318 passed, 0 failed** across six files at `32b8e50eaf`. Runner log sha256 `0cd5001f…`, started 2026-10-06T04:26:14Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
 | Regressions red on base (V2) | All 45 failed on their repair's parent revision. 25 failed on the behavior assertion itself and 20 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
 | Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, and 2026-10-06T04:11:27Z, head `47522c6a2d`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
@@ -168,6 +168,16 @@ was addressed:
 | C-002: screen ranking from an unpublished re-scan | **Fixed.** Attempt 06's receipt publishes the ranking under the current scan, beside every session's live verdict. A receipt test re-ranks the published sessions and gets the recorded `screen_winners` (red on base). The tool calls themselves stay in the lab for privacy. The policy names the live scan's false positives. |
 | C-003: schema-3 rules could never run | **Addressed; the rules first run in T-224.** The receipt suite reads every sprint's published attempts, so the Sprint 4 replay's schema-3 receipts meet them. T-224 names the suite as its acceptance check and adds `id_slot` and `decoded_tokens_observed` to its checklist. No schema-3 receipt exists yet. |
 | C-004: the decode "bound" used the calibrated rate, from unpublished inputs | **Fixed.** Each stopped request publishes its seconds after prefill. The estimate uses the fastest decode rate any receipt shows (3.743 tok/s), is labelled an estimate, and drops the context-slowdown claim. |
+
+## Concern dispositions (critique round 8)
+
+[critique-08](critique-08.md) returned `proceed-with-caveats` with 3 concerns. Each was addressed, and the critic was re-run:
+
+| Concern | Response |
+|---|---|
+| C-001: attempt 05's cut-short off-greedy screen session uncounted | **Disclosed; deferred with rationale** to backlog **T-225**. As locked, S2 ranks the screen that completed (attempt 06), one session per configuration. Attempt 05 was stopped by a lab defect and replayed as attempt 06. The policy, the e2e row and this report now state the exclusion and give the alternative reading: counting attempt 05 as O1 counts stops, greedy costs 375.4 s per verified item and model default (318.5 s) would rank first. The full runs used greedy, so the full-length comparison is unmeasured, and T-225 runs it. |
+| C-002: INT-0004 AC1 identity unasserted on Sprint 3 manifests | **Fixed.** Every published manifest must pin the model, tokenizer, template, backend and corpus SHA-256 hashes, the 40-hex Hermes commit, the interpreter and the seed. |
+| C-003: record drifts | **Fixed.** The AC2 row calls the decode figure an estimate, and the test and publish comment say "estimated". INT-0007's work evidence links the completed tasks and backlog T-223, T-224 and T-225. |
 
 ## Plan deviation: retained fixed values
 

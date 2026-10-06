@@ -3,7 +3,7 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0007
 - **State:** active
-- **Work evidence:** [Sprint 3 build plan](../sprints/s3/sprint-plans/build-plan.md); [T-210 to T-216, T-221 and T-222 in the Sprint 3 plan, and T-217 to T-219 in the backlog](../work/tasks.md)
+- **Work evidence:** [Sprint 3 build plan](../sprints/s3/sprint-plans/build-plan.md); [T-210 to T-216, T-221 and T-222 completions](../work/completed-tasks.md); [T-217 to T-219 and T-223 to T-225 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** [host-calibrated throughput module](../../hermes_cli/local_runtime/throughput.py); [operational lab](../../evals/local_qualification/README.md)
 - **Test evidence:** [Sprint 3 test report](../sprints/s3/sprint-tests/test-report.md); [Sprint 3 live E2E results](../sprints/s3/sprint-tests/e2e-tests.md); [Sprint 3 unit results](../sprints/s3/sprint-tests/unit-tests.md); [Sprint 3 integration results](../sprints/s3/sprint-tests/integration-tests.md)

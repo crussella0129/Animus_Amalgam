@@ -1,13 +1,14 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `47522c6a2d` (after critique round 7).
+- **Tested head:** `32b8e50eaf` (after critique round 8).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-06T04:07:50Z, covering the six
+- **Final formal run (V1):** started 2026-10-06T04:26:14Z, covering the six
   Sprint 3 formal files: **318 passed, 0 failed**. Runner log sha256
-  `2eaec3de6a6705c7feb5ed9a4582124bb3d083bcd074507c1901134754ebcead`. The
-  earlier runs at `a730a0a39e` (291, log `65219407…`), `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
+  `0cd5001ffc27914758ea461fd3f1b68fc27ef4378f187ed91d06c1a5892cf76a`. The
+  earlier runs at `47522c6a2d` (318, log `2eaec3de…`), `a730a0a39e` (291,
+  log `65219407…`), `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
   and `efeb4ef4c4` passed 291 (log `5816e66f…`), 238 (log `b6d63e54…`),
   223 (log `bc3e1d5f…`), 217 (log `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
   with the lab (`<lab>/formal/`) and are not published, because tracebacks
@@ -59,7 +60,7 @@
 | `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. The screen publishes what it saw (1 message, 1 tool call), and the session records the call's validity. |
 | `test_scoring_a_cut_short_session_never_raises_into_the_stop_path` | L2, AC7 | pass | **Regression (round 3).** When scoring raises, `stopped_session` returns the session with the error as its verification. `run.bounded` returns `None` past its bound and the result within it. |
 | `test_a_stopped_request_stays_stopped_whatever_lands_after` (2) | AC7, M3 | pass | **Regression (round 2).** After `request_stopped`, a later `wire_failure` or `response_cancelled` keeps the stopped outcome, its cause, its own timing, both predictions and the resources. Machine time is computed. |
-| `test_a_stopped_request_publishes_its_time_after_prefill` | O1, AC7 | pass | **Regression (round 7).** A stopped request whose decode went unreturned names `decoded_tokens` missing and publishes its seconds after the prompt was fully processed, from its own progress receipt. |
+| `test_a_stopped_request_publishes_its_time_after_prefill` | O1, AC7 | pass | **Regression (round 7).** A stopped request whose decode went unreturned names `decoded_tokens` missing and publishes its seconds after the prompt was fully processed, from its own progress receipt, so the missing decode can be estimated. |
 | `test_publish_scores_and_screens_a_cut_short_session` (2) | L2, L4 | pass | **Regression (round 3).** Publishing scores a cut-short session from its preserved fixture and screens its last request's conversation: clean when it runs the check, flagged when it reads outside the fixture. The screen's message and tool-call counts, and each call's validity, are published, with AC1 coverage for a long:all session (round 5). |
 | `test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause` | AC7, M3 | pass | **Regression (round 3, attempt 02).** An aborted request takes its own session's recorded stop as its cause. A failure in a session that ended without a stop stays a wire failure, and only a request in flight at the attempt stop takes the attempt's reason, timed from its receipts. |
 

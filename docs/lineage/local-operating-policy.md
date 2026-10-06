@@ -54,6 +54,8 @@ both thinking modes:
 | Thinking off | greedy 259 s < model default (1.0 / 0.95 / 20) 319 s < vendor non-thinking (0.7 / 0.8 / 20, presence 1.5): failed, wrote helper files outside its fixture twice |
 | Thinking on | greedy 515 s < vendor or model default 521 s; the mid probe (0.6 / 0.95 / 20) is not selectable |
 
+S2 ranks the screen that completed (attempt 06), one session per configuration under L4's pick. Attempt 05, an earlier screen stopped by the telemetry read race (a lab defect, repaired and replayed as attempt 06), is not counted. Its off-greedy session ran 3 requests for 116.0 s and verified 0 of turns 1–3. Counted the way O1 counts a stopped full-run attempt, thinking-off greedy would cost 375.4 s per verified item, against model default's 318.5 s (320.0 s across its two sessions), and model default would rank first. Thinking-off greedy against model default at full task length is unmeasured (backlog T-225).
+
 The ranking uses the current L4 scan. The live scan, before its repair,
 also flagged model default and the mid probe twice. Those flags were false
 positives: `/.git/` resolved against the Git install path, and a
@@ -88,7 +90,9 @@ on this workload.
 1. **Thinking off, greedy sampling** for agentic tool work on a
    decode-bound host. It verified the same items as bounded thinking in
    about half the machine time. Decode was 90% of R0's machine time, so
-   every reasoning token costs throughput directly.
+   every reasoning token costs throughput directly. Greedy is the completed
+   screen's selection; counting the earlier stopped screen, model default
+   would lead (see Sampling). The full-length comparison is backlog T-225.
 2. **If thinking is on:** greedy and a bounded budget (ranked second). Also
    set `model.reasoning_echo: true`. This choice sits **outside the time
    ranking**: echo on ranks third, 2% slower than echo off on the completed

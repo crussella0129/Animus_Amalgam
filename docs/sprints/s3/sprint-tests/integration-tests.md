@@ -1,8 +1,8 @@
 # Sprint 3 Integration Test Results (after operational confidence)
 
-- **Tested head:** `47522c6a2d` (after critique round 7). These results are
+- **Tested head:** `32b8e50eaf` (after critique round 8). These results are
   part of the final formal run recorded in [unit-tests](unit-tests.md) (318
-  passed, 0 failed; runner log sha256 `2eaec3de…`).
+  passed, 0 failed; runner log sha256 `0cd5001f…`).
 - **Runner:** `scripts/run_tests.sh` on the owner's Windows 11 host.
 - **Ordering:** written and first run after the confidence record
   (2026-10-04T01:58Z).
@@ -54,7 +54,7 @@ rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
 |---|---|---|---|
 | `test_every_attempt_is_published` | V3 | pass | Attempt indices 1–13, taken from the final budget counter, each have a published receipt. |
 | `test_published_evidence_excludes_private_paths_and_credentials` (25) | V3 | pass | No user path, `Bearer` value or 48-hex token appears in any published receipt or manifest. |
-| `test_every_published_attempt_resolves_to_its_manifest` (13) | V3, M4 | pass | Each receipt resolves to its manifest by id. The public copy's digest is valid. The owner's time-model decision, Hermes timeouts (including the terminal timeout), the allowlist and the time parameters are present. The rendered prefix is measured, or not-measured with a reason. Post-calibration plans carry the full calibration record (rates, checkpoint size, frozen count, budget). Every session has an arm, a stop cause is kept, and cleanup took at most 5 s with the listener closed. |
+| `test_every_published_attempt_resolves_to_its_manifest` (13) | V3, M4, INT-0004 AC1 | pass | Each receipt resolves to its manifest by id. **Round 8:** the manifest pins INT-0004 AC1's identity: SHA-256 hashes of the model, tokenizer, template, backend build and task corpus, plus the 40-hex Hermes commit, the interpreter and the seed. The public copy's digest is valid. The owner's time-model decision, Hermes timeouts (including the terminal timeout), the allowlist and the time parameters are present. The rendered prefix is measured, or not-measured with a reason. Post-calibration plans carry the full calibration record (rates, checkpoint size, frozen count, budget). Every session has an arm, a stop cause is kept, and cleanup took at most 5 s with the listener closed. |
 | `test_launched_attempts_record_the_launch_and_admission` (13) | M1, M4 | pass | Every launched attempt's command has `--slot-save-path` and no `--predict`, and records its admission host condition. |
 | `test_sessions_record_their_first_rendered_prefix` (13) | M4 | pass | Each session records its first rendered prefix (tokens and hash). |
 | `test_every_request_names_its_missing_fields` (13) | L1, M3 | pass | **Regression (round 4).** Every request, completed, cancelled or stopped, carries each of the 18 L1/M3 request fields or names it missing. Meaningful first token and the tool-call count (round 4) and decoded tokens (round 6) were silently absent before. Tool-call tokens are named missing in every receipt before round 5. |
@@ -67,7 +67,7 @@ rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
 | `test_supervisor_lag_is_recorded_and_stops_only_past_two_periods` (13) | M3 | pass | **Round 5.** Every outcome records its maximum supervisor lag. It exceeds two telemetry periods exactly when the attempt stopped on lag (attempt 02, 14.9 s); the others peaked at 0.63 s. |
 | `test_long_all_sessions_record_ac1_coverage` (13) | L2 | pass | **Regression (round 5).** Every long:all session, completed or stopped, records AC1 coverage, true exactly at 20 requests or more. |
 | `test_published_screen_reproduces_the_recorded_winners` (13) | S2, L4 | pass | **Regression (round 7).** A screen attempt's receipt publishes each session's verdict under the current scan beside the live one. Re-ranking the published sessions under L4's pick gives the published ranking and the recorded `screen_winners`, and each session's score and live verdict match the receipt's session record. |
-| `test_a_stopped_requests_unreturned_decode_is_bounded_by_the_receipt` (13) | O1 | pass | **Round 7.** Where a stopped request publishes its seconds after prefill, it names `decoded_tokens` missing, and the time lies within its elapsed time. |
+| `test_a_stopped_requests_unreturned_decode_can_be_estimated_from_the_receipt` (13) | O1 | pass | **Round 7.** Where a stopped request publishes its seconds after prefill, it names `decoded_tokens` missing, and the time lies within its elapsed time; the missing decode is estimated from it. |
 | `test_hermes_timers_hold_at_or_above_each_sessions_backstop` (13) | M2 | pass | **Round 5.** After calibration, every session's applied Hermes timer, and the manifest's declared timers, are at or above the request backstop recomputed from the calibration record, the time parameters and that session's output cap. |
 
 ## Windows file behaviour (`windows_only`)
@@ -93,6 +93,7 @@ Sprint 2 checkpoint merge) and on head: `tests/hermes_cli/test_local_*.py`,
 | Head `9c373121cd` | 34 | 622 | 1 | 2 | `99a776a6…` |
 | Head `a730a0a39e` | 34 | 622 | 1 | 2 | `d10f32f0…` |
 | Head `47522c6a2d` | 34 | 649 | 1 | 2 | `20559fd5…` |
+| Head `32b8e50eaf` | 34 | 649 | 1 | 2 | `7722d7f4…` |
 
 - **New failures on head:** none.
 - **Fixed on head (6):** the shell-hook, hooks-CLI, cron catch-up and

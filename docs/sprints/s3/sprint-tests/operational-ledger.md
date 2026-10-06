@@ -871,3 +871,13 @@ republished.
   prefill: 30.5 s (91), 89.1 s (145) and 16.7 s (156). The estimate uses the
   fastest decode rate any receipt shows (3.743 tok/s, attempt 06's request
   71), not the calibrated 3.55: 23 of 162 completed requests decoded faster.
+
+## Test-phase corrections (critique round 8)
+
+These are recorded in response to [critique-08](critique-08.md), which passed
+with caveats. The test changes are at `32b8e50eaf`.
+
+- **The uncounted screen session.** S2 ranks the screen that completed (attempt 06), one session per configuration under L4's pick. Attempt 05, an earlier screen stopped by the telemetry read race (a lab defect, repaired and replayed as attempt 06), is not counted. Its off-greedy session ran 3 requests for 116.0 s and verified 0 of turns 1–3. Counted the way O1 counts a stopped full-run attempt, thinking-off greedy would cost 375.4 s per verified item, against model default's 318.5 s (320.0 s across its two sessions), and model default would rank first. Thinking-off greedy against model default at full task length is unmeasured (backlog T-225).
+- **Identity.** Every published manifest is now asserted to pin INT-0004
+  AC1's identity: model, tokenizer, template, backend and corpus hashes,
+  the Hermes commit, the interpreter and the seed.
