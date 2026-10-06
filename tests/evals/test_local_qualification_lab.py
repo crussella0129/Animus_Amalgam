@@ -801,6 +801,22 @@ def test_a_stopped_request_stays_stopped_whatever_lands_after(tmp_path, after):
     ]
 
 
+def test_a_stopped_request_publishes_its_time_after_prefill(tmp_path):
+    """O1: the decode a stop cut off went unreturned; the time after the prompt was
+    fully processed is published so the missing decode can be bounded."""
+    prefilled = {
+        "kind": "progress",
+        "at": 15.0,
+        "request_id": 1,
+        "total": 99,
+        "processed": 99,
+    }
+    record = publish.receipts(_attempt(tmp_path, [REQUEST, prefilled, STOPPED]))
+    (request,) = record["requests"]
+    assert "decoded_tokens" in request["missing"]
+    assert request["seconds_after_prefill"] == 25.0  # 30 s stopped, prompt done at 5 s
+
+
 @pytest.mark.parametrize(
     "commands,flagged", [(("python check.py",), False), (("cat ../../secret",), True)]
 )

@@ -1,4 +1,316 @@
 {
+ "screen": {
+  "label": "single seeded screening runs",
+  "modes": {
+   "off": {
+    "ranking": [
+     {
+      "arm": "off-greedy",
+      "session": 3,
+      "verified": 1,
+      "machine_s": 259.405999999959,
+      "decoded": 690
+     },
+     {
+      "arm": "off-model-default",
+      "session": 6,
+      "verified": 1,
+      "machine_s": 318.530999999959,
+      "decoded": 871
+     },
+     {
+      "arm": "off-vendor",
+      "session": 5,
+      "verified": 0,
+      "machine_s": 392.875,
+      "decoded": 1117
+     }
+    ],
+    "inconclusive": false
+   },
+   "on": {
+    "ranking": [
+     {
+      "arm": "on-greedy",
+      "session": 8,
+      "verified": 1,
+      "machine_s": 514.704000000027,
+      "decoded": 1499
+     },
+     {
+      "arm": "on-vendor",
+      "session": 9,
+      "verified": 1,
+      "machine_s": 520.859999999986,
+      "decoded": 1638
+     }
+    ],
+    "inconclusive": false
+   }
+  },
+  "sessions": [
+   {
+    "session": 3,
+    "arm": "off-greedy",
+    "thinking": false,
+    "selectable": true,
+    "rerun_of": null,
+    "stop": null,
+    "requests": 7,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 259.405999999959,
+    "decoded": 690,
+    "contamination": [],
+    "contamination_recorded_live": []
+   },
+   {
+    "session": 4,
+    "arm": "off-vendor",
+    "thinking": false,
+    "selectable": true,
+    "rerun_of": null,
+    "stop": null,
+    "requests": 10,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 433.18700000003446,
+    "decoded": 1242,
+    "contamination": [
+     {
+      "token": "/tmp/remove_new.txt",
+      "resolved": "<localappdata>\\Temp\\remove_new.txt"
+     },
+     {
+      "token": "/tmp/remove_new.txt",
+      "resolved": "<localappdata>\\Temp\\remove_new.txt"
+     }
+    ],
+    "contamination_recorded_live": [
+     {
+      "token": "/tmp/remove_new.txt",
+      "resolved": "C:\\Program Files\\Git\\tmp\\remove_new.txt"
+     },
+     {
+      "token": "/tmp/remove_new.txt",
+      "resolved": "C:\\Program Files\\Git\\tmp\\remove_new.txt"
+     }
+    ]
+   },
+   {
+    "session": 5,
+    "arm": "off-vendor",
+    "thinking": false,
+    "selectable": true,
+    "rerun_of": 4,
+    "stop": null,
+    "requests": 9,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 392.875,
+    "decoded": 1117,
+    "contamination": [
+     {
+      "token": "/tmp/patch_remove.py",
+      "resolved": "<localappdata>\\Temp\\patch_remove.py"
+     },
+     {
+      "token": "/tmp/patch_remove.py",
+      "resolved": "<localappdata>\\Temp\\patch_remove.py"
+     }
+    ],
+    "contamination_recorded_live": [
+     {
+      "token": "$f",
+      "resolved": null
+     },
+     {
+      "token": "$f",
+      "resolved": null
+     },
+     {
+      "token": "/tmp/patch_remove.py",
+      "resolved": "C:\\Program Files\\Git\\tmp\\patch_remove.py"
+     },
+     {
+      "token": "/tmp/patch_remove.py",
+      "resolved": "C:\\Program Files\\Git\\tmp\\patch_remove.py"
+     }
+    ]
+   },
+   {
+    "session": 6,
+    "arm": "off-model-default",
+    "thinking": false,
+    "selectable": true,
+    "rerun_of": null,
+    "stop": null,
+    "requests": 10,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 318.530999999959,
+    "decoded": 871,
+    "contamination": [],
+    "contamination_recorded_live": [
+     {
+      "token": "/.git/",
+      "resolved": "C:\\Program Files\\Git\\.git"
+     }
+    ]
+   },
+   {
+    "session": 7,
+    "arm": "off-model-default",
+    "thinking": false,
+    "selectable": true,
+    "rerun_of": 6,
+    "stop": null,
+    "requests": 10,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 321.51500000001397,
+    "decoded": 871,
+    "contamination": [],
+    "contamination_recorded_live": [
+     {
+      "token": "/.git/",
+      "resolved": "C:\\Program Files\\Git\\.git"
+     }
+    ]
+   },
+   {
+    "session": 8,
+    "arm": "on-greedy",
+    "thinking": true,
+    "selectable": true,
+    "rerun_of": null,
+    "stop": null,
+    "requests": 8,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 514.704000000027,
+    "decoded": 1499,
+    "contamination": [],
+    "contamination_recorded_live": []
+   },
+   {
+    "session": 9,
+    "arm": "on-vendor",
+    "thinking": true,
+    "selectable": true,
+    "rerun_of": null,
+    "stop": null,
+    "requests": 7,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 520.859999999986,
+    "decoded": 1638,
+    "contamination": [],
+    "contamination_recorded_live": []
+   },
+   {
+    "session": 10,
+    "arm": "on-mid-probe",
+    "thinking": true,
+    "selectable": false,
+    "rerun_of": null,
+    "stop": null,
+    "requests": 7,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 549.0,
+    "decoded": 1621,
+    "contamination": [],
+    "contamination_recorded_live": [
+     {
+      "token": "/.git/",
+      "resolved": "C:\\Program Files\\Git\\.git"
+     },
+     {
+      "token": "$f",
+      "resolved": null
+     },
+     {
+      "token": "$f",
+      "resolved": null
+     }
+    ]
+   },
+   {
+    "session": 11,
+    "arm": "on-mid-probe",
+    "thinking": true,
+    "selectable": false,
+    "rerun_of": 10,
+    "stop": null,
+    "requests": 8,
+    "verified": 1,
+    "items": {
+     "remove_guard": true,
+     "discount": false,
+     "total": false,
+     "low_stock": false
+    },
+    "machine_s": 742.734999999986,
+    "decoded": 2248,
+    "contamination": [],
+    "contamination_recorded_live": [
+     {
+      "token": "/.git/",
+      "resolved": "C:\\Program Files\\Git\\.git"
+     },
+     {
+      "token": "$f",
+      "resolved": null
+     },
+     {
+      "token": "$f",
+      "resolved": null
+     }
+    ]
+   }
+  ]
+ },
  "attempt": "attempt-06-screen",
  "manifest_id": "f55beeb3380cdad361e6eadbaeb74e6cdc9e0c6429b08020c614ab39a03703bc",
  "plan": "screen",

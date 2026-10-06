@@ -544,6 +544,7 @@
    "seconds_source": "receipt timestamps",
    "started_s": 775.516,
    "ended_s": 794.672,
+   "seconds_after_prefill": 16.718,
    "missing": [
     "meaningful_first_token_seconds",
     "id_slot",

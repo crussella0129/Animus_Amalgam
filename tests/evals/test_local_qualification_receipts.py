@@ -1,13 +1,18 @@
-"""Published Sprint 3 receipts are correlated, complete and private (T-214 V3, M3, M4, L1).
+"""Published qualification receipts are correlated, complete and private (T-214 V3, M3,
+M4, L1).
 
 Every attempt receipt resolves to its published manifest. A manifest keeps the ``id`` the
 lab verified over the private original at launch; sanitizing local paths changes the
-bytes, so ``published_digest`` covers the public copy instead.
+bytes, so ``published_digest`` covers the public copy instead. Every sprint's published
+attempts are checked, so the first receipts of the repaired lab (backlog T-224) meet the
+schema-3 rules here. The screen check re-ranks with the lab's own ``screen`` module, which
+imports its siblings top-level, so the lab directory goes first on ``sys.path``.
 """
 
 import json
 from pathlib import Path
 import re
+import sys
 
 import pytest
 
@@ -18,15 +23,14 @@ from hermes_cli.local_runtime.throughput import (
     request_backstop,
 )
 
-QUALIFICATION = (
-    Path(__file__).resolve().parents[2]
-    / "docs"
-    / "sprints"
-    / "s3"
-    / "sprint-tests"
-    / "qualification"
-)
-RECEIPTS = sorted(QUALIFICATION.glob("attempt-*.json"))
+LAB_DIR = Path(__file__).resolve().parents[2] / "evals" / "local_qualification"
+sys.path.insert(0, str(LAB_DIR))
+
+import screen  # noqa: E402
+
+SPRINTS = Path(__file__).resolve().parents[2] / "docs" / "sprints"
+RECEIPTS = sorted(SPRINTS.glob("*/sprint-tests/qualification/attempt-*.json"))
+QUALIFICATIONS = sorted({p.parent for p in RECEIPTS})
 PRIVATE = re.compile(r"[A-Za-z]:[\\/]+Users|/Users/|/home/|Bearer\s|\b[0-9a-f]{48}\b")
 # L1/M3: every request carries these, or names them missing; never silently absent.
 # Tool-call validity is per session (M3), checked on the sessions.
@@ -64,8 +68,17 @@ def _load(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _receipt_id(path):
+    return f"{path.parents[2].name}-{path.stem}"
+
+
 def _manifest(record):
-    return _load(QUALIFICATION / "manifests" / f"{record['manifest_id']}.json")
+    (path,) = [
+        q / "manifests" / f"{record['manifest_id']}.json"
+        for q in QUALIFICATIONS
+        if (q / "manifests" / f"{record['manifest_id']}.json").exists()
+    ]
+    return _load(path)
 
 
 def _before_repair(record):
@@ -86,20 +99,24 @@ def _cut_calls(record, session):
 def test_every_attempt_is_published():
     """V3 is about every attempt, not whichever files happen to exist."""
     assert RECEIPTS, "the Sprint 3 receipts are part of the evidence handoff"
-    attempts = max(_load(p)["outcome"]["budget"]["attempts"] for p in RECEIPTS)
-    published = sorted(int(p.stem.split("-")[1]) for p in RECEIPTS)
-    assert published == list(range(1, attempts + 1))
+    for qualification in QUALIFICATIONS:
+        own = sorted(qualification.glob("attempt-*.json"))
+        attempts = max(_load(p)["outcome"]["budget"]["attempts"] for p in own)
+        published = sorted(int(p.stem.split("-")[1]) for p in own)
+        assert published == list(range(1, attempts + 1)), qualification
 
 
 @pytest.mark.parametrize(
-    "path", sorted(QUALIFICATION.rglob("*.json")), ids=lambda p: p.name
+    "path",
+    sorted(p for q in QUALIFICATIONS for p in q.rglob("*.json")),
+    ids=lambda p: p.name,
 )
 def test_published_evidence_excludes_private_paths_and_credentials(path):
     leaks = PRIVATE.findall(path.read_text(encoding="utf-8"))
     assert not leaks, leaks[:3]
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_every_published_attempt_resolves_to_its_manifest(receipt):
     record = _load(receipt)
     manifest = _manifest(record)
@@ -123,7 +140,7 @@ def test_every_published_attempt_resolves_to_its_manifest(receipt):
     assert outcome["cleanup_seconds"] <= 5 and outcome["backend_listener_closed"]
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_launched_attempts_record_the_launch_and_admission(receipt):
     record = _load(receipt)
     launches = [e for e in record["events"] if e["kind"] == "launch"]
@@ -135,7 +152,7 @@ def test_launched_attempts_record_the_launch_and_admission(receipt):
     assert admission["sample"]["ram_available"] and admission["cpu_needed"]
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_sessions_record_their_first_rendered_prefix(receipt):
     for session in _load(receipt)["sessions"]:
         first = session.get("first_request")
@@ -144,14 +161,14 @@ def test_sessions_record_their_first_rendered_prefix(receipt):
         assert first["input_tokens"] > 0 and len(first["prompt_sha256"]) == 64
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_every_request_names_its_missing_fields(receipt):
     for request in _load(receipt)["requests"]:
         absent = [f for f in REQUEST_FIELDS if request.get(f) is None]
         assert set(absent) <= set(request["missing"]), (request["request_id"], absent)
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_stopped_requests_keep_their_own_cause_and_elapsed_time(receipt):
     """A stopped request's cause is its own session's recorded stop, or the attempt's
     stop when its session was still running at the attempt stop."""
@@ -166,7 +183,7 @@ def test_stopped_requests_keep_their_own_cause_and_elapsed_time(receipt):
             assert request["seconds"] is not None
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_completed_calibrated_requests_carry_every_l1_and_m3_field(receipt):
     """AC7, L1 and M3 by presence, not by being named: every request completed after
     calibration carries every field. The one exception is ``id_slot``: b10964's
@@ -188,7 +205,7 @@ def test_completed_calibrated_requests_carry_every_l1_and_m3_field(receipt):
                 assert request.get(field) is not None, (request["request_id"], field)
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_long_sessions_validate_every_delivered_tool_call(receipt):
     """M3: every long session, finished or cut short, records each delivered tool
     call's parse and argument validity, or names the shortfall. Only a call cut at
@@ -208,7 +225,7 @@ def test_long_sessions_validate_every_delivered_tool_call(receipt):
         assert 0 <= unvalidated <= allowed, session["session"]
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_the_token_split_accounts_for_decoded_output(receipt):
     """L1: reasoning, visible content and tool-call output never exceed what was
     decoded, and the remainder is published."""
@@ -223,7 +240,7 @@ def test_the_token_split_accounts_for_decoded_output(receipt):
         assert request["unsplit_decoded_tokens"] == parts[0] - counted >= 0
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_supervisor_lag_is_recorded_and_stops_only_past_two_periods(receipt):
     """M3: maximum supervisor lag is the host-responsiveness proxy; past two
     telemetry periods it stops the attempt, and only then."""
@@ -235,7 +252,7 @@ def test_supervisor_lag_is_recorded_and_stops_only_past_two_periods(receipt):
     )
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_long_all_sessions_record_ac1_coverage(receipt):
     """L2: every long:all session, completed or stopped, records AC1 coverage."""
     for session in _load(receipt)["sessions"]:
@@ -244,7 +261,7 @@ def test_long_all_sessions_record_ac1_coverage(receipt):
             assert session["ac1_request_coverage"] is covered, session["session"]
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_hermes_timers_hold_at_or_above_each_sessions_backstop(receipt):
     """M2: after calibration, every session's Hermes timers, and the manifest's
     declared ones, sit at or above the request backstop for its own output cap."""
@@ -268,7 +285,7 @@ def test_hermes_timers_hold_at_or_above_each_sessions_backstop(receipt):
         assert start["hermes_timer_seconds"] >= backstop, start["session"]
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_machine_time_is_recomputable_from_the_receipt(receipt):
     record = _load(receipt)
     for span in record["machine_time"]:
@@ -284,7 +301,7 @@ def test_machine_time_is_recomputable_from_the_receipt(receipt):
         )
 
 
-@pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_attempt_stopped_long_sessions_are_scored(receipt):
     """L2's "being stopped" branch: a long session an attempt stop cut short is scored
     from its fixture state."""
@@ -312,3 +329,38 @@ def test_attempt_stopped_long_sessions_are_scored(receipt):
         own = [r for r in record["requests"] if r["session"] == session["session"]]
         last = max(own, key=lambda r: r["request_id"])
         assert last["outcome"] == "stopped", last["request_id"]
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
+def test_published_screen_reproduces_the_recorded_winners(receipt):
+    """S2 on the published evidence: re-ranking the published screen sessions under
+    L4's pick gives the published ranking and the winners the full runs used. Each
+    session's live verdict and score match the receipt's own session record."""
+    record = _load(receipt)
+    ended = [
+        s
+        for s in record["sessions"]
+        if not s["stopped"] and str(s.get("workload", "")).startswith("long")
+    ]
+    if _manifest(record)["plan"] != "screen" or not ended:
+        return
+    published = record["screen"]
+    winners, report = screen.report(published["sessions"])
+    arms = json.loads((LAB_DIR / "arms.json").read_text(encoding="utf-8"))
+    assert winners == arms["screen_winners"]
+    assert report["modes"] == published["modes"]
+    verifications = {s["session"]: s["verification"] for s in ended}
+    for session in published["sessions"]:
+        live = verifications[session["session"]]
+        assert session["verified"] == live["score"]["passed"]
+        assert session["contamination_recorded_live"] == live["contamination"]
+
+
+@pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
+def test_a_stopped_requests_unreturned_decode_is_bounded_by_the_receipt(receipt):
+    """O1: a stop leaves the decode count unreturned; the receipt keeps the time the
+    decode could have run, after the prompt was fully processed."""
+    for request in _load(receipt)["requests"]:
+        if "seconds_after_prefill" in request:
+            assert "decoded_tokens" in request["missing"]
+            assert 0 <= request["seconds_after_prefill"] <= request["seconds"]

@@ -103,23 +103,17 @@ def screen_results(attempt: Path) -> list[dict]:
     return results
 
 
-def main():
-    parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument("--lab", type=Path, required=True)
-    parser.add_argument("--attempt", required=True)
-    parser.add_argument(
-        "--write", action="store_true", help="record winners in arms.json"
-    )
-    args = parser.parse_args()
-    results = screen_results(args.lab / "attempts" / args.attempt)
+def report(results: list[dict]) -> tuple[dict, dict]:
+    """The winners per thinking mode, and the published report: each mode's ranking
+    under L4's pick and every session with its re-scanned and live verdicts."""
     by_arm = {}
     for r in results:
         by_arm.setdefault(r["arm"], []).append(r)
     chosen = [pick(sessions) for sessions in by_arm.values()]
-    winners, report = {}, {"label": "single seeded screening runs", "modes": {}}
+    winners, published = {}, {"label": "single seeded screening runs", "modes": {}}
     for mode, thinking in (("off", False), ("on", True)):
         ordered, inconclusive = rank([c for c in chosen if c["thinking"] is thinking])
-        report["modes"][mode] = {
+        published["modes"][mode] = {
             "ranking": [
                 {
                     k: c[k]
@@ -131,8 +125,20 @@ def main():
         }
         if ordered:
             winners[mode] = ordered[0]["arm"]
-    report["sessions"] = results
-    print(json.dumps(report, indent=1))
+    published["sessions"] = results
+    return winners, published
+
+
+def main():
+    parser = argparse.ArgumentParser(__doc__)
+    parser.add_argument("--lab", type=Path, required=True)
+    parser.add_argument("--attempt", required=True)
+    parser.add_argument(
+        "--write", action="store_true", help="record winners in arms.json"
+    )
+    args = parser.parse_args()
+    winners, published = report(screen_results(args.lab / "attempts" / args.attempt))
+    print(json.dumps(published, indent=1))
     if args.write:
         path = HERE / "arms.json"
         text = path.read_text(encoding="utf-8")

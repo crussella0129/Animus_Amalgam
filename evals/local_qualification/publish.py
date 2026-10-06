@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 
 from policy import ac1_request_coverage, manifest_digest
+import screen
 import verify_long
 from wire import tool_call_validity
 
@@ -146,6 +147,9 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 **{k: v for k, v in event.items() if k not in ("at", "manifest_id")},
                 "stopped": kind == "session_stopped",
             })
+        elif kind == "progress" and rid in requests:
+            if event.get("total") and event.get("processed") == event["total"]:
+                requests[rid]["_prefilled_at"] = event["at"]
         elif kind not in ("progress", "owned_process"):
             if kind == "session_start":
                 started[event["session"]] = event["workload"]
@@ -172,6 +176,18 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
         ended = r.pop("_ended_at", None)
         r["ended_s"] = None if ended is None else round(ended - t0, 3)
         r.pop("_failed_at", None)
+        prefilled = r.pop("_prefilled_at", None)
+        if (
+            r.get("outcome") == "stopped"
+            and r.get("decoded_tokens") is None
+            and prefilled is not None
+            and r.get("seconds") is not None
+        ):
+            # The decode a stop cut off went unreturned; its time after the prompt was
+            # fully processed bounds it, recomputably from the receipt.
+            r["seconds_after_prefill"] = round(
+                r["seconds"] - (prefilled - t0 - r["started_s"]), 3
+            )
         split = [
             r.get(k) for k in ("decoded_tokens", "reasoning_tokens", "visible_tokens")
         ]
@@ -236,7 +252,15 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             ]
     outcome.pop("sessions", None)
     manifest = json.loads((attempt / "manifest.json").read_text(encoding="utf-8"))
+    screened = {}
+    if manifest["plan"] == "screen":
+        results = screen.screen_results(attempt)
+        if results:
+            # S2 as selected: the ranking under the current L4 scan, beside the live
+            # verdicts (tool calls themselves stay in the lab).
+            screened["screen"] = screen.report(results)[1]
     return {
+        **screened,
         "attempt": attempt.name,
         "manifest_id": manifest["id"],
         "plan": manifest["plan"],
