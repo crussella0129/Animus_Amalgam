@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `a80294f17a`, after
-nine critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `35087cbdf7`, after
+ten critique rounds.
 
 ## Intent Verification
 
@@ -20,13 +20,13 @@ nine critique rounds.
 | AC4 — MTP | Deferred to T-217. | — |
 | AC5 — compression | Deferred to T-219. | — |
 | AC6 — default local policy with evidence | **Met for the settings measured.** | [`local-operating-policy.md`](../../../lineage/local-operating-policy.md) ranks by machine time per verified item, with failures in the denominators and receipt links. The live profile is unchanged (P2). |
-| AC7 — host-derived deadlines, stall rule, backstop, predicted vs actual, stops recorded as failures | **Met on the lab route.** The Hermes-side deadlines are T-219. | The T-215 unit tests (H1–H3), including `step_stop`'s backstop and stall decisions. Live, only stalls and resource guards stopped work, and no backstop was reached. All 165 completed post-calibration requests carry every L1 and M3 request field, asserted by presence. The exceptions are `id_slot`, which b10964 does not stream, and tool-call tokens, which the live runs' wire did not count; both are named missing. The 4 attempt-stopped requests after calibration (attempts 05, 07, 11 and 12) keep their own stop cause and elapsed time, but the pre-repair lab recorded neither their predictions nor their extrema. Attempt 02's stall-stopped calibration request also lacks extrema. The repaired lab keeps both on every stop path (`stopped_request`, `RequestExtrema`), and both paths are tested. |
+| AC7 — host-derived deadlines, stall rule, backstop, predicted vs actual, stops recorded as failures | **Met on the lab route.** The Hermes-side deadlines are T-219. | The T-215 unit tests (H1–H3), including `step_stop`'s backstop and stall decisions. Live, work was stopped by the stall rule (attempt 02), the resource guards (11, 12) and lab defects, each repaired and replayed: scheduler lag (02), the telemetry races (05, 07) and the wire's refusal of a retry (10). No backstop was reached. All 165 completed post-calibration requests carry every L1 and M3 request field, asserted by presence. The exceptions are `id_slot`, which b10964 does not stream, and tool-call tokens, which the live runs' wire did not count; both are named missing. The 4 attempt-stopped requests after calibration (attempts 05, 07, 11 and 12) keep their own stop cause and elapsed time, but the pre-repair lab recorded neither their predictions nor their extrema. Attempt 02's stall-stopped calibration request also lacks extrema. The repaired lab keeps both on every stop path (`stopped_request`, `RequestExtrema`), and both paths are tested. |
 
 ### INT-0004 — bounded local-model qualification
 
 | Gap carried into Sprint 3 | Status | Evidence |
 |---|---|---|
-| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build with every library, a clean Hermes commit, the task corpus, the interpreter and the seed (asserted since rounds 8 and 9). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
+| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build with every library, a clean Hermes commit, the task corpus, the interpreter and the seed (asserted since rounds 8 and 9). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Retries are published as truncation continuations, as refusals that name a preceding length finish, and, since round 10, as `retry_of` for any re-sent conversation; no published session re-sent one. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
 | AC2 time gate (host-derived) | **Met.** | 10,788.8 s charged against the 81,365 s host-derived backstop budget. Calibration was in the ledger before the screen. |
 | AC2 main-cancel replay and OS kill safety | **Met.** | C4: the slot was idle in 0.84 s and cleanup took 0.88 s. The T5 bring-up replay: the silent tree was stopped by the stall rule and gone in 0.047 s, a chatty child survived, and the sentinel survived. |
 
@@ -35,8 +35,8 @@ nine critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **318 passed, 0 failed** across six files at `a80294f17a`. Runner log sha256 `e9081c78…`, started 2026-10-06T04:45:34Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
-| Regressions red on base (V2) | All 46 failed on their repair's parent revision. 26 failed on the behavior assertion itself and 20 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 13 API reds of rounds 3 to 7 are the new fields and seams that those rounds' behavior reds depend on. |
+| Formal unit and integration | **321 passed, 0 failed** across six files at `35087cbdf7`. Runner log sha256 `0f17ffe8…`, started 2026-10-06T10:40:48Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Regressions red on base (V2) | All 49 failed on their repair's parent revision. 26 failed on the behavior assertion itself and 23 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. From round 3 on, an API red marks a published field or seam the repair added, and its row in the unit results names the defect it pins. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
 | Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, and 2026-10-06T04:11:27Z, head `47522c6a2d`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
 | Policy review (P1) | **Pass** (`policy_evidence_review`, re-reviewed 2026-10-06T04:11Z after round 7 corrected two policy figures). See [e2e-tests](e2e-tests.md). |
@@ -76,6 +76,10 @@ regression:
    input was 9,935 tokens, not 7,867.
 10. **The wire's concurrency refusal wrote no receipt** (`a80294f17a`):
    critique-09 C-001. Attempt 10's session ended when Hermes retried after request 142's cap-cut response and the wire refused the retry as concurrent. That refusal wrote no receipt, so the retry has no request record, and every published request reads `continuation_of_length_finish: false`. Since round 9 the wire receipts this refusal like every other one.
+11. **Cut-short sessions dropped their first rendered prefix; retries after
+   a non-length finish were indistinguishable; the screen and timer checks
+   leaned on mutable lab state** (`35087cbdf7`): critique-10 C-002 to
+   C-004.
 
 ## Concern dispositions (critique round 1)
 
@@ -191,6 +195,18 @@ was addressed:
 | C-002: the identity check was weaker than stated | **Fixed.** The check also requires every backend library hash, `source_dirty` false, an integer seed and the interpreter. |
 | C-003: the screen re-rank took its inputs on trust | **Fixed.** The published screen sessions must be exactly the ended long sessions, with arms and re-run links from the session starts, selectability from `arms.json`, machine time from the published span and decoded tokens from the requests. |
 | C-004: record drifts | **Fixed.** INT-0004's work evidence links the completions and backlog. The V2 accounting explains all 20 API reds. The R2 row names attempt 10's session stop. The policy's live-profile proposal carries the T-225 caveat. |
+
+## Concern dispositions (critique round 10)
+
+[critique-10](critique-10.md) returned `proceed-with-caveats` with 5 concerns. Each was addressed, and the critic was re-run:
+
+| Concern | Response |
+|---|---|
+| C-001: the refusal field was only asserted false | **Fixed.** The wire records each response's finish before admitting the next request. New tests run attempt 10's shape (a length finish, then a retry at `[DONE]` during accounting, receipted as a continuation) and a refusal after a length finish (`follows_length_finish: true`). Both pass on base too: on the accepted path the retry waits on the wire's lock. The stale read existed only on the refusal path's lock timeout, which the change closes. |
+| C-002: retries read only as length continuations | **Fixed.** Publish marks a request that re-sends its session's rendered conversation as `retry_of` the first. No published session did. |
+| C-003: checks leaned on mutable lab config | **Fixed.** The screen check's oracle is frozen: the arms the same sprint's full runs ran, and the screen manifest's own arms. Sessions now record the backstop their timers were set against. Schema-2 receipts still recompute it from the frozen calibration record. |
+| C-004: cut-short sessions skipped by the M4 check | **Fixed.** The stop path and publish keep a cut-short session's first prefix. The check skips only sessions with no request (an API red on base for attempts 05, 07, 11 and 12). |
+| C-005: two misstatements | **Fixed.** The AC7 row names every live stop cause, and the V2 accounting states what each API red pins. |
 
 ## Plan deviation: retained fixed values
 

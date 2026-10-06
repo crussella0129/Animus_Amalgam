@@ -1,13 +1,14 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `a80294f17a` (after critique round 9).
+- **Tested head:** `35087cbdf7` (after critique round 10).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-06T04:45:34Z, covering the six
-  Sprint 3 formal files: **318 passed, 0 failed**. Runner log sha256
-  `e9081c7877766d4c80ac77e7bc86a27c7ac512782276ab4ecae114791dd01b96`. The
-  earlier runs at `32b8e50eaf` (318, log `0cd5001f…`), `47522c6a2d` (318,
+- **Final formal run (V1):** started 2026-10-06T10:40:48Z, covering the six
+  Sprint 3 formal files: **321 passed, 0 failed**. Runner log sha256
+  `0f17ffe8b6ebb7d4abc41a5acf32574d4ee3095efb4acac9d0eb188716a8a6b0`. The
+  earlier runs at `a80294f17a` (318, log `e9081c78…`), `32b8e50eaf` (318,
+  log `0cd5001f…`), `47522c6a2d` (318,
   log `2eaec3de…`), `a730a0a39e` (291,
   log `65219407…`), `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
   and `efeb4ef4c4` passed 291 (log `5816e66f…`), 238 (log `b6d63e54…`),
@@ -57,10 +58,11 @@
 | `test_contaminated_twice_is_a_failure_and_once_is_excluded` | L4, S2 | pass | One flag excludes the session (the re-run counts); two flags make the arm a failure with 0 verified items. |
 | `test_stopped_request_keeps_its_cause_timing_and_predictions` | AC7, M3 | pass | **Regressions (rounds 4 and 6).** The `request_stopped` receipt carries the stop cause, elapsed time, meaningful first token, both predictions and the last `/slots` decode count as an observed lower bound. |
 | `test_request_extrema_are_recorded_when_a_guard_stops_the_loop` | L1 | pass | **Regression (round 2).** When a guard raises inside the loop, the in-flight request's resource extrema are still recorded, with the running minimum and maximum. |
-| `test_a_cut_short_session_is_scored_from_its_fixture` | L2 | pass | A session an attempt stop cut short is scored from its fixture: 1 verified after turn 3, with its request count, an empty L4 screen and, being under 20 requests, AC1 coverage not met (L2, round 5). |
+| `test_a_cut_short_session_is_scored_from_its_fixture` | L2 | pass | A session an attempt stop cut short is scored from its fixture: 1 verified after turn 3, with its request count, an empty L4 screen and, being under 20 requests, AC1 coverage not met (L2, round 5). The first rendered prefix is kept (M4, round 10). |
 | `test_a_cut_short_session_is_screened_from_its_last_conversation` | L4, L2 | pass | **Regression (round 3).** The stop path screens the conversation the wire last forwarded; a tool call reading `../../secret` is flagged. The screen publishes what it saw (1 message, 1 tool call), and the session records the call's validity. |
 | `test_scoring_a_cut_short_session_never_raises_into_the_stop_path` | L2, AC7 | pass | **Regression (round 3).** When scoring raises, `stopped_session` returns the session with the error as its verification. `run.bounded` returns `None` past its bound and the result within it. |
 | `test_a_stopped_request_stays_stopped_whatever_lands_after` (2) | AC7, M3 | pass | **Regression (round 2).** After `request_stopped`, a later `wire_failure` or `response_cancelled` keeps the stopped outcome, its cause, its own timing, both predictions and the resources. Machine time is computed. |
+| `test_a_request_resending_the_same_conversation_is_published_as_a_retry` | M3 | pass | **Regression (round 10).** A request that re-sends its session's rendered conversation is published with `retry_of` naming the first, whatever the previous finish; another session's identical prompt is not a retry. |
 | `test_a_stopped_request_publishes_its_time_after_prefill` | O1, AC7 | pass | **Regression (round 7).** A stopped request whose decode went unreturned names `decoded_tokens` missing and publishes its seconds after the prompt was fully processed, from its own progress receipt, so the missing decode can be estimated. |
 | `test_publish_scores_and_screens_a_cut_short_session` (2) | L2, L4 | pass | **Regression (round 3).** Publishing scores a cut-short session from its preserved fixture and screens its last request's conversation: clean when it runs the check, flagged when it reads outside the fixture. The screen's message and tool-call counts, and each call's validity, are published, with AC1 coverage for a long:all session (round 5). |
 | `test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause` | AC7, M3 | pass | **Regression (round 3, attempt 02).** An aborted request takes its own session's recorded stop as its cause. A failure in a session that ended without a stop stays a wire failure, and only a request in flight at the attempt stop takes the attempt's reason, timed from its receipts. |
@@ -119,19 +121,26 @@ earliest bases could be collected; the committed tests are unchanged.
 | stopped request publishes its time after prefill | `47522c6a2d` | `f56cf5f195` | **API:** no `seconds_after_prefill`. |
 | screen receipt reproduces the recorded winners | `47522c6a2d` | `f56cf5f195` | **API:** attempt 06's receipt had no `screen` report, only the pre-repair live verdicts. |
 | concurrency refusal is receipted | `a80294f17a` | `7322017d5b` | **Behavior:** the refused request left no `wire_failure` record. |
+| cut-short session keeps its first prefix (stop path) | `35087cbdf7` | `230d451b60` | **API:** `stopped_session` had no `first_request`. |
+| cut-short session keeps its first prefix (published) | `35087cbdf7` | `230d451b60` | **API:** the cut-short sessions of attempts 05, 07, 11 and 12 had no `first_request`. |
+| retries are marked | `35087cbdf7` | `230d451b60` | **API:** no `retry_of`. |
 
-V2 covers 46 regressions: 26 red on the behavior assertion and 20 on an
+V2 covers 49 regressions: 26 red on the behavior assertion and 23 on an
 API the repair introduced. For the API reds of rounds 1 and 2, the defect
 itself is evidenced live by the attempt that found it (02, 04, 07, 11 and
-12); the test pins the repaired contract. The 13 API reds of rounds 3 to 7
-are the new fields and seams that those rounds' behavior reds depend on. Round
+12); the test pins the repaired contract. From round 3 on, an API red marks
+a published field or a seam that the repair added, and its row names the
+defect it pins: evidence that was absent (rounds 3, 5, 7 and 10) or a seam
+that a same-round behavior red exercises (round 4). Round
 5's assertions on supervisor lag, the Hermes timers against the backstop,
 the request-limit receipt and the live first token pass on base: they cover
 behavior that was already correct. So do round 6's markup-bearing split
 test and the schema-scoped receipt checks, which hold receipts from the
-repaired lab to stricter rules.
+repaired lab to stricter rules, and round 10's tests of attempt 10's retry
+shape and of a refusal after a length finish: on the accepted path the
+retry waits on the wire's lock and already read the right finish.
 
-In the round-3 to round-9 worktrees, the base copy of
+In the round-3 to round-10 worktrees, the base copy of
 `test_session_env_is_private_and_repository_free` also failed. The worktree
 sat inside the owner's `TEMP`, which breaks the test's premise that the
 repository is outside it. The failure is an artifact of where the worktree

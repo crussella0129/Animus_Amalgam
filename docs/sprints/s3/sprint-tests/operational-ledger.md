@@ -893,3 +893,23 @@ with caveats. The code changes are at `a80294f17a`.
   seed and the interpreter.
 - **The screen's inputs.** The published screen sessions are tied to the
   receipt's own session starts, machine-time spans and decoded tokens.
+
+## Test-phase corrections (critique round 10)
+
+These are recorded in response to [critique-10](critique-10.md), which passed
+with caveats. The changes are at `35087cbdf7`, and all 13 receipts were
+republished.
+
+- **The finish before the next request.** The wire now records a
+  response's finish before it admits the next request. On the accepted path
+  this changes nothing, because a retry waits on the wire's lock until
+  accounting ends. On the refusal path a lock timeout could read the
+  previous finish.
+- **Retries.** A request that re-sends its session's rendered conversation
+  is published with `retry_of`. No published session re-sent one, so
+  Sprint 3's only retry is attempt 10's refused one (round 9).
+- **First prefix.** The cut-short sessions of attempts 05, 07, 11 and 12
+  now carry their first rendered prefix.
+- **Frozen oracles.** The screen check compares with the arms this sprint's
+  full runs ran, and sessions record the backstop their timers were set
+  against.

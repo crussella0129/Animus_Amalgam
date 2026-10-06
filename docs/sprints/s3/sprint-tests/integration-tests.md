@@ -1,8 +1,8 @@
 # Sprint 3 Integration Test Results (after operational confidence)
 
-- **Tested head:** `a80294f17a` (after critique round 9). These results are
-  part of the final formal run recorded in [unit-tests](unit-tests.md) (318
-  passed, 0 failed; runner log sha256 `e9081c78…`).
+- **Tested head:** `35087cbdf7` (after critique round 10). These results are
+  part of the final formal run recorded in [unit-tests](unit-tests.md) (321
+  passed, 0 failed; runner log sha256 `0f17ffe8…`).
 - **Runner:** `scripts/run_tests.sh` on the owner's Windows 11 host.
 - **Ordering:** written and first run after the confidence record
   (2026-10-04T01:58Z).
@@ -29,6 +29,8 @@ record the working slot (`slot_seen`). Wall-clock bounds are at least 2 s.
 | `test_streamed_tool_call_is_reassembled_and_counted` | M3, T4, L1 | pass | **Regression (round 5).** A streamed tool call is reassembled with its name and parsed arguments, counted, and recorded valid and known. Its output is counted as tool-call tokens. The capture backend decodes 2 tokens of template markup around its output, as a real template does: reasoning, visible and tool-call tokens stay within the decoded count, and the published remainder equals the markup (round 6). |
 | `test_a_tool_call_cut_at_the_output_cap_is_recorded_invalid` | M3 | pass | **Regression (round 5, attempt 10).** A tool call delivered with `finish_reason: length` and cut arguments is recorded invalid on the response and in the session's validity. |
 | `test_length_finish_marks_the_next_request_a_continuation` | M3 | pass | After a `length` finish, the next request is recorded as a truncation continuation. |
+| `test_a_retry_at_done_after_a_length_finish_is_receipted_a_continuation` | M3, M1 | pass | **Round 10, attempt 10's shape.** After a cap-cut response, a retry sent at `[DONE]`, while the wire still accounts for the response, is admitted and receipted `continuation_of_length_finish: true`. |
+| `test_a_refusal_after_a_length_finish_says_so` | M3 | pass | **Round 10.** A request refused as concurrent after a cap-cut response is receipted `follows_length_finish: true`. The wire records each finish before admitting the next request. |
 | `test_slot_counters_are_progress_while_deltas_are_withheld` | T4 | pass | While SSE deltas are withheld for seconds, rising `/slots` counters register as progress. |
 | `test_receipt_fields_complete_or_named_missing` | M3, L1 | pass | The final chunk is released only after the wire has recorded `slot_seen`. The prediction is recorded at send. The response receipt carries timings, finish reason, the reasoning/visible/tool-call split (no tool call: 0 tool-call tokens and an empty validity list), first token and both predictions. The slot comes from `/slots` (`id_slot_source: "slots"`), because the stream carries none. `kernel_compiled` is present even when no cache is wired. |
 | `test_cancel_returns_promptly_and_is_recorded_as_a_cancel` | C4, INT-0004 AC2 | pass | **Regression (attempt 02).** The cancel returns in under 2 s against a 6 s batch. It is recorded as `response_cancelled`, not as a wire failure, and keeps its elapsed time and prediction (AC7). |
@@ -56,7 +58,7 @@ rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
 | `test_published_evidence_excludes_private_paths_and_credentials` (25) | V3 | pass | No user path, `Bearer` value or 48-hex token appears in any published receipt or manifest. |
 | `test_every_published_attempt_resolves_to_its_manifest` (13) | V3, M4, INT-0004 AC1 | pass | Each receipt resolves to its manifest by id. **Round 8:** the manifest pins INT-0004 AC1's identity: SHA-256 hashes of the model, tokenizer, template, backend build and task corpus, plus the 40-hex Hermes commit. **Round 9:** every backend library hash, a clean source tree, an integer seed and the interpreter. The public copy's digest is valid. The owner's time-model decision, Hermes timeouts (including the terminal timeout), the allowlist and the time parameters are present. The rendered prefix is measured, or not-measured with a reason. Post-calibration plans carry the full calibration record (rates, checkpoint size, frozen count, budget). Every session has an arm, a stop cause is kept, and cleanup took at most 5 s with the listener closed. |
 | `test_launched_attempts_record_the_launch_and_admission` (13) | M1, M4 | pass | Every launched attempt's command has `--slot-save-path` and no `--predict`, and records its admission host condition. |
-| `test_sessions_record_their_first_rendered_prefix` (13) | M4 | pass | Each session records its first rendered prefix (tokens and hash). |
+| `test_sessions_record_their_first_rendered_prefix` (13) | M4 | pass | **Regression (round 10).** Every session with at least one request, completed or cut short, records its first rendered prefix (tokens and hash). |
 | `test_every_request_names_its_missing_fields` (13) | L1, M3 | pass | **Regression (round 4).** Every request, completed, cancelled or stopped, carries each of the 18 L1/M3 request fields or names it missing. Meaningful first token and the tool-call count (round 4) and decoded tokens (round 6) were silently absent before. Tool-call tokens are named missing in every receipt before round 5. |
 | `test_stopped_requests_keep_their_own_cause_and_elapsed_time` (13) | AC7 | pass | **Regression (round 3).** Each stopped request's cause equals its own session's recorded stop, or the attempt's reason when its session was still running, and it keeps its elapsed time. |
 | `test_completed_calibrated_requests_carry_every_l1_and_m3_field` (13) | AC7, L1, M3 | pass | Every request completed after calibration carries every L1 and M3 request field, present and not merely named. The exceptions are fields the live runs' wire could not record, which must be named missing: `id_slot`, which b10964's stream does not return and the `/slots` correlation postdates, and tool-call tokens (round 5). Only receipts from schema-2 manifests (the live runs) may use the exceptions; the repaired lab writes schema 3 (round 6). |
@@ -66,9 +68,9 @@ rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
 | `test_the_token_split_accounts_for_decoded_output` (13) | L1 | pass | **Round 5.** Reasoning, visible and tool-call tokens never exceed the decoded count, and the published remainder makes up the difference. |
 | `test_supervisor_lag_is_recorded_and_stops_only_past_two_periods` (13) | M3 | pass | **Round 5.** Every outcome records its maximum supervisor lag. It exceeds two telemetry periods exactly when the attempt stopped on lag (attempt 02, 14.9 s); the others peaked at 0.63 s. |
 | `test_long_all_sessions_record_ac1_coverage` (13) | L2 | pass | **Regression (round 5).** Every long:all session, completed or stopped, records AC1 coverage, true exactly at 20 requests or more. |
-| `test_published_screen_reproduces_the_recorded_winners` (13) | S2, L4 | pass | **Regression (round 7).** A screen attempt's receipt publishes each session's verdict under the current scan beside the live one. Re-ranking the published sessions under L4's pick gives the published ranking and the recorded `screen_winners`, and each session's score and live verdict match the receipt's session record. **Round 9:** the ranking inputs are tied to the receipt: exactly the ended long sessions, their arms and re-run links, their published machine time and their decoded tokens. |
+| `test_published_screen_reproduces_the_recorded_winners` (13) | S2, L4 | pass | **Regression (round 7).** A screen attempt's receipt publishes each session's verdict under the current scan beside the live one. Re-ranking the published sessions under L4's pick gives the published ranking and the recorded `screen_winners`, and each session's score and live verdict match the receipt's session record. **Round 10:** the oracle is frozen evidence: the winners must be the arms the same sprint's full runs ran in each thinking mode, and selectability and thinking come from the screen's own manifest, not the lab's current `arms.json`. **Round 9:** the ranking inputs are tied to the receipt: exactly the ended long sessions, their arms and re-run links, their published machine time and their decoded tokens. |
 | `test_a_stopped_requests_unreturned_decode_can_be_estimated_from_the_receipt` (13) | O1 | pass | **Round 7.** Where a stopped request publishes its seconds after prefill, it names `decoded_tokens` missing, and the time lies within its elapsed time; the missing decode is estimated from it. |
-| `test_hermes_timers_hold_at_or_above_each_sessions_backstop` (13) | M2 | pass | **Round 5.** After calibration, every session's applied Hermes timer, and the manifest's declared timers, are at or above the request backstop recomputed from the calibration record, the time parameters and that session's output cap. |
+| `test_hermes_timers_hold_at_or_above_each_sessions_backstop` (13) | M2 | pass | **Round 5.** After calibration, every session's applied Hermes timer, and the manifest's declared timers, are at or above the request backstop. **Round 10:** the backstop is the one the session recorded as applied, or, in schema-2 receipts, the one recomputed from the frozen calibration record, the time parameters and that session's output cap. |
 
 ## Windows file behaviour (`windows_only`)
 
@@ -95,6 +97,7 @@ Sprint 2 checkpoint merge) and on head: `tests/hermes_cli/test_local_*.py`,
 | Head `47522c6a2d` | 34 | 649 | 1 | 2 | `20559fd5…` |
 | Head `32b8e50eaf` | 34 | 649 | 1 | 2 | `7722d7f4…` |
 | Head `a80294f17a` | 34 | 649 | 1 | 2 | `28c8adad…` |
+| Head `35087cbdf7` | 34 | 652 | 1 | 2 | `055448ee…` |
 
 - **New failures on head:** none.
 - **Fixed on head (6):** the shell-hook, hooks-CLI, cron catch-up and
