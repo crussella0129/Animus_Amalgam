@@ -11,6 +11,7 @@
 - **Summary:** Host-calibrated deadlines, a hardened lab, a sampling × thinking screen and full long-task runs of the winners with reasoning echo on the real 27B
 - **Intents:** [INT-0007](../../intents/INT-0007-decode-budget-long-session.md), [INT-0004](../../intents/INT-0004-bounded-local-model-qualification.md)
 - **Completion evidence:** Test phase passed on the 11th critic round (proceed-with-caveats; 5 blocks repaired); formal 321/321 at 35087cbdf7; R0-R2 4/4 verified with O1 205.3/345.4/384.3 s per item; INT-0007 AC2 (off, bounded), AC3, AC6 (measured settings) and AC7 (lab route) met, AC1 partly (T-223); INT-0004 AC1, AC2 and AC4 gaps closed; P2 live fingerprints unchanged at close (2026-10-06T10:58Z)
+- **Checkpoint:** https://github.com/crussella0129/Animus_Amalgam/pull/4
 - 2026-10-03 owner-directed environment reset, after the owner freed disk and
   memory. The owner believed the model had been deleted. The read-only check
   found it present and byte-identical (SHA-256 `322e194f…`), so it was kept,
