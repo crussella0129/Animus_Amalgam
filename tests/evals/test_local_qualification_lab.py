@@ -803,7 +803,7 @@ def test_a_stopped_request_stays_stopped_whatever_lands_after(tmp_path, after):
 
 def test_a_stopped_request_publishes_its_time_after_prefill(tmp_path):
     """O1: the decode a stop cut off went unreturned; the time after the prompt was
-    fully processed is published so the missing decode can be bounded."""
+    fully processed is published so the missing decode can be estimated."""
     prefilled = {
         "kind": "progress",
         "at": 15.0,

@@ -62,6 +62,24 @@ LATER_FIELDS = {"id_slot", "tool_call_tokens"}
 REPAIRED_SCHEMA = 3
 TELEMETRY_PERIOD = 1.0  # the retained telemetry cadence (lab README)
 AC1_REQUESTS = 20  # INT-0007 AC1
+# INT-0004 AC1 identity: what a manifest must pin for a result to be reproducible.
+IDENTITY_FIELDS = {
+    "schema",
+    "source_commit",
+    "source_dirty",
+    "model",
+    "backend",
+    "placement",
+    "limits",
+    "owner_choice",
+    "dependencies",
+    "rendered_prefix",
+    "tools",
+    "interpreter",
+    "task_corpus_sha256",
+    "seed",
+}
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 def _load(path):
@@ -121,6 +139,17 @@ def test_every_published_attempt_resolves_to_its_manifest(receipt):
     record = _load(receipt)
     manifest = _manifest(record)
     assert manifest["id"] == record["manifest_id"] == record["outcome"]["manifest_id"]
+    # INT-0004 AC1: model, tokenizer, template, backend build, Hermes commit, corpus.
+    assert IDENTITY_FIELDS <= set(manifest)
+    for digest in (
+        manifest["model"]["sha256"],
+        manifest["model"]["tokenizer_sha256"],
+        manifest["model"]["template_sha256"],
+        manifest["backend"]["sha256"],
+        manifest["task_corpus_sha256"],
+    ):
+        assert SHA256.fullmatch(digest), digest
+    assert re.fullmatch(r"[0-9a-f]{40}", manifest["source_commit"])
     public = {k: v for k, v in manifest.items() if k != "published_digest"}
     assert manifest_digest(public) == manifest["published_digest"]
     assert manifest["owner_choice"]["time_model"]
@@ -357,7 +386,9 @@ def test_published_screen_reproduces_the_recorded_winners(receipt):
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
-def test_a_stopped_requests_unreturned_decode_is_bounded_by_the_receipt(receipt):
+def test_a_stopped_requests_unreturned_decode_can_be_estimated_from_the_receipt(
+    receipt,
+):
     """O1: a stop leaves the decode count unreturned; the receipt keeps the time the
     decode could have run, after the prompt was fully processed."""
     for request in _load(receipt)["requests"]:

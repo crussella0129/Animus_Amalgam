@@ -184,7 +184,7 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             and r.get("seconds") is not None
         ):
             # The decode a stop cut off went unreturned; its time after the prompt was
-            # fully processed bounds it, recomputably from the receipt.
+            # fully processed lets it be estimated, recomputably from the receipt.
             r["seconds_after_prefill"] = round(
                 r["seconds"] - (prefilled - t0 - r["started_s"]), 3
             )
