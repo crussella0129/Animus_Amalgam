@@ -618,7 +618,7 @@ def test_sequential_request_after_done_is_accepted_and_concurrent_is_refused(mak
     """Attempt 10: a retry sent at [DONE] arrived during the previous handler's accounting
     and was refused as concurrent, stopping R2. T-214: a finishing handler cleared the
     next request's in-flight claim, so a third request could slip in."""
-    backend, wire, _records, _consumed = make_lab()
+    backend, wire, records, _consumed = make_lab()
     backend.tokenize_delay = 0.8
     assert _post(wire, _body(10), stop_at_done=True)[0] == 200
     assert _post(wire, _body(10), stop_at_done=True)[0] == 200
@@ -634,6 +634,10 @@ def test_sequential_request_after_done_is_accepted_and_concurrent_is_refused(mak
     first.join()
     assert results == {"a": 200, "b": 409}
     assert "concurrent" in wire.failure
+    # The refusal is receipted, as every other refusal is (round 9).
+    refusal = _record(records, "wire_failure")
+    assert "concurrent" in refusal["error"] and refusal["session"] == 1
+    assert refusal["follows_length_finish"] is False
 
 
 def test_a_failing_request_keeps_its_timing_and_predictions(make_lab):

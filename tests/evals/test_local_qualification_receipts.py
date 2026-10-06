@@ -149,7 +149,12 @@ def test_every_published_attempt_resolves_to_its_manifest(receipt):
         manifest["task_corpus_sha256"],
     ):
         assert SHA256.fullmatch(digest), digest
+    # The server binary alone is not the build: its libraries carry the CUDA code.
+    libraries = manifest["backend"]["libraries"]
+    assert libraries and all(SHA256.fullmatch(h) for h in libraries.values())
     assert re.fullmatch(r"[0-9a-f]{40}", manifest["source_commit"])
+    assert manifest["source_dirty"] is False  # else the commit no longer pins the code
+    assert isinstance(manifest["seed"], int) and manifest["interpreter"]
     public = {k: v for k, v in manifest.items() if k != "published_digest"}
     assert manifest_digest(public) == manifest["published_digest"]
     assert manifest["owner_choice"]["time_model"]
@@ -374,8 +379,34 @@ def test_published_screen_reproduces_the_recorded_winners(receipt):
     if _manifest(record)["plan"] != "screen" or not ended:
         return
     published = record["screen"]
-    winners, report = screen.report(published["sessions"])
+    # The ranking inputs are the receipt's own: every ended long session, with its
+    # arm and re-run link, its published machine time and its decoded tokens.
+    assert {s["session"] for s in published["sessions"]} == {
+        s["session"] for s in ended
+    }
     arms = json.loads((LAB_DIR / "arms.json").read_text(encoding="utf-8"))
+    starts = {e["session"]: e for e in record["events"] if e["kind"] == "session_start"}
+    spans = {m["session"]: m["machine_time_s"] for m in record["machine_time"]}
+    for session in published["sessions"]:
+        start = starts[session["session"]]
+        assert (session["arm"], session["rerun_of"]) == (
+            start["arm"],
+            start["rerun_of"],
+        )
+        arm = arms["session_arms"][session["arm"]]
+        assert (session["thinking"], session["selectable"]) == (
+            arm["thinking"],
+            arm["selectable"],
+        )
+        assert session["machine_s"] == pytest.approx(
+            spans[session["session"]], abs=0.01
+        )
+        assert session["decoded"] == sum(
+            r.get("decoded_tokens") or 0
+            for r in record["requests"]
+            if r["session"] == session["session"]
+        )
+    winners, report = screen.report(published["sessions"])
     assert winners == arms["screen_winners"]
     assert report["modes"] == published["modes"]
     verifications = {s["session"]: s["verification"] for s in ended}

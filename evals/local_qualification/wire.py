@@ -311,8 +311,19 @@ class Wire:
         if refused or not self.lock.acquire(timeout=self.probe_timeout):
             if not refused:
                 self._release_in_flight(token)
-            handler.send_error(409, "Unexpected endpoint or concurrent request")
             self.failure = "unexpected or concurrent inference request"
+            # Receipted like every other refusal: a client retry refused here (attempt
+            # 10, after a cap-cut response) is otherwise visible nowhere.
+            session = self.session
+            self.record(
+                "wire_failure",
+                error=self.failure,
+                path=handler.path,
+                session=session["id"] if session else None,
+                follows_length_finish=bool(session)
+                and session["last_finish"] == "length",
+            )
+            handler.send_error(409, "Unexpected endpoint or concurrent request")
             return
         connection = None
         request_id = None
