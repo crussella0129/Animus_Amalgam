@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `663bac6a2a`, after
-four critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `9c373121cd`, after
+five critique rounds.
 
 ## Intent Verification
 
@@ -26,7 +26,7 @@ four critique rounds.
 
 | Gap carried into Sprint 3 | Status | Evidence |
 |---|---|---|
-| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests). Every request carries each of its 16 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session records tool-call validity. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
+| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests). Every request carries each of its 17 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
 | AC2 time gate (host-derived) | **Met.** | 10,788.8 s charged against the 81,365 s host-derived backstop budget. Calibration was in the ledger before the screen. |
 | AC2 main-cancel replay and OS kill safety | **Met.** | C4: the slot was idle in 0.84 s and cleanup took 0.88 s. The T5 bring-up replay: the silent tree was stopped by the stall rule and gone in 0.047 s, a chatty child survived, and the sentinel survived. |
 
@@ -35,8 +35,8 @@ four critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **238 passed, 0 failed** across six files at `663bac6a2a`. Runner log sha256 `b6d63e54…`, started 2026-10-05T21:35:06Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
-| Regressions red on base (V2) | All 35 failed on their repair's parent revision. 20 failed on the behavior assertion itself and 15 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 8 API reds of rounds 3 and 4 are the new fields and the stop seam that those rounds' behavior reds depend on. |
+| Formal unit and integration | **291 passed, 0 failed** across six files at `9c373121cd`. Runner log sha256 `5816e66f…`, started 2026-10-06T03:25:18Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Regressions red on base (V2) | All 40 failed on their repair's parent revision. 22 failed on the behavior assertion itself and 18 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
 | Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
 | Policy review (P1) | **Pass** (`policy_evidence_review`, 2026-10-05T21:38Z). See [e2e-tests](e2e-tests.md). |
@@ -63,6 +63,10 @@ regression:
    cancel; stopped requests dropped their first token silently; an attempt
    stop during a session's verification would screen nothing**
    (`663bac6a2a`): critique-04 C-001, C-002 and C-003.
+7. **Tool-call validity came from Hermes's history, which drops a call cut
+   at the output cap; tool-call output was in neither half of the token
+   split; cut-short long sessions had no AC1 coverage** (`9c373121cd`):
+   critique-05 C-001, C-002 and C-003.
 
 ## Concern dispositions (critique round 1)
 
@@ -119,10 +123,22 @@ was addressed:
 | Concern | Response |
 |---|---|
 | C-001: a stall- or backstop-stopped request would be published as a cancel with no cause | **Fixed.** `run.stop_active_request` records the in-flight request's `request_stopped` with the session's stop before the wire cancels it, and `run_session` stops through it. A wire test publishes the live wire's own receipts. The stall-stopped request comes out `stopped` with its cause, and the deliberate cancel stays `response_cancelled`. |
-| C-002: meaningful first token silently absent on stopped requests | **Fixed.** `stopped_request` carries the first token. Publish names it, and the tool-call count, missing when absent, which applies to all 5 stopped requests and attempt 04's cancelled request. Cut-short sessions record tool-call validity from their last conversation: attempts 05, 07, 11 and 12 had 2, 2, 2 and 6 calls, all valid and known. The receipt tests check 16 fields per request and validity on every long session. |
+| C-002: meaningful first token silently absent on stopped requests | **Fixed.** `stopped_request` carries the first token. Publish names it, and the tool-call count, missing when absent, which applies to all 5 stopped requests, and attempt 04's cancelled request names its tool-call count missing (it carries its first token; corrected in round 5). Cut-short sessions record tool-call validity from their last conversation: attempts 05, 07, 11 and 12 had 2, 2, 2 and 6 calls, all valid and known. The receipt tests check 16 fields per request and validity on every long session. |
 | C-003: a cut-short screen could be empty and pass as clean | **Fixed.** The wire keeps an ended session readable until the next begins, and `stopped_session` finds the session by id. A wire test ends the session first, as a stop during verification would. Every L4 screen publishes what it saw, and the receipt test requires non-zero messages and tool calls for a session with requests. |
 | C-004: calibration gap window differs from the plan | **Deviation recorded and asserted.** The driver reports the session's T_cli only in its result, after the session ends. During calibration the gap is therefore k × the attempt's own load time, the more permissive window. The README and the deviation list below record it, and the uncalibrated test asserts it. |
 | C-005: no P1/P2 check results | **Fixed.** Both checks are recorded with time and head in [e2e-tests](e2e-tests.md); P2 is re-checked at close. The policy now says the echo-on recommendation is outside the time ranking, where echo ranks third. It is chosen for AC3's append-only history, and its throughput benefit on longer sessions is unmeasured. |
+
+## Concern dispositions (critique round 5)
+
+[critique-05](critique-05.md) returned `block` with 5 concerns:
+
+| Concern | Response |
+|---|---|
+| C-001: validity left out the sprint's only malformed call | **Fixed.** The wire records validity for every delivered call, so a call cut at the cap is recorded invalid (tested), and sessions take their validity from it. For the published attempts, recorded before this, each long session shows its delivered count and names any call missing from Hermes's history. Attempt 10 names 1 of 8, request 142, cut at the output cap. The receipt test asserts that validity plus the named shortfall equals the delivered calls, and that the shortfall never exceeds the calls cut at the cap (red on base). |
+| C-002: the visible count excluded tool-call output | **Fixed.** Tool-call output has its own count (name and arguments), and publish names the remainder of the decoded count (`unsplit_decoded_tokens`: template markup, plus the tool-call output in receipts before round 5). The README defines each part. A wire test checks that the parts add up to the decoded count on a tool-call response, and a receipt test checks that the remainder is never negative. |
+| C-003: four planned checks unasserted | **Fixed.** Maximum supervisor lag is asserted on every outcome: over two periods exactly when the attempt stopped on lag. AC1 coverage is recorded and asserted on every long:all session, cut-short ones included; 07, 11 and 12 are not met. The Hermes timers are asserted at or above the backstop, through `session_windows` and against every published session's applied timer. The request-limit refusal's `wire_failure` receipt is asserted. |
+| C-004: round-4 records misstated attempt 04; an assertion could not fail | **Fixed.** Attempt 04's cancelled request carries its first token (12.344 s) and names only its tool-call count missing; the ledger, this report and the V2 row are corrected. The live-wire test stops after the first token and asserts that the published value equals the wire's. |
+| C-005: no named live replay of the post-confidence stop paths | **Deferred with rationale** to backlog **T-224**: Sprint 4's first lab attempt replays them, with the receipt checks listed there. The launch envelope is spent, and a replay needs the owner's approval. |
 
 ## Plan deviation: retained fixed values
 
@@ -154,9 +170,9 @@ the host's rates.
 - **The live retry path.** The sequential-retry repair was not re-triggered
   live; it is covered by the integration test.
 - **Post-confidence lab changes** were not replayed live (the launch envelope
-  is spent). They are behavior-preserving seams, receipt-completeness
-  changes and fixes, each covered by formal tests. They are listed in the
-  ledger.
+  is spent). They are seams, receipt-completeness changes and fixes to the
+  stop paths, each covered by formal tests and listed in the ledger. Their
+  live replay is backlog **T-224**, the first lab attempt of Sprint 4.
 
 ## Technical Debt Identified
 

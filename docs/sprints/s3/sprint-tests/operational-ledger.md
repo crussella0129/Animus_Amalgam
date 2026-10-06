@@ -786,9 +786,10 @@ all 13 receipts were republished.
   wire cancels it. No published attempt hit this path: attempt 02's stall
   predates the wire cancel, and its cause was corrected in round 3.
 - **Fields named missing.** The stopped requests of attempts 02, 05, 07, 11
-  and 12 now name their meaningful first token and tool-call count missing,
-  and so does attempt 04's deliberately cancelled request. The pre-repair
-  wire never recorded them.
+  and 12 now name their meaningful first token and tool-call count missing.
+  Attempt 04's deliberately cancelled request names its tool-call count
+  missing; it carries its first token (12.344 s). The pre-repair wire never
+  recorded them. (Corrected in round 5.)
 - **Cut-short tool-call validity.** Attempts 05, 07, 11 and 12 made 2, 2, 2
   and 6 tool calls in the conversations screened at publish. All were
   valid and known.
@@ -797,3 +798,32 @@ all 13 receipts were republished.
 - **P2 at test time.** At 2026-10-05T21:38:24Z, head `663bac6a2a`, the live
   `config.yaml` and `presets.ini` equal the plan baseline. They are
   re-checked at close.
+
+## Test-phase corrections (critique round 5)
+
+These are recorded in response to [critique-05](critique-05.md). The code
+changes are at `9c373121cd`. They were not replayed live; backlog **T-224**
+replays them in Sprint 4's first lab attempt. All 13 receipts were
+republished.
+
+- **A dropped tool call.** In attempt 10, request 142 hit the 768-token cap
+  mid-call (`finish_reason: length`). Hermes rejected the cut call and
+  retried, so the call never entered its history. Validity, then computed
+  from that history, showed 7 of 7 valid. The receipt now shows 8 delivered
+  calls and names 1 unvalidated, request 142. Every other long session
+  validates every delivered call. From now on the wire records validity
+  for each delivered call, so a cut call is recorded invalid.
+- **The token split.** Visible tokens are assistant content only. The
+  published receipts did not count tool-call output, so each request now
+  names the remainder of its decoded count (`unsplit_decoded_tokens`). In
+  R0, R1 and R2 that remainder is the tool-call output plus template
+  markup. The wire now counts tool-call output separately.
+- **AC1 coverage on stopped sessions.** The cut-short long:all sessions of
+  attempts 07, 11 and 12 (3, 3 and 11 requests) now record coverage not
+  met.
+- **Supervisor lag.** Only attempt 02 exceeded two telemetry periods (14.9
+  s), and it is the only lag stop. Every other attempt peaked at 0.63 s or
+  less.
+- **Hermes timers.** Every session after calibration ran with its Hermes
+  timer equal to its own request backstop: 1,931.4 s at the 512 cap and
+  2,219.9 s at the 768 cap.
