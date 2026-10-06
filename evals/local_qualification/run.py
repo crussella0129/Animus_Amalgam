@@ -715,6 +715,7 @@ def stopped_session(current, wire, venv: Path, allowlist) -> dict | None:
         "session": current["index"],
         "workload": current["workload"],
         "requests": session["requests"] if session else None,
+        "first_request": session["first_request"] if session else None,
         "tool_calls": None if session is None else session["tool_call_validity"],
         "verification": verification,
     }
@@ -893,6 +894,7 @@ def run_session(index, spec, ctx):
         workload=workload,
         reasoning_echo=spec["reasoning_echo"],
         hermes_timer_seconds=timer,
+        request_backstop_seconds=windows["request_backstop"],
         rerun_of=spec.get("rerun_of"),
     )
     driver = spawn(

@@ -452,6 +452,9 @@ class Wire:
                     if client_streams and line.strip() == b"data: [DONE]":
                         handler.wfile.write(line + b"\n")
                         handler.wfile.flush()
+                        # A retry sent at [DONE] is admitted (or refused) against
+                        # this finish, not the previous one (attempt 10).
+                        session["last_finish"] = folded.finish_reason
                         self._release_in_flight(token)  # the client is done
                     continue
                 data = json.loads(line[6:])
@@ -499,6 +502,7 @@ class Wire:
                 handler.send_header("Content-Length", str(len(payload)))
                 handler.end_headers()
                 handler.wfile.write(payload)
+            session["last_finish"] = folded.finish_reason
             self._release_in_flight(token)  # delivered; accounting follows
             # Hermes may run this response's tool calls before any further request.
             session["last_messages"] = [*messages, folded.message()]
@@ -522,7 +526,6 @@ class Wire:
                     if text
                     else 0
                 )
-            session["last_finish"] = folded.finish_reason
             kernel_end = self.kernel_cache_bytes()
             self.record(
                 "response_end",

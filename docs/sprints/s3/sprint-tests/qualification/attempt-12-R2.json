@@ -24,6 +24,12 @@
    "workload": "long:all",
    "stopped": true,
    "requests": 11,
+   "first_request": {
+    "input_tokens": 3749,
+    "prompt_sha256": "a349d0846c940fd551ccda9c9f6e61f9d537b855a9ac63bf663a4e54944e8e96",
+    "system_sha256": "d8c4afac0dd82db2336162ee2b46c659db398af8dda80fdcce982dddad9f848b",
+    "tools_sha256": "fdbf6729f4ab83987d40b633a1867e9d15f391dbb18eda2973aea8c79aee81dc"
+   },
    "tool_calls": [
     {
      "name": "terminal",

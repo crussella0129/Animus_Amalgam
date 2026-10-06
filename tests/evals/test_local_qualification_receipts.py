@@ -189,9 +189,9 @@ def test_launched_attempts_record_the_launch_and_admission(receipt):
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=_receipt_id)
 def test_sessions_record_their_first_rendered_prefix(receipt):
     for session in _load(receipt)["sessions"]:
-        first = session.get("first_request")
-        if first is None:  # stopped before any request reached the wire
+        if not session.get("requests"):  # stopped before any request reached the wire
             continue
+        first = session["first_request"]
         assert first["input_tokens"] > 0 and len(first["prompt_sha256"]) == 64
 
 
@@ -315,7 +315,11 @@ def test_hermes_timers_hold_at_or_above_each_sessions_backstop(receipt):
     ]
     assert min(declared) >= request_backstop(cal, params, context, max(caps.values()))
     for start in (e for e in record["events"] if e["kind"] == "session_start"):
-        backstop = request_backstop(cal, params, context, caps[start["arm"]])
+        # The backstop as applied, when the lab recorded it; schema-2 receipts are
+        # recomputed from the frozen calibration record.
+        backstop = start.get("request_backstop_seconds") or request_backstop(
+            cal, params, context, caps[start["arm"]]
+        )
         assert start["hermes_timer_seconds"] >= backstop, start["session"]
 
 
@@ -384,7 +388,7 @@ def test_published_screen_reproduces_the_recorded_winners(receipt):
     assert {s["session"] for s in published["sessions"]} == {
         s["session"] for s in ended
     }
-    arms = json.loads((LAB_DIR / "arms.json").read_text(encoding="utf-8"))
+    frozen = {s["arm_name"]: s["arm"] for s in _manifest(record)["sessions"]}
     starts = {e["session"]: e for e in record["events"] if e["kind"] == "session_start"}
     spans = {m["session"]: m["machine_time_s"] for m in record["machine_time"]}
     for session in published["sessions"]:
@@ -393,7 +397,7 @@ def test_published_screen_reproduces_the_recorded_winners(receipt):
             start["arm"],
             start["rerun_of"],
         )
-        arm = arms["session_arms"][session["arm"]]
+        arm = frozen[session["arm"]]
         assert (session["thinking"], session["selectable"]) == (
             arm["thinking"],
             arm["selectable"],
@@ -407,7 +411,23 @@ def test_published_screen_reproduces_the_recorded_winners(receipt):
             if r["session"] == session["session"]
         )
     winners, report = screen.report(published["sessions"])
-    assert winners == arms["screen_winners"]
+    # The oracle is frozen evidence: the arms this sprint's full runs ran in each
+    # thinking mode, not the lab's current arms.json (T-225 may change it).
+    full_runs = [
+        _load(m)
+        for m in receipt.parent.glob("manifests/*.json")
+        if _load(m)["plan"] in ("R0", "R1", "R2", "R3")
+    ]
+    ran = {
+        mode: {
+            s["arm_name"]
+            for m in full_runs
+            for s in m["sessions"]
+            if s["arm"]["thinking"] is (mode == "on")
+        }
+        for mode in ("off", "on")
+    }
+    assert {mode: {arm} for mode, arm in winners.items()} == ran
     assert report["modes"] == published["modes"]
     verifications = {s["session"]: s["verification"] for s in ended}
     for session in published["sessions"]:

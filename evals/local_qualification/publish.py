@@ -66,6 +66,7 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
     recorded ``session_stopped`` itself, from its preserved fixture (L2).
     """
     requests, sessions, started, other, last_body = {}, [], {}, [], {}
+    seen_prompts = {}
     t0 = None
     for event in _events(attempt):
         kind = event["kind"]
@@ -75,6 +76,9 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
         rid = event.get("request_id")
         if kind == "request":
             last_body[event["session"]] = event.get("original_body") or {}
+            # A retry re-sends the same rendered conversation (M3 retries).
+            prompts = seen_prompts.setdefault(event["session"], {})
+            retry_of = prompts.setdefault(event["prompt_sha256"], rid)
             requests[rid] = {
                 "request_id": rid,
                 "session": event["session"],
@@ -86,6 +90,8 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "predicted_initial_seconds": event.get("predicted_initial_seconds"),
                 "_at": event["at"],
             }
+            if retry_of != rid:
+                requests[rid]["retry_of"] = retry_of
         elif kind in ("response_end", "response_cancelled") and rid in requests:
             r = requests[rid]
             t = event.get("timings") or {}
@@ -220,6 +226,17 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "workload": workload,
                 "stopped": True,
                 "requests": len(own_requests),
+                "first_request": {
+                    k: own_requests[0][k]
+                    for k in (
+                        "input_tokens",
+                        "prompt_sha256",
+                        "system_sha256",
+                        "tools_sha256",
+                    )
+                }
+                if own_requests
+                else None,
                 "tool_calls": tool_call_validity(conversation, known),
                 **(
                     {"ac1_request_coverage": ac1_request_coverage(len(own_requests))}

@@ -664,7 +664,12 @@ def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
     _apply_reference(fixture, 3)
 
     class Wire:
-        session = {"id": 2, "requests": 6, "tool_call_validity": []}
+        session = {
+            "id": 2,
+            "requests": 6,
+            "first_request": {"input_tokens": 9, "prompt_sha256": "p" * 64},
+            "tool_call_validity": [],
+        }
         ended = None
 
     current = {"index": 2, "workload": "long:all", "fixture": fixture}
@@ -673,6 +678,7 @@ def test_a_cut_short_session_is_scored_from_its_fixture(tmp_path, session):
     )
     assert stopped["session"] == 2 and stopped["requests"] == 6
     assert stopped["ac1_request_coverage"] is False  # L2: under 20, being stopped
+    assert stopped["first_request"] == Wire.session["first_request"]  # M4
     assert stopped["verification"]["score"]["passed"] == 1
     assert stopped["verification"]["contamination"] == []
     assert (
@@ -691,6 +697,7 @@ def test_a_cut_short_session_is_screened_from_its_last_conversation(tmp_path, se
             "requests": 2,
             "last_messages": _conversation("cat ../../secret"),
             "last_tools": ["terminal"],
+            "first_request": None,
             "tool_call_validity": [],
         }
         ended = None
@@ -714,7 +721,12 @@ def test_scoring_a_cut_short_session_never_raises_into_the_stop_path(
     monkeypatch.setattr(run, "verify_session", broken)
 
     class Wire:
-        session = {"id": 1, "requests": 1, "tool_call_validity": []}
+        session = {
+            "id": 1,
+            "requests": 1,
+            "first_request": None,
+            "tool_call_validity": [],
+        }
         ended = None
 
     current = {"index": 1, "workload": "long:all", "fixture": tmp_path / "fixture"}
@@ -801,6 +813,25 @@ def test_a_stopped_request_stays_stopped_whatever_lands_after(tmp_path, after):
     ]
 
 
+def test_a_request_resending_the_same_conversation_is_published_as_a_retry(
+    tmp_path,
+):
+    """M3: a retry re-sends the same rendered conversation in its session, whatever
+    the previous finish was."""
+    events = [
+        REQUEST,
+        {**REQUEST, "at": 20.0, "request_id": 2, "prompt_sha256": "q"},
+        {**REQUEST, "at": 30.0, "request_id": 3},
+        {**REQUEST, "at": 40.0, "request_id": 4, "session": 2},
+    ]
+    first, second, third, other = publish.receipts(_attempt(tmp_path, events))[
+        "requests"
+    ]
+    assert "retry_of" not in first and "retry_of" not in second
+    assert third["retry_of"] == 1
+    assert "retry_of" not in other  # another session's conversation is its own
+
+
 def test_a_stopped_request_publishes_its_time_after_prefill(tmp_path):
     """O1: the decode a stop cut off went unreturned; the time after the prompt was
     fully processed is published so the missing decode can be estimated."""
@@ -837,6 +868,7 @@ def test_publish_scores_and_screens_a_cut_short_session(tmp_path, commands, flag
     }
     assert len(session["tool_calls"]) == len(commands)
     assert session["ac1_request_coverage"] is False
+    assert session["first_request"]["prompt_sha256"] == REQUEST["prompt_sha256"]
 
 
 def test_an_aborted_request_takes_its_own_sessions_stop_as_its_cause(tmp_path):

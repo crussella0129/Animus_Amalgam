@@ -430,6 +430,45 @@ def test_length_finish_marks_the_next_request_a_continuation(make_lab):
     assert flags == [False, True]
 
 
+def test_a_retry_at_done_after_a_length_finish_is_receipted_a_continuation(
+    make_lab,
+):
+    """Attempt 10's shape: a cap-cut response, and Hermes's retry sent at [DONE]
+    while the wire still accounts for it. The retry is admitted and receipted as the
+    truncation continuation it is (M3)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.finish_reason = "length"
+    backend.tokenize_delay = 0.8
+    assert _post(wire, _body(10), stop_at_done=True)[0] == 200
+    backend.finish_reason = "stop"
+    assert _post(wire, _body(10), stop_at_done=True)[0] == 200
+    deadline = time.monotonic() + 10  # the retry's accounting follows [DONE]
+    while sum(r["kind"] == "response_end" for r in records) < 2:
+        assert time.monotonic() < deadline, "the retry was never accounted"
+        time.sleep(0.01)
+    flags = [
+        r["continuation_of_length_finish"] for r in records if r["kind"] == "request"
+    ]
+    assert flags == [False, True]
+
+
+def test_a_refusal_after_a_length_finish_says_so(make_lab):
+    """A request refused as concurrent names whether it follows a cap-cut response."""
+    backend, wire, records, _consumed = make_lab()
+    backend.finish_reason = "length"
+    assert _post(wire, _body(10))[0] == 200
+    backend.finish_reason = "stop"
+    backend.chunk_delay = 2.0
+    backend.first_chunk_sent.clear()
+    first = threading.Thread(target=lambda: _post(wire, _body(10)))
+    first.start()
+    _wait_mid_stream(wire, backend)
+    assert _post(wire, _body(10))[0] == 409
+    first.join()
+    refusal = _record(records, "wire_failure")
+    assert refusal["follows_length_finish"] is True
+
+
 def test_slot_counters_are_progress_while_deltas_are_withheld(make_lab):
     backend, wire, _records, _consumed = make_lab()
     backend.chunk_delay = 2.0  # deltas withheld for seconds at a time
