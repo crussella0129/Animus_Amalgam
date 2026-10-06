@@ -1,13 +1,14 @@
 # Sprint 3 Unit Test Results (after operational confidence)
 
-- **Tested head:** `32b8e50eaf` (after critique round 8).
+- **Tested head:** `a80294f17a` (after critique round 9).
 - **Runner:** `scripts/run_tests.sh` (per-file subprocess isolation, clean
   env, `TZ=UTC`, `HERMES_TEST_FILE_RETRIES=0`) on the owner's Windows 11
   host.
-- **Final formal run (V1):** started 2026-10-06T04:26:14Z, covering the six
+- **Final formal run (V1):** started 2026-10-06T04:45:34Z, covering the six
   Sprint 3 formal files: **318 passed, 0 failed**. Runner log sha256
-  `0cd5001ffc27914758ea461fd3f1b68fc27ef4378f187ed91d06c1a5892cf76a`. The
-  earlier runs at `47522c6a2d` (318, log `2eaec3de…`), `a730a0a39e` (291,
+  `e9081c7877766d4c80ac77e7bc86a27c7ac512782276ab4ecae114791dd01b96`. The
+  earlier runs at `32b8e50eaf` (318, log `0cd5001f…`), `47522c6a2d` (318,
+  log `2eaec3de…`), `a730a0a39e` (291,
   log `65219407…`), `9c373121cd`, `663bac6a2a`, `4f323770ee`, `1fca1a3095`
   and `efeb4ef4c4` passed 291 (log `5816e66f…`), 238 (log `b6d63e54…`),
   223 (log `bc3e1d5f…`), 217 (log `72fefa45…`) and 171 (log `13bd883f…`). The logs are kept
@@ -117,19 +118,20 @@ earliest bases could be collected; the committed tests are unchanged.
 | published requests name decoded tokens missing | `a730a0a39e` | `cf895ec191` | **Behavior:** the 6 requests that never completed (attempts 02, 04, 05, 07, 11 and 12) left `decoded_tokens` silently absent. |
 | stopped request publishes its time after prefill | `47522c6a2d` | `f56cf5f195` | **API:** no `seconds_after_prefill`. |
 | screen receipt reproduces the recorded winners | `47522c6a2d` | `f56cf5f195` | **API:** attempt 06's receipt had no `screen` report, only the pre-repair live verdicts. |
+| concurrency refusal is receipted | `a80294f17a` | `7322017d5b` | **Behavior:** the refused request left no `wire_failure` record. |
 
-V2 covers 45 regressions: 25 red on the behavior assertion and 20 on an
+V2 covers 46 regressions: 26 red on the behavior assertion and 20 on an
 API the repair introduced. For the API reds of rounds 1 and 2, the defect
 itself is evidenced live by the attempt that found it (02, 04, 07, 11 and
-12); the test pins the repaired contract. The API reds of rounds 3 to 5 are
-the new fields and seams that those rounds' behavior reds depend on. Round
+12); the test pins the repaired contract. The 13 API reds of rounds 3 to 7
+are the new fields and seams that those rounds' behavior reds depend on. Round
 5's assertions on supervisor lag, the Hermes timers against the backstop,
 the request-limit receipt and the live first token pass on base: they cover
 behavior that was already correct. So do round 6's markup-bearing split
 test and the schema-scoped receipt checks, which hold receipts from the
 repaired lab to stricter rules.
 
-In the round-3 to round-7 worktrees, the base copy of
+In the round-3 to round-9 worktrees, the base copy of
 `test_session_env_is_private_and_repository_free` also failed. The worktree
 sat inside the owner's `TEMP`, which breaks the test's premise that the
 repository is outside it. The failure is an artifact of where the worktree

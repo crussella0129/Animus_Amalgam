@@ -5,8 +5,8 @@ Sprint 3 operated the real Hermes CLI on the owner's Windows host
 repaired what broke at the source and replayed every repair, and it wrote
 the formal tests only after the
 [operational confidence record](operational-ledger.md#operational-confidence-record)
-(2026-10-04T01:58Z). The final formal run is at head `32b8e50eaf`, after
-eight critique rounds.
+(2026-10-04T01:58Z). The final formal run is at head `a80294f17a`, after
+nine critique rounds.
 
 ## Intent Verification
 
@@ -26,7 +26,7 @@ eight critique rounds.
 
 | Gap carried into Sprint 3 | Status | Evidence |
 |---|---|---|
-| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build, Hermes commit and task corpus (asserted since round 8). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
+| AC1 and AC4 (identity, correlated receipts) | **Closed.** | All 13 attempts are published, each resolving to a digest-checked manifest with its arms (V3, M4 tests) and pinning the AC1 identity: model, tokenizer, template, backend build with every library, a clean Hermes commit, the task corpus, the interpreter and the seed (asserted since rounds 8 and 9). Every request carries each of its 18 L1/M3 fields or names them missing. Since round 4 this includes meaningful first token and the tool-call count. Every long session has validity for each delivered tool call or names the shortfall: attempt 10's one call cut at the output cap, which Hermes dropped from its history, is named. The wire now records validity for every delivered call. The pinned llama.cpp's OpenAI stream carries no `id_slot`, so the slot is correlated from `/slots` (`id_slot_source: "slots"`). Receipts published before that repair name `id_slot` missing. |
 | AC2 time gate (host-derived) | **Met.** | 10,788.8 s charged against the 81,365 s host-derived backstop budget. Calibration was in the ledger before the screen. |
 | AC2 main-cancel replay and OS kill safety | **Met.** | C4: the slot was idle in 0.84 s and cleanup took 0.88 s. The T5 bring-up replay: the silent tree was stopped by the stall rule and gone in 0.047 s, a chatty child survived, and the sentinel survived. |
 
@@ -35,8 +35,8 @@ eight critique rounds.
 | Layer | Result |
 |---|---|
 | Live (E2E) | Calibration, C1–C4, T5, the screen and R0–R2 all completed; R3 was not triggered. See [e2e-tests](e2e-tests.md). |
-| Formal unit and integration | **318 passed, 0 failed** across six files at `32b8e50eaf`. Runner log sha256 `0cd5001f…`, started 2026-10-06T04:26:14Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
-| Regressions red on base (V2) | All 45 failed on their repair's parent revision. 25 failed on the behavior assertion itself and 20 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 11 API reds of rounds 3 to 5 are the new fields and seams that those rounds' behavior reds depend on. |
+| Formal unit and integration | **318 passed, 0 failed** across six files at `a80294f17a`. Runner log sha256 `e9081c78…`, started 2026-10-06T04:45:34Z; it passed twice in a row with retries off. See [unit-tests](unit-tests.md) and [integration-tests](integration-tests.md). |
+| Regressions red on base (V2) | All 46 failed on their repair's parent revision. 26 failed on the behavior assertion itself and 20 because the repair introduced the API. The 7 API reds of rounds 1 and 2 are evidenced live by the attempt that found each defect. The 13 API reds of rounds 3 to 7 are the new fields and seams that those rounds' behavior reds depend on. |
 | Affected-suite diff | Base: 7 failed. Head: 1 failed, inherited and unchanged. **0 new failures.** |
 | Live-profile fingerprints (P2) | At 2026-10-05T21:38:24Z, head `663bac6a2a`, and 2026-10-06T04:11:27Z, head `47522c6a2d`, `config.yaml` `a48b4add…` (6,700 bytes) and `presets.ini` `bb35c72d…` (580 bytes) equal the plan baseline (`live_profile_untouched`). They are re-checked at sprint close. |
 | Policy review (P1) | **Pass** (`policy_evidence_review`, re-reviewed 2026-10-06T04:11Z after round 7 corrected two policy figures). See [e2e-tests](e2e-tests.md). |
@@ -74,6 +74,8 @@ regression:
    rested on an unpublished re-scan** (`47522c6a2d`): critique-07 C-001 and
    C-002. Echo's prefill saving was the median, not the total, and the peak
    input was 9,935 tokens, not 7,867.
+10. **The wire's concurrency refusal wrote no receipt** (`a80294f17a`):
+   critique-09 C-001. Attempt 10's session ended when Hermes retried after request 142's cap-cut response and the wire refused the retry as concurrent. That refusal wrote no receipt, so the retry has no request record, and every published request reads `continuation_of_length_finish: false`. Since round 9 the wire receipts this refusal like every other one.
 
 ## Concern dispositions (critique round 1)
 
@@ -165,7 +167,7 @@ was addressed:
 | Concern | Response |
 |---|---|
 | C-001: echo saving and peak input contradicted by the receipts | **Fixed.** The policy states the median saving (161 to 60 uncached tokens per continued request) beside the totals, which did not fall (R2 8,259 tokens in 90.3 s, R1 7,943 in 93.7 s). It corrects the peak to 9,935 tokens. The echo recommendation rests on AC3's append-only history, with no throughput claim. P1 was re-reviewed. |
-| C-002: screen ranking from an unpublished re-scan | **Fixed.** Attempt 06's receipt publishes the ranking under the current scan, beside every session's live verdict. A receipt test re-ranks the published sessions and gets the recorded `screen_winners` (red on base). The tool calls themselves stay in the lab for privacy. The policy names the live scan's false positives. |
+| C-002: screen ranking from an unpublished re-scan | **Fixed.** Attempt 06's receipt publishes the ranking under the current scan, beside every session's live verdict. A receipt test re-ranks the published sessions and gets the recorded `screen_winners` (an API red on base). The tool calls themselves stay in the lab for privacy. The policy names the live scan's false positives. |
 | C-003: schema-3 rules could never run | **Addressed; the rules first run in T-224.** The receipt suite reads every sprint's published attempts, so the Sprint 4 replay's schema-3 receipts meet them. T-224 names the suite as its acceptance check and adds `id_slot` and `decoded_tokens_observed` to its checklist. No schema-3 receipt exists yet. |
 | C-004: the decode "bound" used the calibrated rate, from unpublished inputs | **Fixed.** Each stopped request publishes its seconds after prefill. The estimate uses the fastest decode rate any receipt shows (3.743 tok/s), is labelled an estimate, and drops the context-slowdown claim. |
 
@@ -178,6 +180,17 @@ was addressed:
 | C-001: attempt 05's cut-short off-greedy screen session uncounted | **Disclosed; deferred with rationale** to backlog **T-225**. As locked, S2 ranks the screen that completed (attempt 06), one session per configuration. Attempt 05 was stopped by a lab defect and replayed as attempt 06. The policy, the e2e row and this report now state the exclusion and give the alternative reading: counting attempt 05 as O1 counts stops, greedy costs 375.4 s per verified item and model default (318.5 s) would rank first. The full runs used greedy, so the full-length comparison is unmeasured, and T-225 runs it. |
 | C-002: INT-0004 AC1 identity unasserted on Sprint 3 manifests | **Fixed.** Every published manifest must pin the model, tokenizer, template, backend and corpus SHA-256 hashes, the 40-hex Hermes commit, the interpreter and the seed. |
 | C-003: record drifts | **Fixed.** The AC2 row calls the decode figure an estimate, and the test and publish comment say "estimated". INT-0007's work evidence links the completed tasks and backlog T-223, T-224 and T-225. |
+
+## Concern dispositions (critique round 9)
+
+[critique-09](critique-09.md) returned `proceed-with-caveats` with 4 concerns. Each was addressed, and the critic was re-run:
+
+| Concern | Response |
+|---|---|
+| C-001: the concurrency refusal wrote no receipt | **Fixed.** The wire records a `wire_failure` before the 409, naming the session and whether the refused request follows a `length` finish. The concurrency test asserts it (red on base). The attempt-10 records state that its retry has no request receipt. |
+| C-002: the identity check was weaker than stated | **Fixed.** The check also requires every backend library hash, `source_dirty` false, an integer seed and the interpreter. |
+| C-003: the screen re-rank took its inputs on trust | **Fixed.** The published screen sessions must be exactly the ended long sessions, with arms and re-run links from the session starts, selectability from `arms.json`, machine time from the published span and decoded tokens from the requests. |
+| C-004: record drifts | **Fixed.** INT-0004's work evidence links the completions and backlog. The V2 accounting explains all 20 API reds. The R2 row names attempt 10's session stop. The policy's live-profile proposal carries the T-225 caveat. |
 
 ## Plan deviation: retained fixed values
 

@@ -135,7 +135,9 @@ on this workload.
 The live profile is unchanged (P2). Its `presets.ini` currently uses a
 98,304 context, the MTP draft, model-default sampling (`temp = 1`,
 `top-p = 0.95`, `top-k = 20`) and a vision projector. The proposal for a
-thinking-off agent profile, measured only at 32K without MTP:
+thinking-off agent profile, measured only at 32K without MTP, with greedy
+taken from the completed screen (model default's full-length comparison is
+backlog T-225):
 
 ```ini
 # presets.ini — proposal

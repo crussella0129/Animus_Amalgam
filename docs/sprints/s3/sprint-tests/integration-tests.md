@@ -1,8 +1,8 @@
 # Sprint 3 Integration Test Results (after operational confidence)
 
-- **Tested head:** `32b8e50eaf` (after critique round 8). These results are
+- **Tested head:** `a80294f17a` (after critique round 9). These results are
   part of the final formal run recorded in [unit-tests](unit-tests.md) (318
-  passed, 0 failed; runner log sha256 `0cd5001f…`).
+  passed, 0 failed; runner log sha256 `e9081c78…`).
 - **Runner:** `scripts/run_tests.sh` on the owner's Windows 11 host.
 - **Ordering:** written and first run after the confidence record
   (2026-10-04T01:58Z).
@@ -32,7 +32,7 @@ record the working slot (`slot_seen`). Wall-clock bounds are at least 2 s.
 | `test_slot_counters_are_progress_while_deltas_are_withheld` | T4 | pass | While SSE deltas are withheld for seconds, rising `/slots` counters register as progress. |
 | `test_receipt_fields_complete_or_named_missing` | M3, L1 | pass | The final chunk is released only after the wire has recorded `slot_seen`. The prediction is recorded at send. The response receipt carries timings, finish reason, the reasoning/visible/tool-call split (no tool call: 0 tool-call tokens and an empty validity list), first token and both predictions. The slot comes from `/slots` (`id_slot_source: "slots"`), because the stream carries none. `kernel_compiled` is present even when no cache is wired. |
 | `test_cancel_returns_promptly_and_is_recorded_as_a_cancel` | C4, INT-0004 AC2 | pass | **Regression (attempt 02).** The cancel returns in under 2 s against a 6 s batch. It is recorded as `response_cancelled`, not as a wire failure, and keeps its elapsed time and prediction (AC7). |
-| `test_sequential_request_after_done_is_accepted_and_concurrent_is_refused` | M1 | pass | **Regressions (attempt 10 and T-214).** A retry sent at `[DONE]` during the previous request's accounting is accepted. A request arriving mid-stream is refused as concurrent, including after a finishing handler's cleanup. |
+| `test_sequential_request_after_done_is_accepted_and_concurrent_is_refused` | M1 | pass | **Regressions (attempt 10 and T-214).** A retry sent at `[DONE]` during the previous request's accounting is accepted. A request arriving mid-stream is refused as concurrent, including after a finishing handler's cleanup. **Round 9:** the refusal is a `wire_failure` receipt naming the session and whether it follows a `length` finish. |
 | `test_a_failing_request_keeps_its_timing_and_predictions` | AC7, M3 | pass | **Regression (round 1).** A malformed stream fails the request, and its `wire_failure` keeps the elapsed time and both predictions. |
 | `test_an_attempt_stop_receipts_the_live_in_flight_request` | AC7, L4 | pass | **Regression (round 3).** `run.stopped_request` on the live `Wire.active` mid-stream gives the request id, the cause, an elapsed time within the observed window and both predictions. The wire session keeps the conversation it forwarded. |
 | `test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not` | AC7, H2, M3 | pass | **Regression (round 4).** From the live wire's own receipts: a request stopped mid-stream through `run.stop_active_request` is published as `stopped` with the stall cause and its prediction. The stop comes after the first token, and the published first token equals the wire's (round 5). Its decode count never arrived, so `decoded_tokens` is named missing, with the `/slots` count the wire last saw as a lower bound (round 6). A deliberate cancel stays `response_cancelled`, with no cause. |
@@ -54,7 +54,7 @@ rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
 |---|---|---|---|
 | `test_every_attempt_is_published` | V3 | pass | Attempt indices 1–13, taken from the final budget counter, each have a published receipt. |
 | `test_published_evidence_excludes_private_paths_and_credentials` (25) | V3 | pass | No user path, `Bearer` value or 48-hex token appears in any published receipt or manifest. |
-| `test_every_published_attempt_resolves_to_its_manifest` (13) | V3, M4, INT-0004 AC1 | pass | Each receipt resolves to its manifest by id. **Round 8:** the manifest pins INT-0004 AC1's identity: SHA-256 hashes of the model, tokenizer, template, backend build and task corpus, plus the 40-hex Hermes commit, the interpreter and the seed. The public copy's digest is valid. The owner's time-model decision, Hermes timeouts (including the terminal timeout), the allowlist and the time parameters are present. The rendered prefix is measured, or not-measured with a reason. Post-calibration plans carry the full calibration record (rates, checkpoint size, frozen count, budget). Every session has an arm, a stop cause is kept, and cleanup took at most 5 s with the listener closed. |
+| `test_every_published_attempt_resolves_to_its_manifest` (13) | V3, M4, INT-0004 AC1 | pass | Each receipt resolves to its manifest by id. **Round 8:** the manifest pins INT-0004 AC1's identity: SHA-256 hashes of the model, tokenizer, template, backend build and task corpus, plus the 40-hex Hermes commit. **Round 9:** every backend library hash, a clean source tree, an integer seed and the interpreter. The public copy's digest is valid. The owner's time-model decision, Hermes timeouts (including the terminal timeout), the allowlist and the time parameters are present. The rendered prefix is measured, or not-measured with a reason. Post-calibration plans carry the full calibration record (rates, checkpoint size, frozen count, budget). Every session has an arm, a stop cause is kept, and cleanup took at most 5 s with the listener closed. |
 | `test_launched_attempts_record_the_launch_and_admission` (13) | M1, M4 | pass | Every launched attempt's command has `--slot-save-path` and no `--predict`, and records its admission host condition. |
 | `test_sessions_record_their_first_rendered_prefix` (13) | M4 | pass | Each session records its first rendered prefix (tokens and hash). |
 | `test_every_request_names_its_missing_fields` (13) | L1, M3 | pass | **Regression (round 4).** Every request, completed, cancelled or stopped, carries each of the 18 L1/M3 request fields or names it missing. Meaningful first token and the tool-call count (round 4) and decoded tokens (round 6) were silently absent before. Tool-call tokens are named missing in every receipt before round 5. |
@@ -66,7 +66,7 @@ rules. Test IDs carry the sprint, for example `s3-attempt-06-screen`.
 | `test_the_token_split_accounts_for_decoded_output` (13) | L1 | pass | **Round 5.** Reasoning, visible and tool-call tokens never exceed the decoded count, and the published remainder makes up the difference. |
 | `test_supervisor_lag_is_recorded_and_stops_only_past_two_periods` (13) | M3 | pass | **Round 5.** Every outcome records its maximum supervisor lag. It exceeds two telemetry periods exactly when the attempt stopped on lag (attempt 02, 14.9 s); the others peaked at 0.63 s. |
 | `test_long_all_sessions_record_ac1_coverage` (13) | L2 | pass | **Regression (round 5).** Every long:all session, completed or stopped, records AC1 coverage, true exactly at 20 requests or more. |
-| `test_published_screen_reproduces_the_recorded_winners` (13) | S2, L4 | pass | **Regression (round 7).** A screen attempt's receipt publishes each session's verdict under the current scan beside the live one. Re-ranking the published sessions under L4's pick gives the published ranking and the recorded `screen_winners`, and each session's score and live verdict match the receipt's session record. |
+| `test_published_screen_reproduces_the_recorded_winners` (13) | S2, L4 | pass | **Regression (round 7).** A screen attempt's receipt publishes each session's verdict under the current scan beside the live one. Re-ranking the published sessions under L4's pick gives the published ranking and the recorded `screen_winners`, and each session's score and live verdict match the receipt's session record. **Round 9:** the ranking inputs are tied to the receipt: exactly the ended long sessions, their arms and re-run links, their published machine time and their decoded tokens. |
 | `test_a_stopped_requests_unreturned_decode_can_be_estimated_from_the_receipt` (13) | O1 | pass | **Round 7.** Where a stopped request publishes its seconds after prefill, it names `decoded_tokens` missing, and the time lies within its elapsed time; the missing decode is estimated from it. |
 | `test_hermes_timers_hold_at_or_above_each_sessions_backstop` (13) | M2 | pass | **Round 5.** After calibration, every session's applied Hermes timer, and the manifest's declared timers, are at or above the request backstop recomputed from the calibration record, the time parameters and that session's output cap. |
 
@@ -94,6 +94,7 @@ Sprint 2 checkpoint merge) and on head: `tests/hermes_cli/test_local_*.py`,
 | Head `a730a0a39e` | 34 | 622 | 1 | 2 | `d10f32f0…` |
 | Head `47522c6a2d` | 34 | 649 | 1 | 2 | `20559fd5…` |
 | Head `32b8e50eaf` | 34 | 649 | 1 | 2 | `7722d7f4…` |
+| Head `a80294f17a` | 34 | 649 | 1 | 2 | `28c8adad…` |
 
 - **New failures on head:** none.
 - **Fixed on head (6):** the shell-hook, hooks-CLI, cron catch-up and

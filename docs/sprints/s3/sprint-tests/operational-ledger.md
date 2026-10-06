@@ -881,3 +881,15 @@ with caveats. The test changes are at `32b8e50eaf`.
 - **Identity.** Every published manifest is now asserted to pin INT-0004
   AC1's identity: model, tokenizer, template, backend and corpus hashes,
   the Hermes commit, the interpreter and the seed.
+
+## Test-phase corrections (critique round 9)
+
+These are recorded in response to [critique-09](critique-09.md), which passed
+with caveats. The code changes are at `a80294f17a`.
+
+- **Attempt 10's refused retry.** Attempt 10's session ended when Hermes retried after request 142's cap-cut response and the wire refused the retry as concurrent. That refusal wrote no receipt, so the retry has no request record, and every published request reads `continuation_of_length_finish: false`. Since round 9 the wire receipts this refusal like every other one.
+- **Identity.** The manifest check now also covers every backend library
+  hash (33 files, the CUDA code included), a clean source tree, an integer
+  seed and the interpreter.
+- **The screen's inputs.** The published screen sessions are tied to the
+  receipt's own session starts, machine-time spans and decoded tokens.
