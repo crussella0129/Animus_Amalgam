@@ -221,7 +221,9 @@ def main():
         else None
     )
     manifest = {
-        "schema": 2,
+        # 3: the wire records id_slot from /slots, tool-call tokens and each
+        # delivered call's validity; receipts at 2 predate those repairs.
+        "schema": 3,
         "plan": args.plan,
         "source_commit": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True, timeout=10, cwd=REPO

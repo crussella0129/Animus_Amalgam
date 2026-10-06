@@ -660,12 +660,16 @@ def probe_window(cal, params, t_load, period) -> float:
 
 def stopped_request(active: dict, reason: str, now: float) -> dict:
     """The receipt for a request an attempt stop cut short: cause, elapsed time and the
-    predictions it was sent with (INT-0007 AC7)."""
+    predictions it was sent with (INT-0007 AC7). The stream's own decode count
+    never arrives, so the last one /slots showed stands in as a lower bound: the
+    server answers /slots only between batches."""
+    observed = [d for _p, d in active.get("slots_progress") or [] if d is not None]
     return {
         "request_id": active["request_id"],
         "reason": reason,
         "seconds": now - active["started"],
         "meaningful_first_token_seconds": active["first_token"],
+        "decoded_tokens_observed": max(observed, default=None),
         "predicted_initial_seconds": active["predicted_initial"],
         "predicted_rearmed_seconds": active["predicted_rearmed"],
     }

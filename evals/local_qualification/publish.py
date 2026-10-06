@@ -31,6 +31,7 @@ REQUEST_FIELDS = (
     "cached_tokens",
     "uncached_prompt_tokens",
     "reasoning_tokens",
+    "decoded_tokens",
     "visible_tokens",
     "tool_call_tokens",
     "prompt_ms",
@@ -102,7 +103,6 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "reasoning_tokens": event.get("reasoning_tokens"),
                 "visible_tokens": event.get("visible_tokens"),
                 "tool_call_tokens": event.get("tool_call_tokens"),
-                "tool_call_validity": event.get("tool_call_validity"),
                 "kernel_compiled": event.get("kernel_compiled"),
                 "cached_tokens": t.get("cache_n"),
                 "uncached_prompt_tokens": t.get("prompt_n"),
@@ -111,6 +111,8 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
                 "decode_ms": t.get("predicted_ms"),
                 "decode_tps": t.get("predicted_per_second"),
             }
+            if event.get("tool_call_validity") is not None:
+                fields["tool_call_validity"] = event["tool_call_validity"]
             if r.get("outcome") == "stopped":
                 # The attempt stop is the cause; a later record only fills gaps.
                 _fill(r, fields)
@@ -121,6 +123,9 @@ def receipts(attempt: Path, task_python: Path | None = None) -> dict:
             r = requests[rid]
             r.update(outcome="stopped", stop_reason=event.get("reason"))
             r.update({k: event[k] for k in TIMING_FIELDS if event.get(k) is not None})
+            if event.get("decoded_tokens_observed") is not None:
+                # A lower bound from /slots; decoded_tokens itself stays named missing.
+                r["decoded_tokens_observed"] = event["decoded_tokens_observed"]
             r.setdefault("_ended_at", event["at"])
         elif kind == "wire_failure" and rid in requests:
             r = requests[rid]

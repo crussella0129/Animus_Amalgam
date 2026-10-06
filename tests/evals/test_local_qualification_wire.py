@@ -57,6 +57,8 @@ class CaptureBackend:
     and streams a progress chunk, reasoning and content (or tool-call) deltas and a final
     timings chunk carrying no ``id_slot``, as b10964 does."""
 
+    MARKUP = 2  # decoded template tokens around the output, as a real template adds
+
     def __init__(self):
         self.completions = []
         self.chunk_delay = 0.0  # seconds between streamed chunks
@@ -164,7 +166,7 @@ class CaptureBackend:
                     "cache_n": 0,
                     "prompt_n": 3,
                     "prompt_ms": 30.0,
-                    "predicted_n": decoded,
+                    "predicted_n": decoded + self.MARKUP,
                     "predicted_ms": 1500.0,
                     "predicted_per_second": 3.3,
                 },
@@ -362,7 +364,7 @@ def test_wire_streams_and_reassembles(make_lab):
     assert all(c["stream"] and c["return_progress"] for c in backend.completions)
 
 
-def test_streamed_tool_call_is_reassembled_and_counted(make_lab):
+def test_streamed_tool_call_is_reassembled_and_counted(make_lab, tmp_path):
     backend, wire, records, _consumed = make_lab()
     backend.tool_call = True
     _status, folded = _post(wire, _body(10, stream=False, tool_words=1))
@@ -375,13 +377,14 @@ def test_streamed_tool_call_is_reassembled_and_counted(make_lab):
     assert end["tool_call_validity"] == [
         {"name": "terminal", "arguments_valid": True, "known_tool": True}
     ]
-    # L1, round 5: the split accounts for the decoded output; tool-call output is its
-    # own count, not lost from both reasoning and visible.
+    # L1: tool-call output is its own count, not lost from both reasoning and
+    # visible; the parts never exceed the decode, and the published remainder is
+    # exactly the template's markup.
     assert end["visible_tokens"] == 0 and end["tool_call_tokens"] > 0
-    assert (
-        end["reasoning_tokens"] + end["visible_tokens"] + end["tool_call_tokens"]
-        == end["timings"]["predicted_n"]
-    )
+    counted = end["reasoning_tokens"] + end["visible_tokens"] + end["tool_call_tokens"]
+    assert counted <= end["timings"]["predicted_n"]
+    (request,) = _published(records, tmp_path)["requests"]
+    assert request["unsplit_decoded_tokens"] == backend.MARKUP
 
 
 def test_a_tool_call_cut_at_the_output_cap_is_recorded_invalid(make_lab):
@@ -466,7 +469,8 @@ def test_receipt_fields_complete_or_named_missing(make_lab):
     request = next(r for r in records if r["kind"] == "request")
     assert request["predicted_initial_seconds"] == 1.0 + 10 + 768  # known at send
     end = _record(records, "response_end")
-    assert end["timings"]["prompt_n"] == 3 and end["timings"]["predicted_n"] == 5
+    assert end["timings"]["prompt_n"] == 3
+    assert end["timings"]["predicted_n"] == 5 + backend.MARKUP
     assert end["finish_reason"] == "stop"
     # b10964's stream carries no id_slot; the working slot comes from /slots instead.
     assert end["id_slot"] == 0 and end["id_slot_source"] == "slots"
@@ -535,6 +539,10 @@ def test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not(
         assert time.monotonic() < deadline, "no token reached the wire"
         time.sleep(0.01)
     first_token = wire.active["first_token"]
+    backend.slots = [_slot(4)]  # the slot keeps decoding behind the stream
+    while "slots_progress" not in (wire.active or {}):
+        assert time.monotonic() < deadline, "the wire never saw the slot decode"
+        time.sleep(0.01)
     cause = "stall in decode (window 5.0s)"
     run.stop_active_request(
         wire, lambda kind, **data: records.append({"kind": kind, **data}), cause
@@ -555,6 +563,9 @@ def test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not(
     assert (stopped["outcome"], stopped["stop_reason"]) == ("stopped", cause)
     assert stopped["predicted_initial_seconds"] == 100.0
     assert stopped["meaningful_first_token_seconds"] == first_token
+    # The stream's decode count never arrived: named missing, with /slots' lower bound.
+    assert "decoded_tokens" in stopped["missing"]
+    assert stopped["decoded_tokens_observed"] == 4
     assert cancelled["outcome"] == "response_cancelled"
     assert "stop_reason" not in cancelled
 

@@ -39,6 +39,7 @@ REQUEST_FIELDS = (
     "cached_tokens",
     "uncached_prompt_tokens",
     "reasoning_tokens",
+    "decoded_tokens",
     "visible_tokens",
     "tool_call_tokens",
     "prompt_ms",
@@ -51,8 +52,10 @@ REQUEST_FIELDS = (
 )
 RATES = {"prefill_tps", "decode_tps", "overhead_s", "load_s", "cli_start_s"}
 # Fields the live runs' wire could not record: b10964 streams no id_slot (correlated
-# from /slots since round 2), and tool-call tokens are counted since round 5.
+# from /slots since round 2), and tool-call tokens are counted since round 5. Only
+# receipts from schema-2 manifests, the live runs, may name them missing.
 LATER_FIELDS = {"id_slot", "tool_call_tokens"}
+REPAIRED_SCHEMA = 3
 TELEMETRY_PERIOD = 1.0  # the retained telemetry cadence (lab README)
 AC1_REQUESTS = 20  # INT-0007 AC1
 
@@ -63,6 +66,21 @@ def _load(path):
 
 def _manifest(record):
     return _load(QUALIFICATION / "manifests" / f"{record['manifest_id']}.json")
+
+
+def _before_repair(record):
+    return _manifest(record)["schema"] < REPAIRED_SCHEMA
+
+
+def _cut_calls(record, session):
+    """Tool calls delivered in responses cut at the output cap."""
+    return sum(
+        r["tool_calls"]
+        for r in record["requests"]
+        if r["session"] == session
+        and r.get("finish_reason") == "length"
+        and r.get("tool_calls")
+    )
 
 
 def test_every_attempt_is_published():
@@ -160,7 +178,11 @@ def test_completed_calibrated_requests_carry_every_l1_and_m3_field(receipt):
     for request in record["requests"]:
         if request.get("outcome") == "response_end":
             for field in REQUEST_FIELDS:
-                if field in LATER_FIELDS and request.get(field) is None:
+                if (
+                    field in LATER_FIELDS
+                    and request.get(field) is None
+                    and _before_repair(record)
+                ):
                     assert field in request["missing"], request["request_id"]
                     continue
                 assert request.get(field) is not None, (request["request_id"], field)
@@ -177,14 +199,13 @@ def test_long_sessions_validate_every_delivered_tool_call(receipt):
             continue
         own = [r for r in record["requests"] if r["session"] == session["session"]]
         delivered = sum(r.get("tool_calls") or 0 for r in own)
-        cut = sum(
-            r["tool_calls"]
-            for r in own
-            if r.get("finish_reason") == "length" and r.get("tool_calls")
-        )
         unvalidated = session.get("unvalidated_tool_calls", 0)
         assert len(session["tool_calls"]) + unvalidated == delivered
-        assert 0 <= unvalidated <= cut, session["session"]
+        # Since the repair the wire validates every delivered call itself.
+        allowed = (
+            _cut_calls(record, session["session"]) if _before_repair(record) else 0
+        )
+        assert 0 <= unvalidated <= allowed, session["session"]
 
 
 @pytest.mark.parametrize("receipt", RECEIPTS, ids=lambda p: p.stem)
@@ -281,7 +302,10 @@ def test_attempt_stopped_long_sessions_are_scored(receipt):
     screened = session["verification"]["screened"]
     if session["requests"]:
         assert screened["messages"] > 0 and screened["tool_calls"] > 0
-    assert len(session["tool_calls"]) == screened["tool_calls"]
+    # Validity covers every delivered call; the screened history lacks only calls
+    # Hermes dropped, which were cut at the output cap.
+    dropped = len(session["tool_calls"]) - screened["tool_calls"]
+    assert 0 <= dropped <= _cut_calls(record, session["session"])
     if session.get("scored", "").startswith("at publish"):
         # Screened from the last request's conversation: complete only if that
         # request was still in flight, so no executed tool call came after it.

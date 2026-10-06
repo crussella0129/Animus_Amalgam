@@ -610,6 +610,7 @@ def test_stopped_request_keeps_its_cause_timing_and_predictions():
         "request_id": 7,
         "started": 100.0,
         "first_token": 4.0,
+        "slots_progress": [(900, 12)],
         "predicted_initial": 50.0,
         "predicted_rearmed": 40.0,
     }
@@ -618,6 +619,7 @@ def test_stopped_request_keeps_its_cause_timing_and_predictions():
         "reason": "stopped: RAM reserve",
         "seconds": 30.5,
         "meaningful_first_token_seconds": 4.0,
+        "decoded_tokens_observed": 12,
         "predicted_initial_seconds": 50.0,
         "predicted_rearmed_seconds": 40.0,
     }

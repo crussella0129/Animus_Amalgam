@@ -78,6 +78,7 @@
     "cached_tokens",
     "uncached_prompt_tokens",
     "reasoning_tokens",
+    "decoded_tokens",
     "visible_tokens",
     "tool_call_tokens",
     "prompt_ms",
