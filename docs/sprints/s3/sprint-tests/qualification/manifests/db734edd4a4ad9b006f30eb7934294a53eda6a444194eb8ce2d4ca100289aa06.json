@@ -1,0 +1,467 @@
+{
+ "allowlist": [
+  "C:\\Program Files\\Git\\bin",
+  "C:\\Program Files\\Git\\mingw64\\bin",
+  "C:\\Program Files\\Git\\usr\\bin",
+  "<lab>\\task-venv",
+  "C:\\WINDOWS"
+ ],
+ "backend": {
+  "libraries": {
+   "cublas64_12.dll": "e40202fe4223c1cd2d2dce7beec59e1ed61c7801bd827309183be9b50e358f4c",
+   "cublasLt64_12.dll": "2a896460bef60ed57ef32b0875812f355a6984e671d638bb632f5e8c1d7a831f",
+   "cudart64_12.dll": "d28e42265da7462162a54da6b7a99ea4fa2caf8139d862bb500db875d0b32dfc",
+   "ggml-base.dll": "645538131f61107314a1fb38ee43b392ce76a16d1a6811f065b693c9552d8e18",
+   "ggml-cpu-alderlake.dll": "79bd5a3a21e574963312518c43c99ce76d10aa80651f658ac00003aae1f3fe01",
+   "ggml-cpu-cannonlake.dll": "9959698ba5b224a2541d72f711ec856133e010ee95854b70fd034f2c56a4ee05",
+   "ggml-cpu-cascadelake.dll": "edf3ffb10c59cbce92880c82f9580aae8dbf9c41d7e798a5cd8b4ca0acb10167",
+   "ggml-cpu-cooperlake.dll": "b726f7689ec7b5f5b67aa37bacb8c36348450f535aaf86f68a6756b9f90c98a0",
+   "ggml-cpu-haswell.dll": "97302fa13b3fd496828e6f4936ac01433532880cf8277de6bc8b0117add0b816",
+   "ggml-cpu-icelake.dll": "d29a2b47db63d0acb29ca6314cc4a9e0579592d0bbde42926bcab525296bd464",
+   "ggml-cpu-ivybridge.dll": "b742628d4a73f24dad4a4c516d8600b7d50d2e7c07cf6011592bb0f0bda45349",
+   "ggml-cpu-piledriver.dll": "04540f47f6a6d1ccabbb9a92470a9d27ddff6c47cb015b38f9383ac83a93fc5f",
+   "ggml-cpu-sandybridge.dll": "96d99740a206893d081e61a2e2c32ea2b999be0cc82410182e232d2d8041a392",
+   "ggml-cpu-sapphirerapids.dll": "858ea2d8375a94d61d9a80e98ef8f8a88f1ef7c537e98eb69752129fab7cedd2",
+   "ggml-cpu-skylakex.dll": "2b6ac583bbea84b6649ebfbf771907df208c9bfac33d024adb430a853018b396",
+   "ggml-cpu-sse42.dll": "5c23106448a1edfb2683fcc955df017e8e4bdb3330114afa948c1870f8d7a91f",
+   "ggml-cpu-x64.dll": "9241c4023de3b08eadcb56314bf51ac2bd338b12c4008fa4950c30068c11afb6",
+   "ggml-cpu-zen4.dll": "b8f6bd5d70bc608cd2d752ae74bbf85925c2945267bb0eded15aab324ff9716a",
+   "ggml-cuda.dll": "8ca6d2e63709cab79f6c87ca3153e61e409aba6592e83c0c74bac74e222952d1",
+   "ggml-rpc.dll": "39948a2e2e40454421ac819cda1b4da56a12df93e2c00c2ebdd24df2c448c857",
+   "ggml.dll": "9865b315ce521f45b79c50f1d5cfb56cf9f94f186aac3ed0fceebd67f46e48c7",
+   "libomp.dll": "a12116ba72d1d6820407cf30be23da04ce79d6bb8a71a5ee71759c5a1faa6f1c",
+   "llama-batched-bench-impl.dll": "ae139d30f4aa2a6b47279e6b9d1848c69f8ac7572c1f3ef3b9a239900fcc8c01",
+   "llama-bench-impl.dll": "52b07f0fd3a6004b2de6485c1f7f8f5438bf3709eea14dfcd30fc4ec2f57f067",
+   "llama-cli-impl.dll": "4d35886296714799c6ca5aece1ef3e036da7982abacd1056fdf6424a31f13b61",
+   "llama-common.dll": "a9590b558f417f54d17fc688961959b3f4a95038195732adc41faab1999b69e3",
+   "llama-completion-impl.dll": "04526c3dfea986a6e058609fb7d2944612b4f9f7fd5a50235e3b60fd4fbe2d94",
+   "llama-fit-params-impl.dll": "567911c481d9d6d9111b128de622bd9e1a201fe2fb6f060034b030794cc861a2",
+   "llama-perplexity-impl.dll": "52a6213fcb4f06494c8c0b72d52d863124877f4cf87301375a2fe0fa4b075fe2",
+   "llama-quantize-impl.dll": "bcaa4cf05a476f06a09f3911f84b6e2576280b5fd9f23e775c9997b4fce7b8f3",
+   "llama-server-impl.dll": "16913f79cdf57f0f80e618aeff139aa0ae096f8f935b06a02510c556e976d9d4",
+   "llama.dll": "d5fed9f3fe95f03dce3714500903763356122faf1ae98a6179e6490f090c3798",
+   "mtmd.dll": "5a8a0e95ea7b3da360e1ace6325fa441834a2b01fbe9c50639fb7f0c5d57c479"
+  },
+  "name": "llama-server.exe",
+  "sha256": "aa2e1f5c67be55f11be26ae58d643a545ca07c6de498f6f870330ac2f4dfec73"
+ },
+ "calibration_record": {
+  "calibrated_at_attempt": "attempt-04-calibration",
+  "checkpoint_bytes": 156894232,
+  "frozen_checkpoints": 5,
+  "planned_attempts": [
+   [
+    8,
+    50,
+    768
+   ],
+   [
+    1,
+    30,
+    768
+   ],
+   [
+    1,
+    30,
+    768
+   ],
+   [
+    1,
+    30,
+    768
+   ],
+   [
+    1,
+    30,
+    768
+   ]
+  ],
+  "rates": {
+   "cli_start_s": 3.054500000027474,
+   "decode_tps": 3.5504701734116804,
+   "hash_s": 8.875,
+   "load_s": 45.39100000006147,
+   "overhead_s": 0.02350000001024455,
+   "prefill_tps": 96.76225457342335
+  },
+  "recomputed": {
+   "commit": "a5413bc376aaff2ed1bb374144c1ca40ba6f5075",
+   "reason": "admission sample replaces the post-load sample in the checkpoint headroom"
+  },
+  "sprint_budget_s": 81365.34147313735
+ },
+ "dependencies": [
+  "Jinja2==3.1.6",
+  "Markdown==3.10.2",
+  "MarkupSafe==3.0.3",
+  "PyJWT==2.13.0",
+  "PyYAML==6.0.3",
+  "Pygments==2.20.0",
+  "annotated-doc==0.0.4",
+  "annotated-types==0.7.0",
+  "anyio==4.12.1",
+  "boto3==1.42.89",
+  "botocore==1.42.97",
+  "certifi==2026.5.20",
+  "cffi==2.0.0",
+  "charset-normalizer==3.4.4",
+  "click==8.4.2",
+  "colorama==0.4.6",
+  "concurrent-log-handler==0.9.29",
+  "croniter==6.0.0",
+  "cryptography==50.0.0",
+  "distro==1.9.0",
+  "fastapi==0.133.1",
+  "fire==0.7.1",
+  "firecrawl-anydoc==0.2.4",
+  "h11==0.16.0",
+  "hermes-agent==0.21.4",
+  "httpcore==1.0.9",
+  "httptools==0.7.1",
+  "httpx==0.28.1",
+  "idna==3.18",
+  "jiter==0.13.0",
+  "jmespath==1.1.0",
+  "markdown-it-py==4.0.0",
+  "mdurl==0.1.2",
+  "nemo-relay==0.8.3",
+  "openai==2.24.0",
+  "packaging==26.0",
+  "pathspec==1.1.1",
+  "pillow==12.3.0",
+  "pillow_heif==1.5.0",
+  "portalocker==3.2.0",
+  "prompt_toolkit==3.0.52",
+  "psutil==7.2.2",
+  "pycparser==3.0",
+  "pydantic==2.13.4",
+  "pydantic_core==2.46.4",
+  "python-dateutil==2.9.0.post0",
+  "python-dotenv==1.2.2",
+  "python-multipart==0.0.32",
+  "pytz==2025.2",
+  "pywin32==311",
+  "pywinpty==2.0.15",
+  "requests==2.33.0",
+  "rich==14.3.3",
+  "ruamel.yaml.clib==0.2.15",
+  "ruamel.yaml==0.18.17",
+  "s3transfer==0.16.1",
+  "six==1.17.0",
+  "sniffio==1.3.1",
+  "snowballstemmer==3.1.1",
+  "socksio==1.0.0",
+  "starlette==1.3.1",
+  "tenacity==9.1.4",
+  "termcolor==3.3.0",
+  "tqdm==4.67.3",
+  "typing-inspection==0.4.2",
+  "typing_extensions==4.15.0",
+  "tzdata==2025.3",
+  "urllib3==2.7.0",
+  "uvicorn==0.41.0",
+  "watchfiles==1.1.1",
+  "wcwidth==0.6.0",
+  "websockets==15.0.1"
+ ],
+ "hermes_timeouts": {
+  "local_stream_stale_timeout": 2219.8622979632933,
+  "note": "null during calibration: the lab sets them per session from that attempt's measured load time",
+  "request_timeout_seconds": 2219.8622979632933,
+  "stale_timeout_seconds": 2219.8622979632933,
+  "terminal_timeout": 180,
+  "turn_liveness_timeout_s": 2219.8622979632933
+ },
+ "id": "db734edd4a4ad9b006f30eb7934294a53eda6a444194eb8ce2d4ca100289aa06",
+ "interpreter": "3.11.16 (main, Sep  1 2026, 14:15:24) [MSC v.1944 64 bit (AMD64)]",
+ "launch": {
+  "context": 32768,
+  "flags": [
+   "--alias",
+   "amalgam-pilot",
+   "--offline",
+   "--ctx-size",
+   "32768",
+   "--parallel",
+   "1",
+   "--fit",
+   "off",
+   "--load-mode",
+   "none",
+   "--no-context-shift",
+   "--no-warmup",
+   "--spec-type",
+   "none",
+   "-ngl",
+   "all",
+   "-ot",
+   "blk\\.\\d+\\.ffn_.*\\.weight=CPU",
+   "-ctk",
+   "q8_0",
+   "-ctv",
+   "q8_0",
+   "-fa",
+   "on",
+   "-b",
+   "256",
+   "-ub",
+   "128",
+   "-t",
+   "6",
+   "--cache-ram",
+   "0",
+   "--ctx-checkpoints",
+   "5",
+   "--metrics"
+  ],
+  "profile": "sprint",
+  "server_output_limit": "request cap only (server reports n_predict=-1)"
+ },
+ "limits": {
+  "context": 32768,
+  "input_margin_tokens": 512,
+  "max_launches": 12,
+  "max_requests": 400,
+  "max_turns_per_user_turn": 30,
+  "page_in_stop_below_ram_bytes": 8589934592,
+  "ram_reserve_bytes": 4294967296,
+  "vram_reserve_bytes": 1073741824
+ },
+ "model": {
+  "architecture": "qwen35",
+  "bytes": 16464440224,
+  "name": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+  "sha256": "322e194ff79741c7baa497c240f677f54b201b0efab44ca8e50f122b39123482",
+  "template_sha256": "3a0497e618ff1b4afb12431e2e45d8edff1bbec81491ba80aaa51ff04700b1f4",
+  "tensor_bytes": 16453443584,
+  "tokenizer_sha256": "46bfddc9ebc958e47d494711342ad3143a25308288aee0279e37546143db3ef1"
+ },
+ "owner_choice": {
+  "model": "existing 27B first",
+  "time_model": "2026-09-24: attempt-scoped charging ratified; every deadline, stall window and backstop derives from throughput measured on the running host (no fixed seconds); sprint budget is host-derived and stop-and-report"
+ },
+ "placement": {
+  "checkpoint_ram_bytes": 784471160,
+  "context_bytes_upper": 1346371584,
+  "cpu_overhead_bytes": 2147483648,
+  "cpu_pattern": "blk\\.\\d+\\.ffn_.*\\.weight",
+  "cpu_weight_bytes": 10796482560,
+  "gpu_overhead_bytes": 1073741824,
+  "gpu_weight_bytes": 5656961024,
+  "load_mode": "none"
+ },
+ "plan": "screen",
+ "published_digest": "293e6909bb63440a8788b18fce03018e56a5a9ab1a0813ff9efa901f6d8ce76b",
+ "rendered_prefix": {
+  "reason": "measured per session by the wire after admission",
+  "status": "not-measured"
+ },
+ "schema": 2,
+ "seed": 42,
+ "sessions": [
+  {
+   "arm": {
+    "output_cap": 512,
+    "reasoning_budget": null,
+    "sampling": "greedy",
+    "selectable": true,
+    "thinking": false
+   },
+   "arm_name": "off-greedy",
+   "erase_slot": true,
+   "planned_requests": 1,
+   "reasoning_echo": false,
+   "request_limit": 3,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+   },
+   "workload": "smoke"
+  },
+  {
+   "arm": {
+    "output_cap": 512,
+    "reasoning_budget": null,
+    "sampling": "greedy",
+    "selectable": true,
+    "thinking": false
+   },
+   "arm_name": "off-greedy",
+   "erase_slot": false,
+   "planned_requests": 1,
+   "reasoning_echo": false,
+   "request_limit": 3,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+   },
+   "workload": "smoke"
+  },
+  {
+   "arm": {
+    "output_cap": 512,
+    "reasoning_budget": null,
+    "sampling": "greedy",
+    "selectable": true,
+    "thinking": false
+   },
+   "arm_name": "off-greedy",
+   "erase_slot": true,
+   "planned_requests": 8,
+   "reasoning_echo": false,
+   "request_limit": 24,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+   },
+   "workload": "long:1-3"
+  },
+  {
+   "arm": {
+    "output_cap": 512,
+    "reasoning_budget": null,
+    "sampling": "vendor-nonthinking",
+    "selectable": true,
+    "thinking": false
+   },
+   "arm_name": "off-vendor",
+   "erase_slot": true,
+   "planned_requests": 8,
+   "reasoning_echo": false,
+   "request_limit": 24,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 1.5,
+    "repeat_penalty": 1.0,
+    "temperature": 0.7,
+    "top_k": 20,
+    "top_p": 0.8
+   },
+   "workload": "long:1-3"
+  },
+  {
+   "arm": {
+    "output_cap": 512,
+    "reasoning_budget": null,
+    "sampling": "model-default",
+    "selectable": true,
+    "thinking": false
+   },
+   "arm_name": "off-model-default",
+   "erase_slot": true,
+   "planned_requests": 8,
+   "reasoning_echo": false,
+   "request_limit": 24,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 1.0,
+    "top_k": 20,
+    "top_p": 0.95
+   },
+   "workload": "long:1-3"
+  },
+  {
+   "arm": {
+    "output_cap": 768,
+    "reasoning_budget": 256,
+    "sampling": "greedy",
+    "selectable": true,
+    "thinking": true
+   },
+   "arm_name": "on-greedy",
+   "erase_slot": true,
+   "planned_requests": 8,
+   "reasoning_echo": false,
+   "request_limit": 24,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+   },
+   "workload": "long:1-3"
+  },
+  {
+   "arm": {
+    "output_cap": 768,
+    "reasoning_budget": 256,
+    "sampling": "model-default",
+    "selectable": true,
+    "thinking": true
+   },
+   "arm_name": "on-vendor",
+   "erase_slot": true,
+   "planned_requests": 8,
+   "reasoning_echo": false,
+   "request_limit": 24,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 1.0,
+    "top_k": 20,
+    "top_p": 0.95
+   },
+   "workload": "long:1-3"
+  },
+  {
+   "arm": {
+    "output_cap": 768,
+    "reasoning_budget": 256,
+    "sampling": "mid-probe",
+    "selectable": false,
+    "thinking": true
+   },
+   "arm_name": "on-mid-probe",
+   "erase_slot": true,
+   "planned_requests": 8,
+   "reasoning_echo": false,
+   "request_limit": 24,
+   "sampling": {
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+    "temperature": 0.6,
+    "top_k": 20,
+    "top_p": 0.95
+   },
+   "workload": "long:1-3"
+  }
+ ],
+ "source_commit": "2c07cc068967e3d161e33962c8f71a73fc78c728",
+ "source_dirty": false,
+ "task_corpus_sha256": "565b3d2e4d38c60f1f6f1597df767adc8bcea18e462623479b3fc928cd919827",
+ "time_params": {
+  "floor_fraction": 0.5,
+  "margin": 2.0,
+  "min_decode_sample_tokens": 16,
+  "min_observation_periods": 4,
+  "min_prefill_sample_tokens": 256,
+  "planning_uncached_tokens": 2048,
+  "rate_smoothing": 0.3,
+  "stall_multiple": 20.0
+ },
+ "tools": {
+  "fixed_workloads": [],
+  "long": [
+   "terminal"
+  ],
+  "tool_search": "off"
+ }
+}

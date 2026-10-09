@@ -1,0 +1,37 @@
+{
+ "attempt": "attempt-01-calibration",
+ "manifest_id": "9564a78157963ea7620df0142a3effb6ac668462dacca58372e3187164c654ae",
+ "plan": "calibration",
+ "source_commit": "e4b2b7df1bea29ee19f3c1db5765369e3b326532",
+ "outcome": {
+  "reason": "stopped: RuntimeError: source revision differs from frozen candidate",
+  "manifest_id": "9564a78157963ea7620df0142a3effb6ac668462dacca58372e3187164c654ae",
+  "plan": "calibration",
+  "budget": {
+   "launches": 0,
+   "requests": 0,
+   "attempts": 1,
+   "charged_seconds": 8.89000000001397
+  },
+  "cleanup_seconds": 0.0,
+  "backend_listener_closed": true,
+  "load_seconds": null,
+  "max_supervisor_lag_seconds": 0.0
+ },
+ "sessions": [],
+ "machine_time": [],
+ "requests": [],
+ "events": [
+  {
+   "at": 902066.265,
+   "kind": "cleanup",
+   "seconds": 0.0,
+   "processes": []
+  },
+  {
+   "at": 902066.265,
+   "kind": "listener_cleanup",
+   "backend_listener_closed": true
+  }
+ ]
+}

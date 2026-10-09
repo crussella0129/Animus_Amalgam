@@ -10,6 +10,27 @@ import time
 import psutil
 import win32pdh
 
+PERIOD = 1.0  # sample cadence; run.py's TELEMETRY_PERIOD (retained: observation)
+
+
+def publish(pending: Path, destination: Path, retry_s: float = PERIOD / 2) -> bool:
+    """Replace the sample; False when the supervisor held it open for the whole try.
+
+    Windows refuses to replace a file another process has open, and the supervisor opens
+    this one four times a second. A skipped sample is bounded by the supervisor's
+    staleness rule; dying here would stop the attempt (attempt 07). Retrying for half a
+    sample period keeps the cadence.
+    """
+    deadline = time.monotonic() + retry_s
+    while True:
+        try:
+            os.replace(pending, destination)
+            return True
+        except PermissionError:
+            if time.monotonic() > deadline:
+                return False
+            time.sleep(0.01)
+
 
 def main():
     destination = Path(sys.argv[1])
@@ -19,7 +40,7 @@ def main():
     win32pdh.CollectQueryData(query)
     try:
         while True:
-            time.sleep(1)
+            time.sleep(PERIOD)
             win32pdh.CollectQueryData(query)
             _, pages = win32pdh.GetFormattedCounterValue(
                 counter, win32pdh.PDH_FMT_DOUBLE
@@ -57,7 +78,7 @@ def main():
             }
             pending = destination.with_suffix(".tmp")
             pending.write_text(json.dumps(sample), encoding="utf-8")
-            os.replace(pending, destination)
+            publish(pending, destination)
     finally:
         win32pdh.CloseQuery(query)
 

@@ -3,11 +3,11 @@
 <!-- sprint-loop-intent-v2 -->
 - **Intent ID:** INT-0004
 - **State:** active
-- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 to T-209 completions](../work/completed-tasks.md); [T-202 and T-211](../work/tasks.md)
+- **Work evidence:** [Sprint 2 build plan](../sprints/s2/sprint-plans/build-plan.md); [operational repair ledger](../sprints/s2/sprint-tests/operational-ledger.md); [T-201 to T-209 completions](../work/completed-tasks.md); [T-211, T-221 and T-222 completions](../work/completed-tasks.md); [T-202, T-220 and T-224 in the backlog](../work/tasks.md)
 - **Completion evidence:** none
 - **Code evidence:** [operational lab](../../evals/local_qualification/README.md); [explicit local context admission](../../agent/agent_init.py)
-- **Test evidence:** [Sprint 2 test report](../sprints/s2/sprint-tests/test-report.md); [Sprint 2 live E2E results](../sprints/s2/sprint-tests/e2e-tests.md); [Sprint 2 unit results](../sprints/s2/sprint-tests/unit-tests.md); [Sprint 2 integration results](../sprints/s2/sprint-tests/integration-tests.md)
-- **Documentation evidence:** [evaluation protocol](../lineage/local-evaluation-protocol.md); [operational ledger](../sprints/s2/sprint-tests/operational-ledger.md); [direction review](../lineage/direction-review.md)
+- **Test evidence:** [Sprint 2 test report](../sprints/s2/sprint-tests/test-report.md); [Sprint 2 live E2E results](../sprints/s2/sprint-tests/e2e-tests.md); [Sprint 2 unit results](../sprints/s2/sprint-tests/unit-tests.md); [Sprint 2 integration results](../sprints/s2/sprint-tests/integration-tests.md); [Sprint 3 test report](../sprints/s3/sprint-tests/test-report.md); [Sprint 3 live E2E results](../sprints/s3/sprint-tests/e2e-tests.md); [Sprint 3 unit results](../sprints/s3/sprint-tests/unit-tests.md); [Sprint 3 integration results](../sprints/s3/sprint-tests/integration-tests.md)
+- **Documentation evidence:** [evaluation protocol](../lineage/local-evaluation-protocol.md); [operational ledger](../sprints/s2/sprint-tests/operational-ledger.md); [Sprint 3 operational ledger](../sprints/s3/sprint-tests/operational-ledger.md); [direction review](../lineage/direction-review.md)
 
 ## Intent
 
@@ -23,7 +23,11 @@ The owner selected the existing Qwen3.8-27B artifact as the first pilot and
 explained that the live Hermes configuration allowed three hours because
 some historical requests exceeded five minutes. The pilot deadline bounds
 this small experiment; it is not a claim about all acceptable product latency
-and does not change that live configuration. The smaller local 7B artifact
+and does not change that live configuration. From Sprint 3 onward,
+[INT-0007](INT-0007-decode-budget-long-session.md) AC7 replaces fixed
+deadlines with deadlines derived from measured host throughput. The owner
+also ratified attempt-scoped charging of the experiment time budget on
+2026-09-24. The smaller local 7B artifact
 remains a possible later comparison, not an automatic fallback.
 
 Development follows the owner's reverse-E2E workflow: operate actual Hermes
@@ -128,3 +132,7 @@ cancellable process boundary.
   “ok now continue”; moved `proposed` → `planned`, linked work evidence.
 - 2026-09-24: clean independent plan review and canonical lock completed;
   moved `planned` → `active` as the isolated-environment build began.
+- 2026-09-24: owner ratified attempt-scoped time charging, so Sprint 2's
+  conditional results are unconditional. Deadlines for later sprints become
+  host-throughput-derived under INT-0007 AC7. The Intent text is updated;
+  state remains `active`.

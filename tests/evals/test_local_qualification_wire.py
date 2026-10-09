@@ -1,13 +1,21 @@
-"""The lab wire guard bounds Hermes traffic before generation (Sprint 2 T-207 D1/D2).
+"""The lab wire bounds Hermes traffic, streams it and receipts it (Sprint 2 T-207, Sprint 3 T-211).
 
-This is a lab-component integration test: the real ``Wire`` over loopback HTTP against a
-capture backend that stands in for llama.cpp's template/tokenize/completion endpoints.
-The Hermes side of the boundary is evidenced live by the published attempt receipts.
+A lab-component integration test: the real ``Wire`` over loopback HTTP against a capture
+backend standing in for llama.cpp's template, tokenize, slots and streaming completion
+endpoints, shaped like the pinned b10964 (no ``id_slot`` in the stream; ``/slots`` names
+the working slot). Regressions: attempt 02 (a cancel blocked the supervisor until the
+backend's batch ended) and attempt 10 (an immediate sequential retry was refused as
+concurrent). The attempt-stop receipt is read from the live wire's in-flight record; the
+runner imports its siblings top-level, so the lab directory goes first on ``sys.path``.
 """
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+import shutil
+import sys
 import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -15,49 +23,155 @@ import pytest
 
 from evals.local_qualification.wire import Wire
 
+sys.path.insert(
+    0, str(Path(__file__).resolve().parents[2] / "evals" / "local_qualification")
+)
+import publish  # noqa: E402
+import run  # noqa: E402
+import verify_long  # noqa: E402
+
 INPUT_LIMIT = 50
+ARM_THINKING = {"output_cap": 768, "thinking": True, "reasoning_budget": 256}
+ARM_PLAIN = {"output_cap": 512, "thinking": False, "reasoning_budget": None}
+GREEDY = {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "top_k": 0,
+    "min_p": 0.0,
+    "presence_penalty": 0.0,
+    "repeat_penalty": 1.0,
+}
+
+
+def _slot(decoded):
+    return {
+        "id": 0,
+        "is_processing": True,
+        "n_prompt_tokens_processed": 3,
+        "next_token": [{"n_decoded": decoded}],
+    }
 
 
 class CaptureBackend:
-    """Renders messages AND tool schemas, as a real chat template does, and counts
-    whitespace-separated words as tokens."""
+    """Renders messages and tool schemas as a chat template does, counts words as tokens,
+    and streams a progress chunk, reasoning and content (or tool-call) deltas and a final
+    timings chunk carrying no ``id_slot``, as b10964 does."""
+
+    MARKUP = 2  # decoded template tokens around the output, as a real template adds
 
     def __init__(self):
         self.completions = []
+        self.chunk_delay = 0.0  # seconds between streamed chunks
+        self.tokenize_delay = 0.0  # the wire's post-response accounting runs /tokenize
+        self.slots = [_slot(1)]
+        self.tool_call = False
+        self.tool_arguments = json.dumps({"command": "ls"})
+        self.finish_reason = "stop"
+        self.malformed = False  # break the stream after the first answer delta
+        self.hold_final = False  # the final chunk waits for release_final
+        self.release_final = threading.Event()
+        self.request_active = False
+        self.first_chunk_sent = threading.Event()
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *_args):
                 pass
 
-            def do_POST(self):
-                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-                if self.path == "/apply-template":
-                    text = [m["content"] for m in body["messages"]]
-                    text += [
-                        t["function"]["description"] for t in body.get("tools") or []
-                    ]
-                    reply = {"prompt": " ".join(text)}
-                elif self.path == "/tokenize":
-                    reply = {"tokens": list(range(len(body["content"].split())))}
-                else:
-                    owner.completions.append(body)
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/event-stream")
-                    self.end_headers()
-                    chunk = {"choices": [{"delta": {"content": "ok"}}]}
-                    self.wfile.write(b"data: " + json.dumps(chunk).encode() + b"\n\n")
-                    self.wfile.write(b"data: [DONE]\n\n")
-                    return
-                data = json.dumps(reply).encode()
+            def _json(self, value):
+                data = json.dumps(value).encode()
                 self.send_response(200)
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
 
+            def do_GET(self):
+                # Like the real server: a slot is processing only during a request.
+                self._json([
+                    {**slot, "is_processing": owner.request_active}
+                    for slot in owner.slots
+                ])
+
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                if self.path == "/apply-template":
+                    text = [m.get("content") or "" for m in body["messages"]]
+                    text += [
+                        t["function"]["description"] for t in body.get("tools") or []
+                    ]
+                    return self._json({"prompt": " ".join(text)})
+                if self.path == "/tokenize":
+                    time.sleep(owner.tokenize_delay)
+                    return self._json({
+                        "tokens": list(range(len(body["content"].split())))
+                    })
+                owner.completions.append(body)
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.end_headers()
+                owner.request_active = True
+                try:
+                    chunks = owner.chunks()
+                    for number, chunk in enumerate(chunks, start=1):
+                        if number == len(chunks) and owner.hold_final:
+                            owner.release_final.wait(10)
+                        self.wfile.write(
+                            b"data: " + json.dumps(chunk).encode() + b"\n\n"
+                        )
+                        self.wfile.flush()
+                        owner.first_chunk_sent.set()
+                        if owner.malformed and number == 3:
+                            self.wfile.write(b"data: {not json\n\n")
+                            self.wfile.flush()
+                            return
+                        time.sleep(owner.chunk_delay)
+                    self.wfile.write(b"data: [DONE]\n\n")
+                    self.wfile.flush()
+                except OSError:
+                    pass  # the wire hung up (a cancel)
+                finally:
+                    owner.request_active = False
+
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.url = f"http://127.0.0.1:{self.server.server_port}"
+
+    def chunks(self):
+        if self.tool_call:
+            answer = {
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "call_1",
+                        "function": {
+                            "name": "terminal",
+                            "arguments": self.tool_arguments,
+                        },
+                    }
+                ]
+            }
+            answer_words = len(f"terminal {self.tool_arguments}".split())
+        else:
+            answer = {"content": "ok done"}
+            answer_words = 2
+        # Words stand for tokens throughout: the decode count is what was streamed.
+        decoded = len("think it over".split()) + answer_words
+        return [
+            {"prompt_progress": {"total": 3, "cache": 0, "processed": 3, "time_ms": 1}},
+            {"choices": [{"delta": {"reasoning_content": "think it over"}}]},
+            {"choices": [{"delta": answer}]},
+            {
+                "choices": [{"delta": {}, "finish_reason": self.finish_reason}],
+                "timings": {
+                    "cache_n": 0,
+                    "prompt_n": 3,
+                    "prompt_ms": 30.0,
+                    "predicted_n": decoded + self.MARKUP,
+                    "predicted_ms": 1500.0,
+                    "predicted_per_second": 3.3,
+                },
+            },
+        ]
 
 
 def _budget(remaining):
@@ -76,7 +190,7 @@ def _budget(remaining):
 def make_lab():
     opened = []
 
-    def make(remaining=18):
+    def make(remaining=18, arm=ARM_PLAIN, request_limit=24, predictor=None):
         backend = CaptureBackend()
         records = []
         consume, consumed = _budget(remaining)
@@ -85,9 +199,11 @@ def make_lab():
             "ephemeral-token",
             lambda kind, **data: records.append({"kind": kind, **data}),
             consume,
-            INPUT_LIMIT,
-            backend_timeout=30,
+            30,
+            0.05,
+            predictor,
         )
+        wire.begin_session(1, arm, GREEDY, 42, INPUT_LIMIT, request_limit)
         opened.append((wire, backend))
         return backend, wire, records, consumed
 
@@ -97,10 +213,11 @@ def make_lab():
         backend.server.shutdown()
 
 
-def _post(wire, words, model="amalgam-pilot", max_tokens=None, tool_words=0):
+def _body(words, model="amalgam-pilot", max_tokens=None, tool_words=0, stream=True):
     body = {
         "model": model,
-        "stream": True,
+        "stream": stream,
+        "reasoning_effort": "none",
         "messages": [{"role": "user", "content": " ".join(["w"] * words)}],
     }
     if tool_words:
@@ -116,26 +233,82 @@ def _post(wire, words, model="amalgam-pilot", max_tokens=None, tool_words=0):
         ]
     if max_tokens is not None:
         body["max_tokens"] = max_tokens
+    return body
+
+
+def _post(wire, body, stop_at_done=False):
+    """POST like the OpenAI client: with ``stop_at_done`` the client is finished at
+    ``[DONE]`` and does not wait for the server to close the connection."""
     request = urllib.request.Request(
         wire.url + "/chat/completions",
         data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            return response.status, response.read()
+        response = urllib.request.urlopen(request, timeout=60)
     except urllib.error.HTTPError as exc:
         return exc.code, b""
+    if not stop_at_done:
+        with response:
+            return response.status, response.read()
+    lines = []
+    while line := response.readline():
+        lines.append(line)
+        if line.strip() == b"data: [DONE]":
+            break
+    response.fp = None  # abandon the connection rather than drain it
+    return response.status, b"".join(lines)
+
+
+def _wait_mid_stream(wire, backend, timeout=10.0):
+    """Until a request is in flight and the backend has streamed its first chunk."""
+    assert backend.first_chunk_sent.wait(timeout), "no request reached the backend"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        active = wire.active
+        if active is not None and active.get("first_event") is not None:
+            return active
+        time.sleep(0.01)
+    raise AssertionError("the wire never saw the first upstream event")
+
+
+def _published(records, tmp_path):
+    """The wire's own receipts, published as an attempt's."""
+    attempt = tmp_path / "attempt-01-x"
+    attempt.mkdir()
+    events = [{"at": float(i), **r} for i, r in enumerate(records)]
+    (attempt / "events.jsonl").write_text(
+        "\n".join(json.dumps(e) for e in events) + "\n"
+    )
+    (attempt / "outcome.json").write_text(json.dumps({"reason": "sessions complete"}))
+    (attempt / "manifest.json").write_text(
+        json.dumps({"id": "m", "plan": "R2", "allowlist": []})
+    )
+    return publish.receipts(attempt)
+
+
+def _record(records, kind, timeout=10.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        found = [r for r in records if r["kind"] == kind]
+        if found:
+            return found[0]
+        time.sleep(0.01)
+    raise AssertionError(f"no {kind} record")
 
 
 def test_admitted_request_is_bounded_once_and_original_is_preserved(make_lab):
-    backend, wire, records, consumed = make_lab()
-    status, payload = _post(wire, words=10, max_tokens=4096, tool_words=5)
+    backend, wire, records, consumed = make_lab(arm=ARM_THINKING)
+    status, payload = _post(wire, _body(10, max_tokens=4096, tool_words=5))
     assert status == 200 and b"[DONE]" in payload
     assert len(backend.completions) == 1 and len(consumed) == 1
     sent = backend.completions[0]
-    assert sent["max_tokens"] == 128
-    assert sent["chat_template_kwargs"] == {"enable_thinking": False}
+    assert sent["max_tokens"] == ARM_THINKING["output_cap"]
+    assert sent["chat_template_kwargs"] == {"enable_thinking": True}
+    assert sent["reasoning_budget_tokens"] == ARM_THINKING["reasoning_budget"]
+    assert {k: sent[k] for k in GREEDY} == GREEDY and sent["seed"] == 42
+    assert sent["stream"] is True and sent["return_progress"] is True
+    assert "reasoning_effort" not in sent  # thinking is set only by the template kwargs
     request = next(r for r in records if r["kind"] == "request")
     assert request["original_body"]["max_tokens"] == 4096
     assert request["input_tokens"] == 15 and wire.failure is None
@@ -153,7 +326,7 @@ def test_oversized_or_misrouted_request_never_reaches_generation(
     make_lab, words, tool_words, model
 ):
     backend, wire, _records, consumed = make_lab()
-    status, _ = _post(wire, words=words, tool_words=tool_words, model=model)
+    status, _ = _post(wire, _body(words, tool_words=tool_words, model=model))
     assert status == 422
     assert backend.completions == [] and consumed == []
     assert wire.failure  # the owner stops the attempt on any wire failure
@@ -161,7 +334,358 @@ def test_oversized_or_misrouted_request_never_reaches_generation(
 
 def test_exhausted_request_budget_refuses_before_generation(make_lab):
     backend, wire, _records, consumed = make_lab(remaining=0)
-    status, _ = _post(wire, words=10)
+    status, _ = _post(wire, _body(10))
     assert status == 422
     assert backend.completions == [] and consumed == []
     assert "budget exhausted" in wire.failure
+
+
+def test_session_request_limit(make_lab):
+    backend, wire, records, consumed = make_lab(request_limit=1)
+    assert _post(wire, _body(10))[0] == 200
+    assert _post(wire, _body(10))[0] == 422
+    assert len(backend.completions) == 1 and len(consumed) == 1
+    assert "session request limit" in wire.failure
+    # The refusal is an arm failure on the receipt, not only the wire's state.
+    assert "session request limit" in _record(records, "wire_failure")["error"]
+
+
+def test_wire_streams_and_reassembles(make_lab):
+    backend, wire, _records, _consumed = make_lab(arm=ARM_THINKING)
+    _status, streamed = _post(wire, _body(10, stream=True))
+    assert b"prompt_progress" not in streamed and b"[DONE]" in streamed
+    _status, folded = _post(wire, _body(10, stream=False))
+    response = json.loads(folded)
+    message = response["choices"][0]["message"]
+    assert message["content"] == "ok done"
+    assert message["reasoning_content"] == "think it over"
+    assert response["choices"][0]["finish_reason"] == "stop"
+    # Both clients went upstream streaming, with progress requested.
+    assert all(c["stream"] and c["return_progress"] for c in backend.completions)
+
+
+def test_streamed_tool_call_is_reassembled_and_counted(make_lab, tmp_path):
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    _status, folded = _post(wire, _body(10, stream=False, tool_words=1))
+    call = json.loads(folded)["choices"][0]["message"]["tool_calls"][0]
+    assert call["function"]["name"] == "terminal"
+    assert json.loads(call["function"]["arguments"]) == {"command": "ls"}
+    # A non-streaming client has its payload before the wire's accounting records it.
+    end = _record(records, "response_end")
+    assert end["tool_calls"] == 1
+    assert end["tool_call_validity"] == [
+        {"name": "terminal", "arguments_valid": True, "known_tool": True}
+    ]
+    # L1: tool-call output is its own count, not lost from both reasoning and
+    # visible; the parts never exceed the decode, and the published remainder is
+    # exactly the template's markup.
+    assert end["visible_tokens"] == 0 and end["tool_call_tokens"] > 0
+    counted = end["reasoning_tokens"] + end["visible_tokens"] + end["tool_call_tokens"]
+    assert counted <= end["timings"]["predicted_n"]
+    (request,) = _published(records, tmp_path)["requests"]
+    assert request["unsplit_decoded_tokens"] == backend.MARKUP
+
+
+def test_a_tool_call_cut_at_the_output_cap_is_recorded_invalid(make_lab):
+    """Round 5, attempt 10: a call cut at the cap never reached Hermes's history, so
+    validity from that history showed 7 of 7 valid; the wire records every delivered
+    call (M3)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    backend.finish_reason = "length"
+    backend.tool_arguments = '{"command": "cat fi'
+    _post(wire, _body(10, stream=False, tool_words=1))
+    end = _record(records, "response_end")
+    assert end["finish_reason"] == "length"
+    assert end["tool_call_validity"] == [
+        {"name": "terminal", "arguments_valid": False, "known_tool": True}
+    ]
+    assert wire.session["tool_call_validity"] == end["tool_call_validity"]
+
+
+def test_the_screened_conversation_includes_tool_calls_already_delivered(make_lab):
+    """C-002: Hermes can run a delivered response's tool calls before any further
+    request, so a stop between requests must still screen them (L4)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    body = _body(10, stream=False)
+    _status, folded = _post(wire, body)
+    _record(records, "response_end")  # accounting follows delivery
+    call = json.loads(folded)["choices"][0]["message"]["tool_calls"][0]
+    *history, delivered = wire.session["last_messages"]
+    assert history == body["messages"]
+    assert delivered["tool_calls"] == [call]
+
+
+def test_length_finish_marks_the_next_request_a_continuation(make_lab):
+    backend, wire, records, _consumed = make_lab()
+    backend.finish_reason = "length"
+    _post(wire, _body(10))
+    backend.finish_reason = "stop"
+    _post(wire, _body(10))
+    flags = [
+        r["continuation_of_length_finish"] for r in records if r["kind"] == "request"
+    ]
+    assert flags == [False, True]
+
+
+def test_a_retry_at_done_after_a_length_finish_is_receipted_a_continuation(
+    make_lab,
+):
+    """Attempt 10's shape: a cap-cut response, and Hermes's retry sent at [DONE]
+    while the wire still accounts for it. The retry is admitted and receipted as the
+    truncation continuation it is (M3)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.finish_reason = "length"
+    backend.tokenize_delay = 0.8
+    assert _post(wire, _body(10), stop_at_done=True)[0] == 200
+    backend.finish_reason = "stop"
+    assert _post(wire, _body(10), stop_at_done=True)[0] == 200
+    deadline = time.monotonic() + 10  # the retry's accounting follows [DONE]
+    while sum(r["kind"] == "response_end" for r in records) < 2:
+        assert time.monotonic() < deadline, "the retry was never accounted"
+        time.sleep(0.01)
+    flags = [
+        r["continuation_of_length_finish"] for r in records if r["kind"] == "request"
+    ]
+    assert flags == [False, True]
+
+
+def test_a_refusal_after_a_length_finish_says_so(make_lab):
+    """A request refused as concurrent names whether it follows a cap-cut response."""
+    backend, wire, records, _consumed = make_lab()
+    backend.finish_reason = "length"
+    assert _post(wire, _body(10))[0] == 200
+    backend.finish_reason = "stop"
+    backend.chunk_delay = 2.0
+    backend.first_chunk_sent.clear()
+    first = threading.Thread(target=lambda: _post(wire, _body(10)))
+    first.start()
+    _wait_mid_stream(wire, backend)
+    assert _post(wire, _body(10))[0] == 409
+    first.join()
+    refusal = _record(records, "wire_failure")
+    assert refusal["follows_length_finish"] is True
+
+
+def test_slot_counters_are_progress_while_deltas_are_withheld(make_lab):
+    backend, wire, _records, _consumed = make_lab()
+    backend.chunk_delay = 2.0  # deltas withheld for seconds at a time
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    deadline = time.monotonic() + 10
+    while not (wire.last_slots and wire.last_slots[0]["is_processing"]):
+        assert time.monotonic() < deadline, "the wire never polled the working slot"
+        time.sleep(0.01)
+    backend.slots = [_slot(2)]  # the slot keeps decoding behind the stream
+    deadline = time.monotonic() + 10
+    while (
+        wire.active is not None
+        and "slots_progress" not in wire.active
+        and time.monotonic() < deadline
+    ):
+        time.sleep(0.01)
+    seen = wire.active is not None and "slots_progress" in wire.active
+    sender.join()
+    assert seen
+
+
+def test_receipt_fields_complete_or_named_missing(make_lab):
+    backend, wire, records, _consumed = make_lab(
+        arm=ARM_THINKING, predictor=lambda uncached, cap: 1.0 + uncached + cap
+    )
+    backend.hold_final = True
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    deadline = time.monotonic() + 10
+    while (wire.active or {}).get("slot_seen") is None:
+        assert time.monotonic() < deadline, "the wire never recorded the working slot"
+        time.sleep(0.01)
+    backend.release_final.set()  # the stream ends only after the wire saw the slot
+    sender.join()
+    request = next(r for r in records if r["kind"] == "request")
+    assert request["predicted_initial_seconds"] == 1.0 + 10 + 768  # known at send
+    end = _record(records, "response_end")
+    assert end["timings"]["prompt_n"] == 3
+    assert end["timings"]["predicted_n"] == 5 + backend.MARKUP
+    assert end["finish_reason"] == "stop"
+    # b10964's stream carries no id_slot; the working slot comes from /slots instead.
+    assert end["id_slot"] == 0 and end["id_slot_source"] == "slots"
+    assert end["reasoning_tokens"] == 3 and end["visible_tokens"] == 2
+    assert end["tool_call_tokens"] == 0 and end["tool_call_validity"] == []
+    assert end["meaningful_first_token_seconds"] is not None
+    assert end["predicted_initial_seconds"] and end["predicted_rearmed_seconds"]
+    assert (
+        "kernel_compiled" in end
+    )  # None when no kernel cache is wired: named, not dropped
+
+
+def test_an_attempt_stop_receipts_the_live_in_flight_request(make_lab):
+    """C-003: the attempt stop reads the wire's own in-flight record; the cut-short
+    session keeps the conversation it last forwarded, for L4."""
+    backend, wire, _records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.chunk_delay = 2.0
+    body = _body(10)
+    sender = threading.Thread(target=lambda: _post(wire, body))
+    before = time.monotonic()
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    now = time.monotonic()
+    stopped = run.stopped_request(wire.active, "stopped: RAM", now)
+    wire.cancel_active()
+    sender.join(timeout=30)
+    assert stopped["request_id"] == 1 and stopped["reason"] == "stopped: RAM"
+    # Timed from the wire's own send; Windows' clock tick can make it 0.0.
+    assert 0 <= stopped["seconds"] <= now - before
+    assert stopped["predicted_initial_seconds"] == 100.0
+    assert "predicted_rearmed_seconds" in stopped
+    assert wire.session["last_messages"] == body["messages"]
+
+
+def test_cancel_returns_promptly_and_is_recorded_as_a_cancel(make_lab):
+    """Attempt 02: closing the upstream waited for the reader's lock until the backend's
+    next chunk; the supervisor froze and its lag guard stopped the attempt."""
+    backend, wire, records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.chunk_delay = 6.0
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    started = time.monotonic()
+    wire.cancel_active()
+    elapsed = time.monotonic() - started
+    sender.join(timeout=30)
+    assert elapsed < 2.0  # the backend's batch still had seconds to run
+    cancelled = next(r for r in records if r["kind"] == "response_cancelled")
+    assert cancelled["seconds"] is not None  # a stopped request keeps its timing (AC7)
+    assert cancelled["predicted_initial_seconds"] == 100.0
+    assert wire.failure is None
+
+
+def test_a_stall_stop_is_published_with_its_cause_and_a_cancel_is_not(
+    make_lab, tmp_path
+):
+    """Round 4: a stall or backstop cancels the request through the wire, as the C4
+    cancel does; only the stop's own receipt tells them apart in the published record."""
+    backend, wire, records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.chunk_delay = 2.0
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    deadline = time.monotonic() + 10
+    while (wire.active or {}).get("first_token") is None:
+        assert time.monotonic() < deadline, "no token reached the wire"
+        time.sleep(0.01)
+    first_token = wire.active["first_token"]
+    backend.slots = [_slot(4)]  # the slot keeps decoding behind the stream
+    while "slots_progress" not in (wire.active or {}):
+        assert time.monotonic() < deadline, "the wire never saw the slot decode"
+        time.sleep(0.01)
+    cause = "stall in decode (window 5.0s)"
+    run.stop_active_request(
+        wire, lambda kind, **data: records.append({"kind": kind, **data}), cause
+    )
+    sender.join(timeout=30)
+    _record(records, "response_cancelled")
+    backend.first_chunk_sent.clear()
+    sender = threading.Thread(target=lambda: _post(wire, _body(10)))
+    sender.start()
+    _wait_mid_stream(wire, backend)
+    wire.cancel_active()  # the deliberate main-cancel (C4) records no stop
+    sender.join(timeout=30)
+    deadline = time.monotonic() + 10
+    while sum(r["kind"] == "response_cancelled" for r in records) < 2:
+        assert time.monotonic() < deadline, "the second cancel was not recorded"
+        time.sleep(0.01)
+    stopped, cancelled = _published(records, tmp_path)["requests"]
+    assert (stopped["outcome"], stopped["stop_reason"]) == ("stopped", cause)
+    assert stopped["predicted_initial_seconds"] == 100.0
+    assert stopped["meaningful_first_token_seconds"] == first_token
+    # The stream's decode count never arrived: named missing, with /slots' lower bound.
+    assert "decoded_tokens" in stopped["missing"]
+    assert stopped["decoded_tokens_observed"] == 4
+    assert cancelled["outcome"] == "response_cancelled"
+    assert "stop_reason" not in cancelled
+
+
+def test_a_stop_during_verification_still_screens_the_ended_session(make_lab, tmp_path):
+    """Round 4: a guard can stop the attempt while a session is being verified, after
+    the wire has ended it; the stop path must still screen what it forwarded (L4)."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tool_call = True
+    body = _body(5, stream=False, tool_words=1)
+    body["messages"] += [
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": "call_0",
+                    "type": "function",
+                    "function": {
+                        "name": "terminal",
+                        "arguments": json.dumps({"command": "cat ../../secret"}),
+                    },
+                }
+            ],
+        },
+        {"role": "tool", "tool_call_id": "call_0", "content": "x"},
+    ]
+    _post(wire, body)
+    _record(records, "response_end")
+    wire.end_session()
+    fixture = tmp_path / "live" / "fixture"
+    shutil.copytree(verify_long.TASK / "fixture", fixture)
+    (tmp_path / "live" / "home" / "tmp").mkdir(parents=True)
+    current = {"index": 1, "workload": "long:all", "fixture": fixture}
+    venv = Path(sys.executable).parent.parent
+    stopped = run.stopped_session(current, wire, venv, [str(venv)])
+    assert stopped["requests"] == 1
+    assert stopped["verification"]["screened"] == {
+        "messages": len(body["messages"]) + 1,  # the delivered response too
+        "tool_calls": 2,
+    }
+    assert stopped["verification"]["contamination"]
+    # Validity covers the calls this wire delivered: the response, not the history.
+    assert stopped["tool_calls"] == [
+        {"name": "terminal", "arguments_valid": True, "known_tool": True}
+    ]
+    assert stopped["ac1_request_coverage"] is False
+
+
+def test_sequential_request_after_done_is_accepted_and_concurrent_is_refused(make_lab):
+    """Attempt 10: a retry sent at [DONE] arrived during the previous handler's accounting
+    and was refused as concurrent, stopping R2. T-214: a finishing handler cleared the
+    next request's in-flight claim, so a third request could slip in."""
+    backend, wire, records, _consumed = make_lab()
+    backend.tokenize_delay = 0.8
+    assert _post(wire, _body(10), stop_at_done=True)[0] == 200
+    assert _post(wire, _body(10), stop_at_done=True)[0] == 200
+    assert wire.failure is None
+    backend.tokenize_delay = 0.0
+    backend.chunk_delay = 2.0
+    backend.first_chunk_sent.clear()
+    results = {}
+    first = threading.Thread(target=lambda: results.update(a=_post(wire, _body(10))[0]))
+    first.start()
+    _wait_mid_stream(wire, backend)
+    results["b"] = _post(wire, _body(10))[0]
+    first.join()
+    assert results == {"a": 200, "b": 409}
+    assert "concurrent" in wire.failure
+    # The refusal is receipted, as every other refusal is (round 9).
+    refusal = _record(records, "wire_failure")
+    assert "concurrent" in refusal["error"] and refusal["session"] == 1
+    assert refusal["follows_length_finish"] is False
+
+
+def test_a_failing_request_keeps_its_timing_and_predictions(make_lab):
+    """AC7: a request that never completes still records elapsed time and predictions."""
+    backend, wire, records, _consumed = make_lab(predictor=lambda u, c: 100.0)
+    backend.malformed = True
+    _post(wire, _body(10))
+    failure = _record(records, "wire_failure")
+    assert failure["request_id"] == 1 and "JSONDecodeError" in failure["error"]
+    assert failure["seconds"] is not None
+    assert failure["predicted_initial_seconds"] == 100.0
+    assert failure["predicted_rearmed_seconds"] is not None
